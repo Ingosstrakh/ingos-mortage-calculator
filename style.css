@@ -1,0 +1,165 @@
+/* =======================
+   PREMIUM GLOBAL STYLE
+   ======================= */
+
+/* Ингосстрах темно-синий */
+:root {
+  --deep-blue: #001E60;
+  --blue-light: #0A3A8E;
+  --platinum: #E8ECF5;
+  --white: #ffffff;
+  --text: #f4f6fc;
+  --accent: #4BA3FF;
+  --gradient: linear-gradient(145deg, #001E60, #0A3A8E);
+  --shadow: 0 12px 38px rgba(0, 0, 0, 0.35);
+  --shadow-soft: 0 8px 24px rgba(0, 0, 0, 0.22);
+  --radius: 18px;
+  --transition: 0.3s ease;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--gradient);
+  font-family: 'Segoe UI', Roboto, sans-serif;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* =======================
+      HEADER
+   ======================= */
+
+.header {
+  padding: 32px 0;
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--shadow);
+}
+
+.header__content {
+  max-width: 1200px;
+  margin: auto;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 24px;
+}
+
+.logo {
+  width: 145px;
+  height: auto;
+}
+
+.title {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.title span {
+  color: var(--accent);
+  font-weight: 800;
+}
+
+/* =======================
+       MAIN LAYOUT
+   ======================= */
+
+.container {
+  max-width: 1200px;
+  margin: 40px auto;
+  padding: 0 24px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+}
+
+.card {
+  padding: 28px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(10px);
+  transition: var(--transition);
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow);
+}
+
+/* =======================
+       INPUT AREA
+   ======================= */
+
+.input-area {
+  width: 100%;
+  height: 240px;
+  padding: 16px;
+  border-radius: var(--radius);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--white);
+  font-size: 16px;
+  resize: vertical;
+  outline: none;
+  transition: var(--transition);
+}
+
+.input-area:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 12px rgba(75, 163, 255, 0.4);
+}
+
+/* =======================
+       BUTTONS
+   ======================= */
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--white);
+  padding: 14px 26px;
+  border-radius: var(--radius);
+  border: none;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 20px;
+  width: 100%;
+  transition: var(--transition);
+  box-shadow: 0 6px 18px rgba(75, 163, 255, 0.35);
+}
+
+.btn-primary:hover {
+  background: #63b4ff;
+  transform: translateY(-3px);
+}
+
+/* =======================
+       OUTPUT
+   ======================= */
+
+.output {
+  background: rgba(255, 255, 255, 0.07);
+  padding: 20px;
+  border-radius: var(--radius);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  min-height: 160px;
+  line-height: 1.6;
+  font-size: 17px;
+  color: var(--white);
+  box-shadow: var(--shadow-soft);
+}
+
+/* =======================
+         FOOTER
+   ======================= */
+
+.footer {
+  text-align: center;
+  padding: 26px;
+  color: var(--platinum);
+  font-size: 14px;
+  opacity: 0.7;
+}

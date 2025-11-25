@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Ипотечный калькулятор — Ингосстрах</title>
+  <link rel="stylesheet" href="style.css">
+  <script defer src="ui-adapter.js"></script>
+  <script defer src="parser.js"></script>
+  <script defer src="calculator.js"></script>
+  <script defer src="config_banks.js"></script>
+  <script defer src="tariffs_life.js"></script>
+  <script defer src="tariffs_property.js"></script>
+</head>
+
+<body>
+  <header class="header">
+    <div class="header__content">
+      <img src="logo.svg" class="logo" alt="Ингосстрах">
+      <h1 class="title">Ипотечный калькулятор<br><span>Ингосстрах</span></h1>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card premium-card">
+      <h2>Интеллектуальный парсер</h2>
+      <textarea id="inputText" class="input-area" placeholder="Вставьте текст клиента, например:
+ВТБ от 05.12.2019
+ост - 2 580 873
+она - 14.04.1983
+кв-ра"></textarea>
+
+      <button class="btn-primary" onclick="parseAndCalculate()">Рассчитать</button>
+    </section>
+
+    <section class="card output-card">
+      <h2>Результат расчёта</h2>
+      <div id="output" class="output"></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>© Ингосстрах — премиальный ипотечный калькулятор</p>
+  </footer>
+
+</body>
+</html>
