@@ -5,9 +5,8 @@ document.addEventListener("DOMContentLoaded", () => {
   btn.addEventListener("click", async () => {
     const raw = input.value.trim();
 
-    // Проверка на пустой ввод
+    // Проверка на пустой запрос
     if (raw.length < 5) {
-      // Если введенный текст слишком короткий или пустой, выводим ошибку
       displayPremiumOutput("<b>Ошибка:</b> Пожалуйста, введите корректный запрос.");
       return;
     }
@@ -16,10 +15,9 @@ document.addEventListener("DOMContentLoaded", () => {
       // Отправляем запрос к GPT-5 mini и получаем ответ
       const gptResponse = await handleClientRequest(raw);
 
-      // Выводим ответ от GPT-5 mini в элемент
+      // Выводим ответ или вопрос от GPT-5 mini
       displayPremiumOutput(gptResponse);
     } catch (e) {
-      // Если произошла ошибка, выводим ее в интерфейсе
       displayPremiumOutput("<b>Ошибка:</b><br>" + e.message);
     }
   });
@@ -27,7 +25,7 @@ document.addEventListener("DOMContentLoaded", () => {
   console.log("UI адаптер успешно инициализирован");
 });
 
-// Функция для отображения результата в UI
+// Функция для отображения результата
 function displayPremiumOutput(text) {
   const outputElement = document.getElementById('gptResponse');
   outputElement.innerHTML = text;
