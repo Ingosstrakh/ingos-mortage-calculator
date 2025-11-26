@@ -2,7 +2,7 @@
 
 // Функция для отправки запроса в Hugging Face API и получения ответа от GPT-Neo
 async function askGPTNeo(question) {
-  const apiKey = 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;  // Вставьте сюда ваш API ключ
+  const apiKey = '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';  // Вставьте сюда ваш API ключ в кавычках
 
   const response = await fetch('https://api-inference.huggingface.co/models/EleutherAI/gpt-neo-2.7B', {
     method: 'POST',
