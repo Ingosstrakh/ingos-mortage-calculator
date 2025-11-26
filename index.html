@@ -6,21 +6,20 @@
 
   <link rel="stylesheet" href="style.css">
 
-  <!-- Данные -->
+  <!-- Данные банков и тарифов -->
   <script defer src="config_banks.js"></script>
   <script defer src="tariffs_life.js"></script>
   <script defer src="tariffs_property.js"></script>
 
-  <!-- Логика -->
+  <!-- Логика работы -->
   <script defer src="parser.js"></script>
   <script defer src="calculator.js"></script>
 
-  <!-- Интерфейс -->
+  <!-- UI адаптер — ВСЕГДА ПОСЛЕДНИМ -->
   <script defer src="ui-adapter.js"></script>
 </head>
 
 <body>
-
 <header class="header">
   <div class="header__content">
     <img src="logo.svg" class="logo" alt="Ингосстрах">
@@ -29,34 +28,28 @@
 </header>
 
 <main class="container">
-
-  <!-- Блок парсера -->
   <section class="card premium-card">
     <h2>Интеллектуальный парсер</h2>
 
-    <textarea id="input-area"
-              class="input-area"
+    <textarea id="input-area" class="input-area"
               placeholder="Вставьте текст клиента, например:
-Сбер 05.11.2021
-остаток 2 480 000
-мужчина 1988 г.
-квартира">
+сбер от 05.12.2021
+остаток 2 350 000
+муж 1985
+квартира, 3 риска">
     </textarea>
 
     <button id="calculate-btn" class="btn-primary">Рассчитать</button>
   </section>
 
-  <!-- Вывод -->
   <section class="card output-card">
     <h2>Результат расчёта</h2>
     <div id="output" class="output"></div>
   </section>
-
 </main>
 
 <footer class="footer">
-  <p>© Ингосстрах — Ипотечный калькулятор</p>
+  <p>© Ингосстрах — ипотечный калькулятор</p>
 </footer>
-
 </body>
 </html>
