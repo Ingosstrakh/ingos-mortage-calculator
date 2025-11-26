@@ -1,36 +1,32 @@
-// calculator.js
+// calculator_v2.js
 // Главный модуль расчёта премии
 
-// Достаём глобальные данные
-const LIFE_TARIFF_BASE = window.LIFE_TARIFF_BASE;
-const LIFE_TARIFF_DOMRF = window.LIFE_TARIFF_DOMRF;
-const LIFE_TARIFF_RSHB_LOSS = window.LIFE_TARIFF_RSHB_LOSS;
-const getPropertyTariff = window.getPropertyTariff;
+// Все тарифы теперь берутся напрямую из window —
+// без создания новых переменных! (исключает ошибки already declared)
 
 // Расчёт страховки по жизни
 function calculateLife(age, gender, bank, sumInsured, loss = false) {
     let tariff;
 
     if (bank === "Дом РФ") {
-        tariff = LIFE_TARIFF_DOMRF[gender][age];
+        tariff = window.LIFE_TARIFF_DOMRF[gender][age];
     } else if (bank === "РСХБ" && loss === true) {
-        tariff = LIFE_TARIFF_RSHB_LOSS[gender][age];
+        tariff = window.LIFE_TARIFF_RSHB_LOSS[gender][age];
     } else {
-        tariff = LIFE_TARIFF_BASE[gender][age];
+        tariff = window.LIFE_TARIFF_BASE[gender][age];
     }
 
-    const premium = (sumInsured * tariff) / 100;
-    return Math.round(premium);
+    return Math.round((sumInsured * tariff) / 100);
 }
 
 // Расчёт имущества
 function calculateProperty(bank, objectType, material, creditSum, discountAllowed) {
-    const propertyTariff = getPropertyTariff(bank, objectType, material);
+    const propertyTariff = window.getPropertyTariff(bank, objectType, material);
 
     let tariff = propertyTariff;
 
     if (discountAllowed) {
-        tariff *= 0.9;
+        tariff *= 0.9; // Скидка 10%
     }
 
     return Math.round((creditSum * tariff) / 100);
@@ -39,14 +35,16 @@ function calculateProperty(bank, objectType, material, creditSum, discountAllowe
 // Главная функция
 function calculateInsurance(data) {
     const bank = data.bank;
-    const cfg = BANKS[bank];
+    const cfg = window.BANKS[bank]; // <-- ссылка только через window
 
     let fullSum = data.sum;
 
+    // Надбавка
     if (cfg.add_percent > 0) {
         fullSum = Math.round(fullSum * (1 + cfg.add_percent / 100));
     }
 
+    // Страхование жизни
     let life = calculateLife(
         data.age,
         data.gender,
@@ -55,10 +53,12 @@ function calculateInsurance(data) {
         data.loss
     );
 
+    // Скидка 25%
     if (cfg.allow_discount_life && data.discount_life) {
         life = Math.round(life * 0.75);
     }
 
+    // Имущество
     const property = calculateProperty(
         bank,
         data.objectType,
@@ -80,6 +80,5 @@ function calculateInsurance(data) {
 `;
 }
 
-// Экспорт в глобальную область
+// Экспорт
 window.calculateInsurance = calculateInsurance;
-
