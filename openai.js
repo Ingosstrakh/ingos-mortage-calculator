@@ -1,24 +1,20 @@
 // openai.js
 
-async function askGPT5Mini(question) {
-  const apiKey = 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;  // Вставьте сюда ваш API ключ
+// Функция для отправки запроса в Hugging Face API и получения ответа от GPT-Neo
+async function askGPTNeo(question) {
+  const apiKey = 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;  // Вставьте сюда ваш API ключ
 
-  const response = await fetch('https://api.openai.com/v1/completions', {
+  const response = await fetch('https://api-inference.huggingface.co/models/EleutherAI/gpt-neo-2.7B', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      model: 'gpt-5-mini',  // Указываем модель GPT-5 mini
-      prompt: question,
-      max_tokens: 150,
-      temperature: 0.7,
-    }),
+    body: JSON.stringify({ inputs: question }),
   });
 
   const data = await response.json();
-  console.log(data);  // Выводим ответ от GPT-5 mini для отладки
+  console.log(data);  // Выводим ответ от GPT-Neo для отладки
 
-  return data.choices[0].text.trim(); // Возвращаем ответ от GPT-5 mini
+  return data[0].generated_text.trim(); // Возвращаем сгенерированный текст от GPT-Neo
 }
