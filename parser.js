@@ -1,4 +1,4 @@
-/ parser.js
+// parser.js
 // Гибридный интеллектуальный парсер (правила + эвристики)
 // Возвращает structured JSON: parseTextToObject(text)
 // Экспорт: module.exports.parseTextToObject (Node) и window.parseTextToObject (browser)
@@ -446,4 +446,5 @@ if (typeof module !== 'undefined' && module.exports) {
 }
 if (typeof window !== 'undefined') {
   window.parseTextToObject = parseTextToObject;
+
 }
