@@ -6,20 +6,21 @@
 
   <link rel="stylesheet" href="style.css">
 
-  <!-- Подключаем сначала данные -->
+  <!-- Данные -->
   <script defer src="config_banks.js"></script>
   <script defer src="tariffs_life.js"></script>
   <script defer src="tariffs_property.js"></script>
 
-  <!-- Затем логика -->
+  <!-- Логика -->
   <script defer src="parser.js"></script>
   <script defer src="calculator.js"></script>
 
-  <!-- И только в самом конце UI -->
+  <!-- Интерфейс -->
   <script defer src="ui-adapter.js"></script>
 </head>
 
 <body>
+
 <header class="header">
   <div class="header__content">
     <img src="logo.svg" class="logo" alt="Ингосстрах">
@@ -28,6 +29,8 @@
 </header>
 
 <main class="container">
+
+  <!-- Блок парсера -->
   <section class="card premium-card">
     <h2>Интеллектуальный парсер</h2>
 
@@ -43,14 +46,17 @@
     <button id="calculate-btn" class="btn-primary">Рассчитать</button>
   </section>
 
+  <!-- Вывод -->
   <section class="card output-card">
     <h2>Результат расчёта</h2>
     <div id="output" class="output"></div>
   </section>
+
 </main>
 
 <footer class="footer">
-  <p>© Ингосстрах — премиальный ипотечный калькулятор</p>
+  <p>© Ингосстрах — Ипотечный калькулятор</p>
 </footer>
+
 </body>
 </html>
