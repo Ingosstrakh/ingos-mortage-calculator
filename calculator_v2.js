@@ -1,14 +1,18 @@
 // Подключаем функцию из openai.js
 async function handleClientRequest(clientText) {
-  // Шаг 1: Получаем ответ от GPT-5 mini
+  if (!clientText || clientText.trim().length === 0) {
+    return 'Пожалуйста, введите запрос для расчета.';
+  }
+
+  // Получаем ответ от GPT-5 mini
   const gptResponse = await askGPT5Mini(clientText);
 
-  // Шаг 2: Если GPT-5 mini говорит, что не хватает данных, задаем уточняющие вопросы
+  // Если GPT-5 mini говорит, что не хватает данных, задаем уточняющие вопросы
   if (gptResponse.includes("не хватает данных")) {
     return `${gptResponse}\nПожалуйста, уточните:\n- Какой пол и дата рождения заемщика?`;
   }
 
-  // Шаг 3: Возвращаем ответ от GPT-5 mini (или вопрос для клиента)
+  // Возвращаем ответ от GPT-5 mini
   return gptResponse;
 }
 
