@@ -2,7 +2,6 @@
 // Главный модуль расчёта премии
 
 // Достаём глобальные данные
-const BANKS = window.BANKS;
 const LIFE_TARIFF_BASE = window.LIFE_TARIFF_BASE;
 const LIFE_TARIFF_DOMRF = window.LIFE_TARIFF_DOMRF;
 const LIFE_TARIFF_RSHB_LOSS = window.LIFE_TARIFF_RSHB_LOSS;
@@ -83,3 +82,4 @@ function calculateInsurance(data) {
 
 // Экспорт в глобальную область
 window.calculateInsurance = calculateInsurance;
+
