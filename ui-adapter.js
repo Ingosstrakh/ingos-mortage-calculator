@@ -1,69 +1,46 @@
 // ui-adapter.js
-// Премиальная визуализация и безопасное подключение событий
+// Премиальные эффекты + кнопка расчёта
 
-// Ждём полной загрузки DOM
+function fadeIn(el) {
+    el.style.opacity = "0";
+    el.style.transform = "translateY(10px)";
+    el.style.transition = "0.4s ease";
+
+    setTimeout(() => {
+        el.style.opacity = "1";
+        el.style.transform = "translateY(0)";
+    }, 10);
+}
+
+function showOutput(text) {
+    const out = document.getElementById("output");
+    out.style.opacity = "0";
+
+    setTimeout(() => {
+        out.innerHTML = text.replace(/\n/g, "<br>");
+        fadeIn(out);
+    }, 50);
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("calculate-btn").onclick = () => {
+        const input = document.getElementById("input-area").value.trim();
 
-    const input = document.getElementById("input-area");
-    const button = document.getElementById("calculate-btn");
-    const output = document.getElementById("output");
-
-    if (!input || !button || !output) {
-        console.error("UI elements not found");
-        return;
-    }
-
-    // Анимация плавного появления
-    function fadeInElement(el) {
-        el.style.opacity = "0";
-        el.style.transform = "translateY(10px)";
-        el.style.transition = "0.45s ease";
-        setTimeout(() => {
-            el.style.opacity = "1";
-            el.style.transform = "translateY(0)";
-        }, 20);
-    }
-
-    function flashSuccess(el) {
-        el.style.boxShadow = "0 0 18px rgba(75,163,255,0.6)";
-        setTimeout(() => el.style.boxShadow = "none", 600);
-    }
-
-    function flashError(el) {
-        el.style.boxShadow = "0 0 18px rgba(255,80,80,0.7)";
-        setTimeout(() => el.style.boxShadow = "none", 600);
-    }
-
-    function displayPremiumOutput(text) {
-        output.innerHTML = "";
-        fadeInElement(output);
-        setTimeout(() => {
-            output.innerHTML = text.replace(/\n/g, "<br>");
-            flashSuccess(output);
-        }, 80);
-    }
-
-    // ОБРАБОТЧИК КНОПКИ
-    button.addEventListener("click", () => {
-
-        const text = input.value.trim();
-
-        if (text.length < 5) {
-            flashError(input);
-            displayPremiumOutput("<b>Ошибка:</b> введите корректные данные.");
+        if (!input) {
+            showOutput("<b>Введите текст для анализа.</b>");
             return;
         }
 
         try {
-            const parsed = parseClientText(text);   // из parser.js
-            const result = calculateInsurance(parsed); // из calculator.js
+            const parsed = parseClientText(input);
+            const result = calculateInsurance(parsed);
 
-            displayPremiumOutput(result);
-        }
-        catch (err) {
-            displayPremiumOutput("<b>Ошибка анализа:</b><br>" + err.message);
-        }
-    });
+            showOutput(result);
 
-    console.log("UI адаптер успешно инициализирован");
+        } catch (e) {
+            showOutput("<b>Ошибка:</b> " + e.message);
+        }
+    };
+
+    console.log("UI адаптер загружен");
 });
