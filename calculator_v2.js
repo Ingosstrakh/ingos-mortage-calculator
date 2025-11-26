@@ -1,73 +1,81 @@
-// calculator_v2.js
-// Главный модуль расчёта премии
+// Подключаем функцию из openai.js
+async function handleClientRequest(clientText) {
+  // Шаг 1: Получаем ответ от GPT-5 mini
+  const gptResponse = await askGPT5Mini(clientText);
 
-// Все тарифы теперь берутся напрямую из window —
-// без создания новых переменных! (исключает ошибки already declared)
+  // Шаг 2: Если GPT-5 mini говорит, что не хватает данных, задаем уточняющие вопросы
+  if (gptResponse.includes("не хватает данных")) {
+    return `${gptResponse}\nПожалуйста, уточните:\n- Какой пол и дата рождения заемщика?`;
+  }
 
-// Расчёт страховки по жизни
+  // Шаг 3: Возвращаем ответ от GPT-5 mini (или вопрос для клиента)
+  return gptResponse;
+}
+
+// Функция для расчета страховки жизни
 function calculateLife(age, gender, bank, sumInsured, loss = false) {
-    let tariff;
+  let tariff;
 
-    if (bank === "Дом РФ") {
-        tariff = window.LIFE_TARIFF_DOMRF[gender][age];
-    } else if (bank === "РСХБ" && loss === true) {
-        tariff = window.LIFE_TARIFF_RSHB_LOSS[gender][age];
-    } else {
-        tariff = window.LIFE_TARIFF_BASE[gender][age];
-    }
+  if (bank === "Дом РФ") {
+    tariff = window.LIFE_TARIFF_DOMRF[gender][age];
+  } else if (bank === "РСХБ" && loss === true) {
+    tariff = window.LIFE_TARIFF_RSHB_LOSS[gender][age];
+  } else {
+    tariff = window.LIFE_TARIFF_BASE[gender][age];
+  }
 
-    return Math.round((sumInsured * tariff) / 100);
+  return Math.round((sumInsured * tariff) / 100);
 }
 
-// Расчёт имущества
+// Функция для расчета имущества
 function calculateProperty(bank, objectType, material, creditSum, discountAllowed) {
-    const propertyTariff = window.getPropertyTariff(bank, objectType, material);
+  const propertyTariff = window.getPropertyTariff(bank, objectType, material);
 
-    let tariff = propertyTariff;
+  let tariff = propertyTariff;
 
-    if (discountAllowed) {
-        tariff *= 0.9; // Скидка 10%
-    }
+  if (discountAllowed) {
+    tariff *= 0.9; // Скидка 10%
+  }
 
-    return Math.round((creditSum * tariff) / 100);
+  return Math.round((creditSum * tariff) / 100);
 }
 
-// Главная функция
+// Главная функция расчета
 function calculateInsurance(data) {
-    const bank = data.bank;
-    const cfg = window.BANKS[bank]; // <-- ссылка только через window
+  const bank = data.bank;
+  const cfg = window.BANKS[bank]; // <-- ссылка только через window
 
-    let fullSum = data.sum;
+  let fullSum = data.sum;
 
-    // Надбавка
-    if (cfg.add_percent > 0) {
-        fullSum = Math.round(fullSum * (1 + cfg.add_percent / 100));
-    }
+  // Надбавка
+  if (cfg.add_percent > 0) {
+    fullSum = Math.round(fullSum * (1 + cfg.add_percent / 100));
+  }
 
-    // Страхование жизни
-    let life = calculateLife(
-        data.age,
-        data.gender,
-        bank,
-        fullSum,
-        data.loss
-    );
+  // Страхование жизни
+  let life = calculateLife(
+    data.age,
+    data.gender,
+    bank,
+    fullSum,
+    data.loss
+  );
 
-    // Скидка 25%
-    if (cfg.allow_discount_life && data.discount_life) {
-        life = Math.round(life * 0.75);
-    }
+  // Скидка 25%
+  if (cfg.allow_discount_life && data.discount_life) {
+    life = Math.round(life * 0.75);
+  }
 
-    // Имущество
-    const property = calculateProperty(
-        bank,
-        data.objectType,
-        data.material,
-        data.sum,
-        cfg.allow_discount_property && data.discount_property
-    );
+  // Имущество
+  const property = calculateProperty(
+    bank,
+    data.objectType,
+    data.material,
+    data.sum,
+    cfg.allow_discount_property && data.discount_property
+  );
 
-    return `
+  return `
 <b>Банк:</b> ${bank}<br>
 <b>Возраст:</b> ${data.age}<br>
 <b>Пол:</b> ${data.gender}<br>
@@ -80,5 +88,5 @@ function calculateInsurance(data) {
 `;
 }
 
-// Экспорт
+// Экспортируем функцию
 window.calculateInsurance = calculateInsurance;
