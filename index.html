@@ -17,6 +17,7 @@
 
   <!-- UI -->
   <script defer src="ui-adapter.js?v=3"></script>
+  <script defer src="openai.js"></script> <!-- Подключаем файл с GPT-5 mini -->
 </head>
 
 <body>
@@ -33,11 +34,7 @@
 
     <textarea id="input-area"
               class="input-area"
-              placeholder="Вставьте текст клиента, например:
-Сбер 05.11.2021
-остаток 2 480 000
-мужчина 1988 г.
-квартира">
+              placeholder="Введите запрос для калькулятора">
     </textarea>
 
     <button id="calculate-btn" class="btn-primary">Рассчитать</button>
@@ -54,4 +51,3 @@
 </footer>
 </body>
 </html>
-
