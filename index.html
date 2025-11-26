@@ -4,19 +4,19 @@
   <meta charset="UTF-8">
   <title>Ипотечный калькулятор — Ингосстрах</title>
 
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=3">
 
-  <!-- Данные банков и тарифов -->
-  <script defer src="config_banks.js"></script>
-  <script defer src="tariffs_life.js"></script>
-  <script defer src="tariffs_property.js"></script>
+  <!-- Подключаем данные -->
+  <script defer src="config_banks.js?v=3"></script>
+  <script defer src="tariffs_life.js?v=3"></script>
+  <script defer src="tariffs_property.js?v=3"></script>
 
-  <!-- Логика работы -->
-  <script defer src="parser.js"></script>
-  <script defer src="calculator.js"></script>
+  <!-- Логика -->
+  <script defer src="parser.js?v=3"></script>
+  <script defer src="calculator.js?v=3"></script>
 
-  <!-- UI адаптер — ВСЕГДА ПОСЛЕДНИМ -->
-  <script defer src="ui-adapter.js"></script>
+  <!-- UI -->
+  <script defer src="ui-adapter.js?v=3"></script>
 </head>
 
 <body>
@@ -31,12 +31,13 @@
   <section class="card premium-card">
     <h2>Интеллектуальный парсер</h2>
 
-    <textarea id="input-area" class="input-area"
+    <textarea id="input-area"
+              class="input-area"
               placeholder="Вставьте текст клиента, например:
-сбер от 05.12.2021
-остаток 2 350 000
-муж 1985
-квартира, 3 риска">
+Сбер 05.11.2021
+остаток 2 480 000
+мужчина 1988 г.
+квартира">
     </textarea>
 
     <button id="calculate-btn" class="btn-primary">Рассчитать</button>
