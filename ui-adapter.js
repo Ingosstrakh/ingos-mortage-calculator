@@ -1,3 +1,5 @@
+// ui-adapter.js
+
 document.addEventListener("DOMContentLoaded", () => {
   const btn = document.getElementById("calculate-btn");
   const input = document.getElementById("input-area");
@@ -12,10 +14,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      // Отправляем запрос к GPT-5 mini и получаем ответ
+      // Отправляем запрос к GPT-Neo и получаем ответ
       const gptResponse = await handleClientRequest(raw);
 
-      // Выводим ответ или вопрос от GPT-5 mini
+      // Выводим ответ от GPT-Neo в интерфейс
       displayPremiumOutput(gptResponse);
     } catch (e) {
       displayPremiumOutput("<b>Ошибка:</b><br>" + e.message);
