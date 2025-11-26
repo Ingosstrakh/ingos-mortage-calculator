@@ -1,167 +1,130 @@
-// config_banks.js — исправлённый (lifeModel добавлены)
-const BANKS = {
-  "Абсолют": {
-    markup: 0,
-    allowDiscountLife: true,
-    allowDiscountProperty: true,
-    titleFromMarkedUpSum: false,
-    lifeModel: "BASE"
-  },
+// config_banks.js
+// Финальная конфигурация банков для ипотечного калькулятора Ингосстрах
 
-  "Альфа Банк": {
-    markup: 0,
-    manualMarkup: true,
-    allowDiscountLife: false,
-    allowDiscountProperty: false,
-    titleFromMarkedUpSum: false,
-    lifeModel: "BASE"
+window.BANKS = {
+  "Абсолют Банк": {
+    aliases: ["абсолют", "абсолют банк"],
+    add_percent: 0,
+    allow_discount_property: true,
+    allow_discount_life: true
   },
 
   "Ак Барс": {
-    markup: 0,
-    allowDiscountLife: true,
-    allowDiscountProperty: true,
-    titleFromMarkedUpSum: false,
-    lifeModel: "BASE"
+    aliases: ["ак барс", "ак-барс", "акбарс"],
+    add_percent: 0,
+    allow_discount_property: true,
+    allow_discount_life: true
+  },
+
+  "Альфа Банк": {
+    aliases: ["альфа", "альфабанк", "альфа банк"],
+    add_percent: null, // клиент вводит сам
+    allow_discount_property: false, // запрещена
+    allow_discount_life: false      // запрещена
   },
 
   "ВТБ": {
-    markup: 10,
-    allowDiscountLife: true,
-    allowDiscountProperty: true,
-    titleFromMarkedUpSum: true,
-    lifeModel: "BASE"
+    aliases: ["втб", "втб банк", "открытие", "банк открытие"],
+    add_percent: 10,
+    allow_discount_property: true,
+    allow_discount_life: true
   },
 
   "Дом.РФ": {
-    markup: 0,
-    allowDiscountLife: false,
-    allowDiscountProperty: false,
-    titleFromMarkedUpSum: false,
-    lifeModel: "DOMRF"
+    aliases: ["дом.рф", "дом рф", "дом. рф"],
+    add_percent: 0,
+    allow_discount_property: false, // запрещена
+    allow_discount_life: false      // запрещена
   },
 
   "Зенит": {
-    markup: 10,
-    allowDiscountLife: true,
-    allowDiscountProperty: true,
-    titleFromMarkedUpSum: true,
-    lifeModel: "BASE"
+    aliases: ["зенит"],
+    add_percent: 10,
+    allow_discount_property: true,
+    allow_discount_life: true
   },
 
-  "ИТБ": {
-    markup: 10,
-    allowDiscountLife: true,
-    allowDiscountProperty: true,
-    titleFromMarkedUpSum: true,
-    lifeModel: "BASE"
+  "ИТБ / ТКБ": {
+    aliases: ["итб", "ткб", "ткб/итб", "итб/ткб"],
+    add_percent: 10,
+    allow_discount_property: true,
+    allow_discount_life: true
   },
 
   "Металлинвест": {
-    markup: 10,
-    allowDiscountLife: true,
-    allowDiscountProperty: true,
-    titleFromMarkedUpSum: true,
-    lifeModel: "BASE"
+    aliases: ["металлинвест", "металлинвестбанк"],
+    add_percent: 10,
+    allow_discount_property: true,
+    allow_discount_life: true
   },
 
-  "МТС": {
-    markup: 10,
-    allowDiscountLife: true,
-    allowDiscountProperty: true,
-    titleFromMarkedUpSum: true,
-    lifeModel: "BASE"
+  "МТС Банк": {
+    aliases: ["мтс", "мтс банк"],
+    add_percent: 10,
+    allow_discount_property: true,
+    allow_discount_life: true
   },
 
-  "Открытие (ВТБ)": {
-    markup: 10,
-    allowDiscountLife: true,
-    allowDiscountProperty: true,
-    titleFromMarkedUpSum: true,
-    lifeModel: "BASE"
+  "ПСБ (Промсвязьбанк)": {
+    aliases: ["псб", "промсвязьбанк", "псб банк"],
+    add_percent: 0,
+    allow_discount_property: true,
+    allow_discount_life: true
   },
 
-  "Промсвязьбанк": {
-    markup: 0,
-    allowDiscountLife: true,
-    allowDiscountProperty: true,
-    titleFromMarkedUpSum: false,
-    lifeModel: "BASE"
-  },
-
-  "Райффайзен": {
-    markup: 10,
-    allowDiscountLife: true,
-    allowDiscountProperty: true,
-    titleFromMarkedUpSum: true,
-    lifeModel: "BASE"
+  "Райффайзенбанк": {
+    aliases: ["райфайзен", "райффайзен", "raiffaisen"],
+    add_percent: 10,
+    allow_discount_property: true,
+    allow_discount_life: true
   },
 
   "Росбанк / Т-Банк": {
-    markup: 0,
-    allowDiscountLife: true,
-    allowDiscountProperty: true,
-    titleFromMarkedUpSum: false,
-    lifeModel: "BASE"
+    aliases: ["росбанк", "т банк", "т-банк", "t bank"],
+    add_percent: 0,
+    allow_discount_property: true,
+    allow_discount_life: true
   },
 
   "РСХБ": {
-    markup: 10,
-    allowDiscountLife: true,
-    allowDiscountProperty: true,
-    titleFromMarkedUpSum: true,
-    lifeModel: "RSHB"
+    aliases: ["рсхб", "россельхоз", "россельхозбанк"],
+    add_percent: 10,
+    allow_discount_property: true,
+    allow_discount_life: true
   },
 
   "Сбербанк": {
-    markup: 0,
-    allowDiscountLife: true,
-    allowDiscountProperty: true,
-    titleFromMarkedUpSum: false,
-    lifeModel: "BASE"
+    aliases: ["сбер", "сбербанк", "sber"],
+    add_percent: 0,
+    allow_discount_property: true,
+    allow_discount_life: true
   },
 
   "Тимер Банк": {
-    markup: 0,
-    allowDiscountLife: true,
-    allowDiscountProperty: true,
-    titleFromMarkedUpSum: false,
-    lifeModel: "BASE"
-  },
-
-  "ТКБ": {
-    markup: 10,
-    allowDiscountLife: true,
-    allowDiscountProperty: true,
-    titleFromMarkedUpSum: true,
-    lifeModel: "BASE"
+    aliases: ["тимер", "тимер банк"],
+    add_percent: 0,
+    allow_discount_property: true,
+    allow_discount_life: true
   },
 
   "УБРИР": {
-    markup: 0,
-    manualMarkup: true,
-    allowDiscountLife: true,
-    allowDiscountProperty: true,
-    titleFromMarkedUpSum: false,
-    lifeModel: "BASE"
+    aliases: ["убрир", "у б р и р", "ubr"],
+    add_percent: null, // клиент вводит сам
+    allow_discount_property: true,
+    allow_discount_life: true
   },
 
   "Уралсиб": {
-    markup: 0,
-    allowDiscountLife: true,
-    allowDiscountProperty: true,
-    titleFromMarkedUpSum: false,
-    lifeModel: "BASE"
+    aliases: ["уралсиб"],
+    add_percent: 0,
+    allow_discount_property: true,
+    allow_discount_life: true
   },
 
-  "Энергобанк": {
-    markup: 0,
-    allowDiscountLife: true,
-    allowDiscountProperty: true,
-    titleFromMarkedUpSum: false,
-    lifeModel: "BASE"
+  "Юникредит Банк": {
+    aliases: ["юникредит", "unicredit", "uni credit"],
+    add_percent: 0,
+    allow_discount_property: true,
+    allow_discount_life: true
   }
 };
-
-if (typeof window !== 'undefined') window.BANKS = BANKS;
-if (typeof module !== 'undefined') module.exports = BANKS;
