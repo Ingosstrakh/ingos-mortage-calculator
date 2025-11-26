@@ -1,48 +1,43 @@
 // calculator_v2.js
 
-// Пример функции для расчета страхования жизни
-function calculateLife(age, gender, bank, sumInsured, loss = false) {
-  let tariff;
-
-  if (bank === "Дом РФ") {
-    tariff = window.LIFE_TARIFF_DOMRF[gender][age];
-  } else if (bank === "РСХБ" && loss === true) {
-    tariff = window.LIFE_TARIFF_RSHB_LOSS[gender][age];
-  } else {
-    tariff = window.LIFE_TARIFF_BASE[gender][age];
-  }
-
-  return Math.round((sumInsured * tariff) / 100);
+// Функция для выполнения ипотечного расчета
+function calculateLoan(loanAmount, interestRate, years) {
+  const monthlyRate = interestRate / 12 / 100;
+  const numberOfPayments = years * 12;
+  const monthlyPayment = loanAmount * monthlyRate / (1 - Math.pow(1 + monthlyRate, -numberOfPayments));
+  return monthlyPayment;
 }
 
-// Пример функции для расчета имущества
-function calculateProperty(bank, objectType, material, creditSum, discountAllowed) {
-  const propertyTariff = window.getPropertyTariff(bank, objectType, material);
-
-  let tariff = propertyTariff;
-
-  if (discountAllowed) {
-    tariff *= 0.9; // Скидка 10%
-  }
-
-  return Math.round((creditSum * tariff) / 100);
-}
-
-// Функция для выполнения расчетов
+// Основная функция для обработки запроса клиента
 async function handleClientRequest(clientText) {
-  // Отправляем запрос к GPT-5 mini
-  const gptResponse = await askGPT5Mini(clientText);
+  // Отправляем запрос в GPT-Neo для извлечения данных из текста
+  const gptResponse = await askGPTNeo(clientText);
 
-  // Логируем ответ от GPT-5 mini для диагностики
-  console.log("Ответ от GPT-5 mini:", gptResponse);
+  // Логируем ответ от GPT-Neo для диагностики
+  console.log("Ответ от GPT-Neo:", gptResponse);
 
-  // Если GPT-5 mini говорит, что не хватает данных, задаем уточняющие вопросы
-  if (gptResponse.includes("не хватает данных")) {
-    return `${gptResponse}\nПожалуйста, уточните:\n- Какой пол и дата рождения заемщика?`;
+  // Пример обработки запроса с извлечением данных
+  // В данном случае мы ожидаем, что GPT-Neo вернет параметры для расчета
+  const loanAmount = extractNumber(gptResponse, 'сумма кредита'); // Пример извлечения суммы кредита
+  const interestRate = extractNumber(gptResponse, 'ставка');  // Пример извлечения ставки
+  const years = extractNumber(gptResponse, 'лет');  // Пример извлечения срока
+
+  if (!loanAmount || !interestRate || !years) {
+    return "Недостаточно данных для расчета. Пожалуйста, уточните запрос.";
   }
 
-  // Возвращаем результат
-  return gptResponse;
+  // Выполняем расчет ипотечного платежа
+  const monthlyPayment = calculateLoan(loanAmount, interestRate, years);
+
+  return `Ежемесячный платеж по ипотеке: ${monthlyPayment.toFixed(2)} рублей.`;
 }
 
-window.calculateInsurance = handleClientRequest;
+// Функция для извлечения числовых данных из текста
+function extractNumber(text, keyword) {
+  const regex = new RegExp(`(${keyword})\\s*(\\d+([\\.,]\\d+)?)`);
+  const match = text.match(regex);
+  if (match) {
+    return parseFloat(match[2].replace(',', '.')); // Возвращаем число
+  }
+  return null; // Если не нашли, возвращаем null
+}
