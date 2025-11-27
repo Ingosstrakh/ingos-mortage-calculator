@@ -2,53 +2,133 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Калькулятор + GPT-5Nano чат</title>
-  <!-- Подключаем Puter.js -->
-  <script src="https://js.puter.com/v2/"></script>
-</head>
-<body>
-  <!-- Ваш существующий UI калькулятора -->
-  <div id="calculator">
-    <!-- ... сюда вставьте ваши HTML-калькулятор + форму ввода ... -->
-  </div>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ипотечный калькулятор — Ингосстрах</title>
 
-  <!-- Добавим чат-интерфейс -->
-  <div id="chat-container">
-    <textarea id="user-input" placeholder="Введите вопрос..."></textarea>
-    <button id="send-btn">Отправить</button>
-    <div id="chat-output"></div>
-  </div>
+  <link rel="stylesheet" href="style.css?v=3">
+
+  <!-- Подключаем данные -->
+  <script defer src="config_banks.js?v=3"></script>
+  <script defer src="tariffs_life.js?v=3"></script>
+  <script defer src="tariffs_property.js?v=3"></script>
+
+  <!-- Логика -->
+  <script defer src="parser.js?v=3"></script>
+  <script defer src="calculator_v2.js"></script>
+
+  <!-- UI -->
+  <script defer src="ui-adapter.js?v=3"></script>
+
+  <!-- Подключаем Puter.js для работы с GPT-5Nano -->
+  <script src="https://js.puter.com/v2/"></script>
+
+  <!-- Логика GPT-5Nano -->
+  <script defer src="openai.js"></script>
+</head>
+
+<body>
+  <header class="header">
+    <div class="header__content">
+      <img src="logo.svg" class="logo" alt="Ингосстрах">
+      <h1 class="title">Ипотечный калькулятор<br><span>Ингосстрах</span></h1>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card premium-card">
+      <h2>Интеллектуальный парсер</h2>
+      
+      <!-- Поле для ввода запроса от клиента -->
+      <textarea id="input-area" class="input-area" placeholder="Введите запрос для калькулятора"></textarea>
+      
+      <button id="calculate-btn" class="btn-primary">Запросить расчет</button>
+    </section>
+
+    <section class="card output-card">
+      <h2>Результат расчёта</h2>
+      <!-- Вывод результата (ответ GPT-Neo) -->
+      <div id="gptResponse" class="output"></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>© Ингосстрах — ипотечный калькулятор</p>
+  </footer>
 
   <script>
-    // Функция: отправить запрос в GPT-5Nano через Puter
-    async function askGPT5Nano(prompt) {
-      try {
-        const response = await puter.ai.chat(prompt, { model: "gpt-5-nano" });
-        return response;  // строка — ответ от бота
-      } catch (e) {
-        console.error("Ошибка puter.ai.chat:", e);
-        return null;
-      }
+    // Функция для расчета с учетом тарифов
+    async function calculateTariff(bank, risk, amount, age) {
+        let tariff = 0;
+        let discount = 0;
+
+        // Применяем тарифы на основе выбранного банка и риска
+        if (risk === 'жизнь') {
+            tariff = LIFE_TARIFF_BASE.m[age] || LIFE_TARIFF_DOMRF.m[age]; // Пример для жизни
+        } else if (risk === 'имущ') {
+            tariff = PROPERTY_TARIFFS.base.flat; // Тариф на имущество
+        }
+
+        // Применяем скидку, если она есть для банка
+        const bankData = BANKS[bank];
+        if (bankData && bankData.allow_discount_life) {
+            discount = tariff * 0.1; // Например, скидка 10%
+        }
+
+        // Рассчитываем итоговый тариф
+        const finalTariff = tariff - discount;
+        return finalTariff;
     }
 
-    // Обработчик клика по кнопке отправки
-    document.getElementById("send-btn").addEventListener("click", async () => {
-      const input = document.getElementById("user-input").value;
-      if (!input) return;
-      // Показываем, что бот "думает"
-      const outDiv = document.getElementById("chat-output");
-      outDiv.innerHTML += `<div><b>Вы:</b> ${input}</div>`;
-      outDiv.innerHTML += `<div><i>Бот отвечает...</i></div>`;
-      // Запрос к GPT-5Nano
-      const answer = await askGPT5Nano(input);
-      if (answer) {
-        outDiv.innerHTML += `<div><b>Бот:</b> ${answer}</div>`;
-      } else {
-        outDiv.innerHTML += `<div><b>Бот:</b> Ошибка при получении ответа.</div>`;
-      }
-      outDiv.scrollTop = outDiv.scrollHeight;
-      document.getElementById("user-input").value = "";
+    // Функция для обработки запроса от клиента
+    async function handleClientRequest(clientText) {
+        // Извлекаем информацию из запроса
+        const parsedData = parseRequest(clientText); // Должна быть функция для разбора запроса
+        const { bank, risk, amount, age } = parsedData;
+
+        // Выполняем расчет тарифа
+        const finalTariff = await calculateTariff(bank, risk, amount, age);
+
+        // Возвращаем результат расчета
+        return `Тариф для ${bank} (${risk}): ${finalTariff.toFixed(2)} рублей.`;
+    }
+
+    // Функция для обработки текстовых запросов
+    function parseRequest(text) {
+        const bankRegex = /(\bВТБ\b|\bДом\.РФ\b|\bЮникредит\b)/i;
+        const riskRegex = /\bжизнь\b|\bимущ\b|\bтитул\b/i;
+        const amountRegex = /ост\s*(\d+(\.\d+)?)/;
+        const dateRegex = /\bкд\s*(\d{2}\.\d{2}\.\d{4})/;
+
+        const bank = text.match(bankRegex)?.[0];
+        const risk = text.match(riskRegex)?.[0];
+        const amount = text.match(amountRegex)?.[1];
+        const creditDate = text.match(dateRegex)?.[1];
+
+        return { bank, risk, amount, creditDate };
+    }
+
+    // Вставляем обработчик для кнопки "Запросить расчет"
+    document.getElementById("calculate-btn").addEventListener("click", async () => {
+        const rawText = document.getElementById("input-area").value.trim();
+        if (rawText) {
+            const response = await handleClientRequest(rawText);
+            document.getElementById("gptResponse").innerHTML = response;
+        } else {
+            document.getElementById("gptResponse").innerHTML = "Пожалуйста, введите запрос для расчета.";
+        }
     });
+
+    // Функция для отправки запроса в GPT-5Nano через Puter
+    async function askGPT5Nano(question) {
+        try {
+            // Используем Puter.js для отправки запроса
+            const response = await puter.ai.chat(question, { model: "gpt-5-nano" });
+            return response;  // Получаем ответ от модели
+        } catch (e) {
+            console.error("Ошибка при запросе к Puter:", e);
+            return "Ошибка при получении ответа.";
+        }
+    }
   </script>
 </body>
 </html>
