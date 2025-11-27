@@ -10,21 +10,27 @@
     <div class="calculator-container">
         <h1>Ипотечный калькулятор</h1>
         <div class="form-container">
-            <input type="text" id="inputData" placeholder="Введите данные для расчета">
+            <div class="input-group">
+                <label for="inputData">Введите параметры:</label>
+                <input type="text" id="inputData" placeholder="Введите данные для расчета">
+            </div>
             <button id="calcBtn">Запросить расчет</button>
         </div>
+
         <div class="result">
             <h3>Результат расчета:</h3>
-            <div id="resultDisplay">Тут будет результат</div>
+            <div id="resultDisplay">Здесь будет расчет</div>
         </div>
 
-        <!-- Чат GPT -->
+        <!-- Чат с GPT -->
         <div class="chat-container">
-            <textarea id="chatInput" placeholder="Задайте вопрос"></textarea>
+            <h2>Чат с расчетным помощником</h2>
+            <textarea id="chatInput" placeholder="Задайте вопрос..."></textarea>
             <button id="chatBtn">Отправить вопрос</button>
             <div id="chatDisplay">Тут будет диалог</div>
         </div>
     </div>
+
     <script src="openai.js"></script>
     <script src="calculator_v2.js"></script>
 </body>
