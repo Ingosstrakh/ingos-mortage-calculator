@@ -1,37 +1,54 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ипотечный калькулятор</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <title>Калькулятор + GPT-5Nano чат</title>
+  <!-- Подключаем Puter.js -->
+  <script src="https://js.puter.com/v2/"></script>
 </head>
 <body>
-    <div class="calculator-container">
-        <h1>Ипотечный калькулятор</h1>
-        <div class="form-container">
-            <div class="input-group">
-                <label for="inputData">Введите параметры:</label>
-                <input type="text" id="inputData" placeholder="Введите данные для расчета">
-            </div>
-            <button id="calcBtn">Запросить расчет</button>
-        </div>
+  <!-- Ваш существующий UI калькулятора -->
+  <div id="calculator">
+    <!-- ... сюда вставьте ваши HTML-калькулятор + форму ввода ... -->
+  </div>
 
-        <div class="result">
-            <h3>Результат расчета:</h3>
-            <div id="resultDisplay">Здесь будет расчет</div>
-        </div>
+  <!-- Добавим чат-интерфейс -->
+  <div id="chat-container">
+    <textarea id="user-input" placeholder="Введите вопрос..."></textarea>
+    <button id="send-btn">Отправить</button>
+    <div id="chat-output"></div>
+  </div>
 
-        <!-- Чат с GPT -->
-        <div class="chat-container">
-            <h2>Чат с расчетным помощником</h2>
-            <textarea id="chatInput" placeholder="Задайте вопрос..."></textarea>
-            <button id="chatBtn">Отправить вопрос</button>
-            <div id="chatDisplay">Тут будет диалог</div>
-        </div>
-    </div>
+  <script>
+    // Функция: отправить запрос в GPT-5Nano через Puter
+    async function askGPT5Nano(prompt) {
+      try {
+        const response = await puter.ai.chat(prompt, { model: "gpt-5-nano" });
+        return response;  // строка — ответ от бота
+      } catch (e) {
+        console.error("Ошибка puter.ai.chat:", e);
+        return null;
+      }
+    }
 
-    <script src="openai.js"></script>
-    <script src="calculator_v2.js"></script>
+    // Обработчик клика по кнопке отправки
+    document.getElementById("send-btn").addEventListener("click", async () => {
+      const input = document.getElementById("user-input").value;
+      if (!input) return;
+      // Показываем, что бот "думает"
+      const outDiv = document.getElementById("chat-output");
+      outDiv.innerHTML += `<div><b>Вы:</b> ${input}</div>`;
+      outDiv.innerHTML += `<div><i>Бот отвечает...</i></div>`;
+      // Запрос к GPT-5Nano
+      const answer = await askGPT5Nano(input);
+      if (answer) {
+        outDiv.innerHTML += `<div><b>Бот:</b> ${answer}</div>`;
+      } else {
+        outDiv.innerHTML += `<div><b>Бот:</b> Ошибка при получении ответа.</div>`;
+      }
+      outDiv.scrollTop = outDiv.scrollHeight;
+      document.getElementById("user-input").value = "";
+    });
+  </script>
 </body>
 </html>
