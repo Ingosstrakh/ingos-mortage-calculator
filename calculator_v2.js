@@ -1,5 +1,3 @@
-// calculator_v2.js
-
 // Функция для выполнения ипотечного расчета
 function calculateLoan(loanAmount, interestRate, years) {
   const monthlyRate = interestRate / 12 / 100;
@@ -10,34 +8,26 @@ function calculateLoan(loanAmount, interestRate, years) {
 
 // Основная функция для обработки запроса клиента
 async function handleClientRequest(clientText) {
-  // Отправляем запрос в GPT-Neo для извлечения данных из текста
-  const gptResponse = await askGPTNeo(clientText);
+  // Формируем запрос для GPT-5 nano с использованием имеющихся данных
+  const context = `
+    Вопрос: ${clientText}
+    Банки и тарифы:
+    ВТБ РТ: жизнь 5000, имущество 4000, титул 3000.
+    Сбербанк: жизнь 4500, имущество 3800, титул 2900.
+    Тинькофф: жизнь 4800, имущество 3900, титул 3100.
+  `;
 
-  // Логируем ответ от GPT-Neo для диагностики
-  console.log("Ответ от GPT-Neo:", gptResponse);
+  const gptResponse = await askGPT5Nano(context); // Отправляем запрос в GPT-5 nano
 
-  // Пример обработки запроса с извлечением данных
-  // В данном случае мы ожидаем, что GPT-Neo вернет параметры для расчета
-  const loanAmount = extractNumber(gptResponse, 'сумма кредита'); // Пример извлечения суммы кредита
-  const interestRate = extractNumber(gptResponse, 'ставка');  // Пример извлечения ставки
-  const years = extractNumber(gptResponse, 'лет');  // Пример извлечения срока
+  // Логируем ответ от GPT-5
+  console.log("Ответ от GPT-5:", gptResponse);
 
-  if (!loanAmount || !interestRate || !years) {
-    return "Недостаточно данных для расчета. Пожалуйста, уточните запрос.";
-  }
-
-  // Выполняем расчет ипотечного платежа
-  const monthlyPayment = calculateLoan(loanAmount, interestRate, years);
-
-  return `Ежемесячный платеж по ипотеке: ${monthlyPayment.toFixed(2)} рублей.`;
+  // Если GPT ответил, выводим расчет
+  document.getElementById('result').innerText = gptResponse;
 }
 
-// Функция для извлечения числовых данных из текста
-function extractNumber(text, keyword) {
-  const regex = new RegExp(`(${keyword})\\s*(\\d+([\\.,]\\d+)?)`);
-  const match = text.match(regex);
-  if (match) {
-    return parseFloat(match[2].replace(',', '.')); // Возвращаем число
-  }
-  return null; // Если не нашли, возвращаем null
-}
+// Обработчик события для отправки данных
+document.getElementById('calculateButton').addEventListener('click', function() {
+  const userInput = document.getElementById('userInput').value;  // Получаем введенный текст
+  handleClientRequest(userInput);  // Обрабатываем запрос пользователя
+});
