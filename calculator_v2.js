@@ -10,16 +10,19 @@ function calculateLoan(loanAmount, interestRate, years) {
 async function handleClientRequest(clientText) {
   // Отправляем запрос в GPT-Neo для извлечения данных из текста
   const gptResponse = await askGPTNeo(clientText);
+  
+  // Проверяем, является ли ответ объектом, и преобразуем его в строку, если необходимо
+  const responseText = typeof gptResponse === 'object' ? JSON.stringify(gptResponse) : gptResponse;
 
   // Логируем ответ от GPT-Neo для диагностики
-  console.log("Ответ от GPT-Neo:", gptResponse);
+  console.log("Ответ от GPT-Neo:", responseText);
 
   // Пример обработки запроса с извлечением данных
-  const loanAmount = extractNumber(gptResponse, 'сумма кредита'); // Пример извлечения суммы кредита
-  const interestRate = extractNumber(gptResponse, 'ставка');  // Пример извлечения ставки
-  const years = extractNumber(gptResponse, 'лет');  // Пример извлечения срока
-  const risk = extractRisk(gptResponse);  // Пример извлечения риска (жизнь, имущество, титул)
-  const bank = extractBank(gptResponse);  // Пример извлечения банка
+  const loanAmount = extractNumber(responseText, 'сумма кредита'); // Пример извлечения суммы кредита
+  const interestRate = extractNumber(responseText, 'ставка');  // Пример извлечения ставки
+  const years = extractNumber(responseText, 'лет');  // Пример извлечения срока
+  const risk = extractRisk(responseText);  // Пример извлечения риска (жизнь, имущество, титул)
+  const bank = extractBank(responseText);  // Пример извлечения банка
 
   if (!loanAmount || !interestRate || !years || !risk || !bank) {
     return "Недостаточно данных для расчета. Пожалуйста, уточните запрос.";
