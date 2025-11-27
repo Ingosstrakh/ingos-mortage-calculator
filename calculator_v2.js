@@ -1,5 +1,3 @@
-// calculator_v2.js
-
 // Функция для выполнения ипотечного расчета
 function calculateLoan(loanAmount, interestRate, years) {
   const monthlyRate = interestRate / 12 / 100;
@@ -40,4 +38,15 @@ function extractNumber(text, keyword) {
     return parseFloat(match[2].replace(',', '.')); // Возвращаем число
   }
   return null; // Если не нашли, возвращаем null
+}
+
+// Функция для отправки запроса в GPT-5Nano через Puter
+async function askGPTNeo(question) {
+  try {
+    const response = await puter.ai.chat(question, { model: "gpt-5-nano" });
+    return response;  // Получаем ответ от модели
+  } catch (e) {
+    console.error("Ошибка при запросе к Puter:", e);
+    return "Ошибка при получении ответа.";
+  }
 }
