@@ -56,79 +56,57 @@
   </footer>
 
   <script>
-    // Функция для расчета с учетом тарифов
-    async function calculateTariff(bank, risk, amount, age) {
-        let tariff = 0;
-        let discount = 0;
-
-        // Применяем тарифы на основе выбранного банка и риска
-        if (risk === 'жизнь') {
-            tariff = LIFE_TARIFF_BASE.m[age] || LIFE_TARIFF_DOMRF.m[age]; // Пример для жизни
-        } else if (risk === 'имущ') {
-            tariff = PROPERTY_TARIFFS.base.flat; // Тариф на имущество
-        }
-
-        // Применяем скидку, если она есть для банка
-        const bankData = BANKS[bank];
-        if (bankData && bankData.allow_discount_life) {
-            discount = tariff * 0.1; // Например, скидка 10%
-        }
-
-        // Рассчитываем итоговый тариф
-        const finalTariff = tariff - discount;
-        return finalTariff;
+    // Сохранение данных о расчетах в локальное хранилище
+    function saveCalculationData(bank, risk, amount, result) {
+      const calculationData = { bank, risk, amount, result };
+      localStorage.setItem("calculationData", JSON.stringify(calculationData));
     }
 
-    // Функция для обработки запроса от клиента
-    async function handleClientRequest(clientText) {
-        // Извлекаем информацию из запроса
-        const parsedData = parseRequest(clientText); // Должна быть функция для разбора запроса
-        const { bank, risk, amount, age } = parsedData;
-
-        // Выполняем расчет тарифа
-        const finalTariff = await calculateTariff(bank, risk, amount, age);
-
-        // Возвращаем результат расчета
-        return `Тариф для ${bank} (${risk}): ${finalTariff.toFixed(2)} рублей.`;
+    // Использование сохраненных данных для следующего запроса
+    function getSavedCalculationData() {
+      const savedData = localStorage.getItem("calculationData");
+      return savedData ? JSON.parse(savedData) : null;
     }
-
-    // Функция для обработки текстовых запросов
-    function parseRequest(text) {
-        const bankRegex = /(\bВТБ\b|\bДом\.РФ\b|\bЮникредит\b)/i;
-        const riskRegex = /\bжизнь\b|\bимущ\b|\bтитул\b/i;
-        const amountRegex = /ост\s*(\d+(\.\d+)?)/;
-        const dateRegex = /\bкд\s*(\d{2}\.\d{2}\.\d{4})/;
-
-        const bank = text.match(bankRegex)?.[0];
-        const risk = text.match(riskRegex)?.[0];
-        const amount = text.match(amountRegex)?.[1];
-        const creditDate = text.match(dateRegex)?.[1];
-
-        return { bank, risk, amount, creditDate };
-    }
-
-    // Вставляем обработчик для кнопки "Запросить расчет"
-    document.getElementById("calculate-btn").addEventListener("click", async () => {
-        const rawText = document.getElementById("input-area").value.trim();
-        if (rawText) {
-            const response = await handleClientRequest(rawText);
-            document.getElementById("gptResponse").innerHTML = response;
-        } else {
-            document.getElementById("gptResponse").innerHTML = "Пожалуйста, введите запрос для расчета.";
-        }
-    });
 
     // Функция для отправки запроса в GPT-5Nano через Puter
-    async function askGPT5Nano(question) {
-        try {
-            // Используем Puter.js для отправки запроса
-            const response = await puter.ai.chat(question, { model: "gpt-5-nano" });
-            return response;  // Получаем ответ от модели
-        } catch (e) {
-            console.error("Ошибка при запросе к Puter:", e);
-            return "Ошибка при получении ответа.";
-        }
+    async function askGPTNeo(question) {
+      try {
+        // Получаем контекст из локального хранилища
+        const previousCalculation = getSavedCalculationData();
+        const context = previousCalculation ? `Ранее рассматривались данные: банк ${previousCalculation.bank}, риск ${previousCalculation.risk}, сумма ${previousCalculation.amount}, результат ${previousCalculation.result}. ` : "";
+        
+        // Строим полный запрос с контекстом
+        const fullQuestion = context + question;
+
+        // Отправляем запрос в Puter.ai для обработки
+        const response = await puter.ai.chat(fullQuestion, { model: "gpt-5-nano" });
+
+        // Сохраняем контекст и расчет для следующего запроса
+        saveCalculationData(previousCalculation ? previousCalculation.bank : "Неизвестный банк", 
+                            previousCalculation ? previousCalculation.risk : "Неизвестный риск", 
+                            previousCalculation ? previousCalculation.amount : 0, 
+                            response);
+
+        return response; // Ответ от модели
+      } catch (error) {
+        console.error("Ошибка при запросе к Puter:", error);
+        return "Ошибка при получении ответа.";
+      }
     }
+
+    // Обработка запроса и вывод ответа
+    async function handleClientRequest() {
+      const clientText = document.getElementById("input-area").value.trim();
+      if (clientText) {
+        const response = await askGPTNeo(clientText);
+        document.getElementById("gptResponse").innerText = response;
+      } else {
+        document.getElementById("gptResponse").innerText = "Пожалуйста, введите запрос для расчета.";
+      }
+    }
+
+    // Добавляем обработчик на кнопку
+    document.getElementById("calculate-btn").addEventListener("click", handleClientRequest);
   </script>
 </body>
 </html>
