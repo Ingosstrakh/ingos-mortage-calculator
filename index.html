@@ -1,26 +1,31 @@
+<!DOCTYPE html>
+<html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ипотечный калькулятор</title>
-
-  <!-- Подключаем данные -->
-  <script defer src="config_banks.js"></script>
-  <script defer src="tariffs_life.js"></script>
-  <script defer src="tariffs_property.js"></script>
-
-  <!-- Логика -->
-  <script defer src="parser.js"></script>
-  <script defer src="calculator_v2.js"></script>
-  <script defer src="openai.js"></script>
-
-  <!-- Подключаем Puter.js для работы с GPT-5 nano -->
-  <script src="https://js.puter.com/v2/"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ипотечный калькулятор</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div>
-    <h1>Ипотечный калькулятор</h1>
-    <textarea id="userInput" placeholder="Введите запрос"></textarea>
-    <button id="calculateButton">Запросить расчет</button>
-    <div id="result"></div>
-  </div>
+    <div class="calculator-container">
+        <h1>Ипотечный калькулятор</h1>
+        <div class="form-container">
+            <input type="text" id="inputData" placeholder="Введите данные для расчета">
+            <button id="calcBtn">Запросить расчет</button>
+        </div>
+        <div class="result">
+            <h3>Результат расчета:</h3>
+            <div id="resultDisplay">Тут будет результат</div>
+        </div>
+
+        <!-- Чат GPT -->
+        <div class="chat-container">
+            <textarea id="chatInput" placeholder="Задайте вопрос"></textarea>
+            <button id="chatBtn">Отправить вопрос</button>
+            <div id="chatDisplay">Тут будет диалог</div>
+        </div>
+    </div>
+    <script src="openai.js"></script>
+    <script src="calculator_v2.js"></script>
 </body>
+</html>
