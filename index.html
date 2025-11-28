@@ -47,5 +47,15 @@
 
     <script src="openai.js"></script>
     <script src="calculator_v2.js"></script>
+<script type="module">
+import { calculateWithGPT } from "./openai.js";
+
+document.getElementById("chatBtn").onclick = async () => {
+    const input = document.getElementById("chatInput").value;
+    const reply = await calculateWithGPT(input);
+    document.getElementById("chatDisplay").innerHTML += "<p><b>GPT:</b> " + reply + "</p>";
+};
+</script>
 </body>
 </html>
+
