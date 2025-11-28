@@ -1,112 +1,51 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ипотечный калькулятор — Ингосстрах</title>
-
-  <link rel="stylesheet" href="style.css?v=3">
-
-  <!-- Подключаем данные -->
-  <script defer src="config_banks.js?v=3"></script>
-  <script defer src="tariffs_life.js?v=3"></script>
-  <script defer src="tariffs_property.js?v=3"></script>
-
-  <!-- Логика -->
-  <script defer src="parser.js?v=3"></script>
-  <script defer src="calculator_v2.js"></script>
-
-  <!-- UI -->
-  <script defer src="ui-adapter.js?v=3"></script>
-
-  <!-- Подключаем Puter.js для работы с GPT-5Nano -->
-  <script src="https://js.puter.com/v2/"></script>
-
-  <!-- Логика GPT-5Nano -->
-  <script defer src="openai.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ипотечный калькулятор</title>
+    <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-  <header class="header">
-    <div class="header__content">
-      <img src="logo.svg" class="logo" alt="Ингосстрах">
-      <h1 class="title">Ипотечный калькулятор<br><span>Ингосстрах</span></h1>
+    <div class="calculator-container">
+        <h1>Ипотечный калькулятор</h1>
+        <div class="form-container">
+            <div class="input-group">
+                <label for="bank">Выберите банк:</label>
+                <select id="bank">
+                    <option value="VTB">ВТБ</option>
+                    <option value="Sberbank">Сбербанк</option>
+                    <option value="Gazprombank">Газпромбанк</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label for="amount">Остаток по ипотеке:</label>
+                <input type="number" id="amount" placeholder="Введите остаток">
+            </div>
+
+            <div class="input-group">
+                <label for="term">Срок ипотеки (лет):</label>
+                <input type="number" id="term" placeholder="Введите срок">
+            </div>
+
+            <button id="calcBtn">Запросить расчет</button>
+        </div>
+
+        <div class="result">
+            <h3>Результат расчета:</h3>
+            <div id="resultDisplay">Здесь будет расчет</div>
+        </div>
+
+        <div class="chat-container">
+            <h2>Чат с расчетным помощником</h2>
+            <textarea id="chatInput" placeholder="Задайте вопрос..."></textarea>
+            <button id="chatBtn">Отправить вопрос</button>
+            <div id="chatDisplay">Тут будет диалог</div>
+        </div>
     </div>
-  </header>
 
-  <main class="container">
-    <section class="card premium-card">
-      <h2>Интеллектуальный парсер</h2>
-      
-      <!-- Поле для ввода запроса от клиента -->
-      <textarea id="input-area" class="input-area" placeholder="Введите запрос для калькулятора"></textarea>
-      
-      <button id="calculate-btn" class="btn-primary">Запросить расчет</button>
-    </section>
-
-    <section class="card output-card">
-      <h2>Результат расчёта</h2>
-      <!-- Вывод результата (ответ GPT-Neo) -->
-      <div id="gptResponse" class="output"></div>
-    </section>
-  </main>
-
-  <footer class="footer">
-    <p>© Ингосстрах — ипотечный калькулятор</p>
-  </footer>
-
-  <script>
-    // Сохранение данных о расчетах в локальное хранилище
-    function saveCalculationData(bank, risk, amount, result) {
-      const calculationData = { bank, risk, amount, result };
-      localStorage.setItem("calculationData", JSON.stringify(calculationData));
-    }
-
-    // Использование сохраненных данных для следующего запроса
-    function getSavedCalculationData() {
-      const savedData = localStorage.getItem("calculationData");
-      return savedData ? JSON.parse(savedData) : null;
-    }
-
-    // Функция для отправки запроса в GPT-5Nano через Puter
-    async function askGPTNeo(question) {
-      try {
-        // Получаем контекст из локального хранилища
-        const previousCalculation = getSavedCalculationData();
-        const context = previousCalculation ? `Ранее рассматривались данные: банк ${previousCalculation.bank}, риск ${previousCalculation.risk}, сумма ${previousCalculation.amount}, результат ${previousCalculation.result}. ` : "";
-        
-        // Строим полный запрос с контекстом
-        const fullQuestion = context + question;
-
-        // Отправляем запрос в Puter.ai для обработки
-        const response = await puter.ai.chat(fullQuestion, { model: "gpt-5-nano" });
-
-        // Сохраняем контекст и расчет для следующего запроса
-        saveCalculationData(previousCalculation ? previousCalculation.bank : "Неизвестный банк", 
-                            previousCalculation ? previousCalculation.risk : "Неизвестный риск", 
-                            previousCalculation ? previousCalculation.amount : 0, 
-                            response);
-
-        return response; // Ответ от модели
-      } catch (error) {
-        console.error("Ошибка при запросе к Puter:", error);
-        return "Ошибка при получении ответа.";
-      }
-    }
-
-    // Обработка запроса и вывод ответа
-    async function handleClientRequest() {
-      const clientText = document.getElementById("input-area").value.trim();
-      if (clientText) {
-        const response = await askGPTNeo(clientText);
-        document.getElementById("gptResponse").innerText = response;
-      } else {
-        document.getElementById("gptResponse").innerText = "Пожалуйста, введите запрос для расчета.";
-      }
-    }
-
-    // Добавляем обработчик на кнопку
-    document.getElementById("calculate-btn").addEventListener("click", handleClientRequest);
-  </script>
+    <script src="openai.js"></script>
+    <script src="calculator_v2.js"></script>
 </body>
 </html>
