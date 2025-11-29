@@ -1,101 +1,240 @@
-// Функция для выполнения ипотечного расчета
-function calculateLoan(loanAmount, interestRate, years) {
-  const monthlyRate = interestRate / 12 / 100;
-  const numberOfPayments = years * 12;
-  const monthlyPayment = loanAmount * monthlyRate / (1 - Math.pow(1 + monthlyRate, -numberOfPayments));
-  return monthlyPayment;
-}
+// calculator_v2.js
 
 // Основная функция для обработки запроса клиента
-async function handleClientRequest(clientText) {
-  // Отправляем запрос в GPT-Neo для извлечения данных из текста
-  const gptResponse = await askGPTNeo(clientText);
-  
-  // Проверяем, является ли ответ объектом, и преобразуем его в строку, если необходимо
-  const responseText = typeof gptResponse === 'object' ? JSON.stringify(gptResponse) : gptResponse;
-
-  // Логируем ответ от GPT-Neo для диагностики
-  console.log("Ответ от GPT-Neo:", responseText);
-
-  // Пример обработки запроса с извлечением данных
-  const loanAmount = extractNumber(responseText, 'сумма кредита'); // Пример извлечения суммы кредита
-  const interestRate = extractNumber(responseText, 'ставка');  // Пример извлечения ставки
-  const years = extractNumber(responseText, 'лет');  // Пример извлечения срока
-  const risk = extractRisk(responseText);  // Пример извлечения риска (жизнь, имущество, титул)
-  const bank = extractBank(responseText);  // Пример извлечения банка
-
-  if (!loanAmount || !interestRate || !years || !risk || !bank) {
-    return "Недостаточно данных для расчета. Пожалуйста, уточните запрос.";
-  }
-
-  // Выполняем расчет ипотечного платежа
-  const finalTariff = await calculateTariff(bank, risk, loanAmount, interestRate, years);
-
-  return `Ежемесячный платеж по ипотеке для банка ${bank} (${risk}): ${finalTariff.toFixed(2)} рублей.`;
-}
-
-// Функция для извлечения числовых данных из текста
-function extractNumber(text, keyword) {
-  // Убедимся, что text это строка
-  if (typeof text !== 'string') {
-    text = String(text); // Преобразуем в строку
-  }
-
-  const regex = new RegExp(`(${keyword})\\s*(\\d+([\\.,]\\d+)?)`);
-  const match = text.match(regex);
-  
-  if (match) {
-    return parseFloat(match[2].replace(',', '.')); // Возвращаем число
-  }
-  return null; // Если не нашли, возвращаем null
-}
-
-// Функция для извлечения риска (жизнь, имущество, титул)
-function extractRisk(text) {
-  const riskRegex = /\bжизнь\b|\bимущ\b|\bтитул\b/i;
-  const match = text.match(riskRegex);
-  return match ? match[0] : null;
-}
-
-// Функция для извлечения банка
-function extractBank(text) {
-  const bankRegex = /(\bВТБ\b|\bДом\.РФ\b|\bЮникредит\b)/i;
-  const match = text.match(bankRegex);
-  return match ? match[0] : null;
-}
-
-// Функция для расчета тарифов с учетом банка, риска, суммы, ставки и срока
-async function calculateTariff(bank, risk, loanAmount, interestRate, years) {
-  let tariff = 0;
-  let discount = 0;
-
-  // Определяем тарифы на основе риска и банка
-  if (risk === 'жизнь') {
-    tariff = LIFE_TARIFF_BASE.m[loanAmount] || LIFE_TARIFF_DOMRF.m[loanAmount]; // Пример для жизни
-  } else if (risk === 'имущ') {
-    tariff = PROPERTY_TARIFFS.base.flat; // Тариф на имущество
-  } else if (risk === 'титул') {
-    tariff = TITLE_TARIFFS.base.flat; // Тариф на титул (пример)
-  }
-
-  // Применяем скидку для определенного банка
-  const bankData = BANKS[bank];
-  if (bankData && bankData.allow_discount_life) {
-    discount = tariff * 0.1; // Пример скидки 10%
-  }
-
-  // Рассчитываем итоговый тариф
-  const finalTariff = tariff - discount;
-  return finalTariff;
-}
-
-// Функция для отправки запроса в GPT-5Nano через Puter
-async function askGPTNeo(question) {
+function handleClientRequest(clientText) {
   try {
-    const response = await puter.ai.chat(question, { model: "gpt-5-nano" });
-    return response;  // Ответ от модели
-  } catch (e) {
-    console.error("Ошибка при запросе к Puter:", e);
-    return "Ошибка при получении ответа.";
+    // Парсим текст с помощью parseTextToObject
+    const parsedData = parseTextToObject(clientText);
+
+    console.log("Разобранные данные:", parsedData);
+
+    // Проверяем наличие основных данных
+    if (!parsedData.bank) {
+      return "Не удалось определить банк. Пожалуйста, укажите банк в запросе.";
+    }
+
+    if (!parsedData.osz) {
+      return "Не удалось определить сумму кредита (остаток). Пожалуйста, укажите остаток долга.";
+    }
+
+    // Проверяем, есть ли риски для расчета
+    const hasRisks = parsedData.risks.life || parsedData.risks.property || parsedData.risks.titul;
+    if (!hasRisks) {
+      return "Не удалось определить тип страхования. Укажите 'жизнь', 'имущество' или 'титул'.";
+    }
+
+    // Выполняем расчеты
+    const result = performCalculations(parsedData);
+
+    return result;
+  } catch (error) {
+    console.error("Ошибка в handleClientRequest:", error);
+    return "Произошла ошибка при обработке запроса: " + error.message;
   }
+}
+
+// Функция выполнения всех расчетов
+function performCalculations(data) {
+  const bankConfig = window.BANKS[data.bank];
+  if (!bankConfig) {
+    return `Банк "${data.bank}" не найден в конфигурации.`;
+  }
+
+  let output = `<b>Банк:</b> ${data.bank}<br>`;
+  output += `<b>Остаток долга:</b> ${data.osz.toLocaleString('ru-RU')} ₽<br><br>`;
+
+  // Расчет страховой суммы с надбавкой
+  let insuranceAmount = data.osz;
+  if (bankConfig.add_percent && bankConfig.add_percent > 0) {
+    const markup = data.osz * (bankConfig.add_percent / 100);
+    insuranceAmount = data.osz + markup;
+    output += `<b>Надбавка ${bankConfig.add_percent}%:</b> ${markup.toLocaleString('ru-RU')} ₽<br>`;
+    output += `<b>Страховая сумма:</b> ${insuranceAmount.toLocaleString('ru-RU')} ₽<br><br>`;
+  } else if (bankConfig.add_percent === null) {
+    output += `<b>Внимание:</b> Для этого банка надбавка вводится вручную клиентом<br><br>`;
+  } else {
+    output += `<b>Страховая сумма:</b> ${insuranceAmount.toLocaleString('ru-RU')} ₽<br><br>`;
+  }
+
+  let totalPremium = 0;
+  const calculations = [];
+
+  // Расчет страхования жизни
+  if (data.risks.life) {
+    const lifeResult = calculateLifeInsurance(data, bankConfig, insuranceAmount);
+    if (lifeResult) {
+      calculations.push(lifeResult);
+      totalPremium += lifeResult.total;
+    }
+  }
+
+  // Расчет страхования имущества
+  if (data.risks.property) {
+    const propertyResult = calculatePropertyInsurance(data, bankConfig, insuranceAmount);
+    if (propertyResult) {
+      calculations.push(propertyResult);
+      totalPremium += propertyResult.total;
+    }
+  }
+
+  // Расчет титула
+  if (data.risks.titul) {
+    const titleResult = calculateTitleInsurance(insuranceAmount);
+    calculations.push(titleResult);
+    totalPremium += titleResult.total;
+  }
+
+  // Формируем вывод
+  calculations.forEach(calc => {
+    output += calc.output;
+  });
+
+  output += `<hr><b>ИТОГО страховая премия:</b> ${totalPremium.toLocaleString('ru-RU')} ₽`;
+
+  return output;
+}
+
+// Расчет страхования жизни
+function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
+  if (!data.borrowers || data.borrowers.length === 0) {
+    return null;
+  }
+
+  let output = `<b>Страхование жизни:</b><br>`;
+  let totalPremium = 0;
+
+  // Определяем тарифы в зависимости от банка
+  let tariffTable;
+  if (data.bank === "Дом.РФ") {
+    tariffTable = window.LIFE_TARIFF_DOMRF || LIFE_TARIFF_DOMRF;
+  } else if (data.bank === "РСХБ") {
+    tariffTable = window.LIFE_TARIFF_RSHB_LOSS || LIFE_TARIFF_RSHB_LOSS;
+  } else {
+    tariffTable = window.LIFE_TARIFF_BASE || LIFE_TARIFF_BASE;
+  }
+
+  data.borrowers.forEach((borrower, index) => {
+    if (!borrower.age || !borrower.gender) {
+      output += `&nbsp;&nbsp;Заемщик ${index + 1}: недостаточно данных (возраст/пол)<br>`;
+      return;
+    }
+
+    let tariff;
+    if (data.bank === "РСХБ") {
+      // Для РСХБ тарифы по индексу возраста (18-64 лет)
+      const ageIndex = Math.max(0, Math.min(borrower.age - 18, tariffTable[borrower.gender].length - 1));
+      tariff = tariffTable[borrower.gender][ageIndex];
+    } else {
+      // Для остальных банков тарифы по возрасту
+      tariff = tariffTable[borrower.gender][borrower.age];
+    }
+
+    if (!tariff) {
+      output += `&nbsp;&nbsp;Заемщик ${index + 1}: тариф для возраста ${borrower.age} не найден<br>`;
+      return;
+    }
+
+    const shareAmount = insuranceAmount * (borrower.share / 100);
+    const premium = shareAmount * (tariff / 100);
+
+    // Применяем скидку 25%, если разрешено банком
+    let discountedPremium = premium;
+    let discountApplied = false;
+    if (bankConfig.allow_discount_life) {
+      discountedPremium = premium * 0.75; // 25% скидка = умножить на 0.75
+      discountApplied = true;
+    }
+
+    output += `&nbsp;&nbsp;Заемщик ${index + 1} (${borrower.gender === 'm' ? 'муж.' : 'жен.'}, ${borrower.age} лет, ${borrower.share}%):<br>`;
+    output += `&nbsp;&nbsp;&nbsp;&nbsp;Тариф: ${tariff.toFixed(3)}%<br>`;
+    output += `&nbsp;&nbsp;&nbsp;&nbsp;Страховая сумма: ${shareAmount.toLocaleString('ru-RU')} ₽<br>`;
+    output += `&nbsp;&nbsp;&nbsp;&nbsp;Премия: ${premium.toFixed(2)} ₽<br>`;
+    if (discountApplied) {
+      output += `&nbsp;&nbsp;&nbsp;&nbsp;Со скидкой 25%: ${discountedPremium.toFixed(2)} ₽<br>`;
+    }
+    output += `<br>`;
+
+    totalPremium += discountedPremium;
+  });
+
+  return {
+    output: output,
+    total: totalPremium
+  };
+}
+
+// Расчет страхования имущества
+function calculatePropertyInsurance(data, bankConfig, insuranceAmount) {
+  // Определяем тип объекта
+  let objectType = 'flat'; // по умолчанию квартира
+
+  if (data.objectType === 'townhouse') {
+    objectType = 'townhouse';
+  } else if (data.objectType === 'house') {
+    if (data.material === 'wood') {
+      objectType = 'house_wood';
+    } else {
+      objectType = 'house_brick';
+    }
+  }
+
+  // Получаем тариф
+  const tariff = (window.getPropertyTariff || getPropertyTariff)(data.bank, objectType);
+  if (!tariff) {
+    return {
+      output: `<b>Страхование имущества:</b> тариф для типа объекта не найден<br><br>`,
+      total: 0
+    };
+  }
+
+  const premium = insuranceAmount * (tariff / 100);
+
+  // Применяем скидку 10%, если разрешено банком
+  let discountedPremium = premium;
+  let discountApplied = false;
+  if (bankConfig.allow_discount_property) {
+    discountedPremium = premium * 0.9; // 10% скидка = умножить на 0.9
+    discountApplied = true;
+  }
+
+  let output = `<b>Страхование имущества (${getObjectTypeName(objectType)}):</b><br>`;
+  output += `&nbsp;&nbsp;Тариф: ${tariff.toFixed(3)}%<br>`;
+  output += `&nbsp;&nbsp;Страховая сумма: ${insuranceAmount.toLocaleString('ru-RU')} ₽<br>`;
+  output += `&nbsp;&nbsp;Премия: ${premium.toFixed(2)} ₽<br>`;
+  if (discountApplied) {
+    output += `&nbsp;&nbsp;Со скидкой 10%: ${discountedPremium.toFixed(2)} ₽<br>`;
+  }
+  output += `<br>`;
+
+  return {
+    output: output,
+    total: discountedPremium
+  };
+}
+
+// Расчет страхования титула
+function calculateTitleInsurance(insuranceAmount) {
+  const tariff = 0.2; // 0.2% для всех банков
+  const premium = insuranceAmount * (tariff / 100);
+
+  let output = `<b>Страхование титула:</b><br>`;
+  output += `&nbsp;&nbsp;Тариф: ${tariff.toFixed(3)}%<br>`;
+  output += `&nbsp;&nbsp;Страховая сумма: ${insuranceAmount.toLocaleString('ru-RU')} ₽<br>`;
+  output += `&nbsp;&nbsp;Премия: ${premium.toFixed(2)} ₽<br><br>`;
+
+  return {
+    output: output,
+    total: premium
+  };
+}
+
+// Вспомогательная функция для названия типа объекта
+function getObjectTypeName(type) {
+  const names = {
+    'flat': 'квартира',
+    'townhouse': 'таунхаус',
+    'house_brick': 'дом кирпичный',
+    'house_wood': 'дом деревянный'
+  };
+  return names[type] || type;
 }
