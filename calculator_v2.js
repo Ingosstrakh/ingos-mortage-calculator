@@ -63,6 +63,7 @@ function performCalculations(data) {
   if (data.risks.life) {
     const lifeResult = calculateLifeInsurance(data, bankConfig, insuranceAmount);
     if (lifeResult) {
+      lifeResult.type = 'life';
       calculations.push(lifeResult);
       totalPremium += lifeResult.total;
     }
@@ -72,6 +73,7 @@ function performCalculations(data) {
   if (data.risks.property) {
     const propertyResult = calculatePropertyInsurance(data, bankConfig, insuranceAmount);
     if (propertyResult) {
+      propertyResult.type = 'property';
       calculations.push(propertyResult);
       totalPremium += propertyResult.total;
     }
@@ -80,16 +82,55 @@ function performCalculations(data) {
   // Расчет титула
   if (data.risks.titul) {
     const titleResult = calculateTitleInsurance(insuranceAmount);
+    titleResult.type = 'title';
     calculations.push(titleResult);
     totalPremium += titleResult.total;
   }
 
-  // Формируем вывод
+  // Формируем вывод в новом формате
+  let totalWithoutDiscount = 0;
+  let totalWithDiscount = 0;
+  let hasAnyDiscount = false;
+
+  // Находим результаты расчетов
+  const lifeResult = calculations.find(calc => calc.type === 'life');
+  const propertyResult = calculations.find(calc => calc.type === 'property');
+  const titleResult = calculations.find(calc => calc.type === 'title');
+
+  // Собираем итоговые суммы
   calculations.forEach(calc => {
-    output += calc.output;
+    totalWithoutDiscount += calc.totalWithoutDiscount || calc.total;
+    totalWithDiscount += calc.total;
+    if (calc.hasDiscount) hasAnyDiscount = true;
   });
 
-  output += `<hr><b>ИТОГО страховая премия:</b> ${totalPremium.toLocaleString('ru-RU')} ₽`;
+  // Вывод результатов
+  if (data.risks.property && propertyResult) {
+    if (propertyResult.hasDiscount) {
+      output += `Имущество ${propertyResult.totalWithoutDiscount.toLocaleString('ru-RU')} Со скидкой ${propertyResult.total.toLocaleString('ru-RU')}<br>`;
+    } else {
+      output += `Имущество ${propertyResult.total.toLocaleString('ru-RU')}<br>`;
+    }
+  }
+
+  if (data.risks.life && lifeResult) {
+    if (lifeResult.hasDiscount) {
+      output += `жизнь заемщик ${lifeResult.totalWithoutDiscount.toLocaleString('ru-RU')} Со скидкой ${lifeResult.total.toLocaleString('ru-RU')}<br>`;
+    } else {
+      output += `жизнь заемщик ${lifeResult.total.toLocaleString('ru-RU')}<br>`;
+    }
+  }
+
+  if (data.risks.titul && titleResult) {
+    output += `титул ${titleResult.total.toLocaleString('ru-RU')}<br>`;
+  }
+
+  // Итого
+  if (hasAnyDiscount) {
+    output += `ИТОГО тариф/ взнос ${totalWithoutDiscount.toLocaleString('ru-RU')} Со скидкой ${totalWithDiscount.toLocaleString('ru-RU')}`;
+  } else {
+    output += `ИТОГО тариф/ взнос ${totalWithDiscount.toLocaleString('ru-RU')}`;
+  }
 
   return output;
 }
@@ -100,8 +141,9 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
     return null;
   }
 
-  let output = `<b>Страхование жизни:</b><br>`;
   let totalPremium = 0;
+  let totalPremiumWithDiscount = 0;
+  let hasDiscount = bankConfig.allow_discount_life;
 
   // Определяем тарифы в зависимости от банка
   let tariffTable;
@@ -115,8 +157,7 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
 
   data.borrowers.forEach((borrower, index) => {
     if (!borrower.age || !borrower.gender) {
-      output += `&nbsp;&nbsp;Заемщик ${index + 1}: недостаточно данных (возраст/пол)<br>`;
-      return;
+      return null;
     }
 
     let tariff;
@@ -130,34 +171,23 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
     }
 
     if (!tariff) {
-      output += `&nbsp;&nbsp;Заемщик ${index + 1}: тариф для возраста ${borrower.age} не найден<br>`;
-      return;
+      return null;
     }
 
     const shareAmount = insuranceAmount * (borrower.share / 100);
     const premium = shareAmount * (tariff / 100);
 
-    // Применяем скидку 25%, если разрешено банком
-    let discountedPremium = premium;
-    let discountApplied = false;
-    if (bankConfig.allow_discount_life) {
-      discountedPremium = premium * 0.75; // 25% скидка = умножить на 0.75
-      discountApplied = true;
-    }
+    totalPremium += premium;
 
-    // Клиентоориентированный вывод без технических деталей
-    if (data.borrowers.length === 1) {
-      output += `&nbsp;&nbsp;${discountedPremium.toLocaleString('ru-RU')} ₽<br>`;
-    } else {
-      output += `&nbsp;&nbsp;Заемщик ${index + 1}: ${discountedPremium.toLocaleString('ru-RU')} ₽<br>`;
+    if (hasDiscount) {
+      totalPremiumWithDiscount += premium * 0.75; // 25% скидка
     }
-
-    totalPremium += discountedPremium;
   });
 
   return {
-    output: output,
-    total: totalPremium
+    total: hasDiscount ? totalPremiumWithDiscount : totalPremium,
+    totalWithoutDiscount: totalPremium,
+    hasDiscount: hasDiscount
   };
 }
 
@@ -195,12 +225,10 @@ function calculatePropertyInsurance(data, bankConfig, insuranceAmount) {
     discountApplied = true;
   }
 
-  let output = `<b>Страхование имущества:</b><br>`;
-  output += `&nbsp;&nbsp;${discountedPremium.toLocaleString('ru-RU')} ₽<br><br>`;
-
   return {
-    output: output,
-    total: discountedPremium
+    total: discountedPremium,
+    totalWithoutDiscount: premium,
+    hasDiscount: discountApplied
   };
 }
 
@@ -209,12 +237,10 @@ function calculateTitleInsurance(insuranceAmount) {
   const tariff = 0.2; // 0.2% для всех банков
   const premium = insuranceAmount * (tariff / 100);
 
-  let output = `<b>Страхование титула:</b><br>`;
-  output += `&nbsp;&nbsp;${premium.toLocaleString('ru-RU')} ₽<br><br>`;
-
   return {
-    output: output,
-    total: premium
+    total: premium,
+    totalWithoutDiscount: premium,
+    hasDiscount: false
   };
 }
 
