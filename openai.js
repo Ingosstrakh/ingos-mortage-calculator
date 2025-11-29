@@ -1,63 +1,20 @@
-// -----------------------
-// ЗАГРУЗКА ТАРИФОВ
-// -----------------------
-import { banksConfig } from "./config_banks.js";
-import { lifeTariffs } from "./tariffs_life.js";
-import { propertyTariffs } from "./tariffs_property.js";
+// openai.js
 
-// -----------------------
-// GPT-5 Nano через PUTER
-// -----------------------
-async function askGPT5(prompt) {
-    const proxy = "https://cors-anywhere.herokuapp.com/";
-    const url = "https://api.puter.com/v1/chat/completions";
+// Функция для отправки запроса в Hugging Face API и получения ответа от GPT-Neo
+async function askGPTNeo(question) {
+  const apiKey = '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';  // Вставьте сюда ваш API ключ в кавычках
 
-    const body = {
-        model: "gpt-5-nano",
-        messages: [{ role: "user", content: prompt }],
-    };
+  const response = await fetch('https://api-inference.huggingface.co/models/EleutherAI/gpt-neo-2.7B', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ inputs: question }),
+  });
 
-    const res = await fetch(proxy + url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
-    });
+  const data = await response.json();
+  console.log(data);  // Выводим ответ от GPT-Neo для отладки
 
-    const data = await res.json();
-
-    if (!data.choices) return "Ошибка GPT: " + JSON.stringify(data);
-
-    return data.choices[0].message.content;
-}
-
-// -----------------------
-// ОСНОВНАЯ ФУНКЦИЯ РАСЧЁТА
-// -----------------------
-export async function calculateWithGPT(userInput) {
-    const payload = `
-Ты — страховой расчетчик. 
-
-У тебя есть ТРИ набора данных:
-
-1) Надбавки и особенности банков:
-${JSON.stringify(banksConfig, null, 2)}
-
-2) Тарифы по страхованию жизни:
-${JSON.stringify(lifeTariffs, null, 2)}
-
-3) Тарифы по имуществу / титулу:
-${JSON.stringify(propertyTariffs, null, 2)}
-
------------------------------------------
-ЗАДАЧА: рассчитать страховку ПОЛНОСТЬЮ.
-Если данных мало — задавай уточняющий вопрос.
-Если данных достаточно — дай итоговую цену.
-Пиши чётко, по делу.
------------------------------------------
-
-Ввод пользователя:
-${userInput}
-    `;
-
-    return await askGPT5(payload);
+  return data[0].generated_text.trim(); // Возвращаем сгенерированный текст от GPT-Neo
 }
