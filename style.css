@@ -335,163 +335,130 @@ body {
 }
 
 /* Адаптивность */
-/* Чат с Grok AI */
-.chat-section {
-  margin-top: 60px;
-  padding: 40px 0;
-  background: #f8f9fa;
-}
-
-.chat-container {
+/* Единый ИИ интерфейс */
+.ai-calculator {
   background: white;
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   overflow: hidden;
-  max-width: 800px;
-  margin: 0 auto;
+  margin-bottom: 60px;
 }
 
-.chat__title {
-  font-size: 24px;
+.ai-calculator__header {
+  background: linear-gradient(135deg, #0056b3 0%, #003d82 100%);
+  color: white;
+  padding: 40px 30px;
+  text-align: center;
+}
+
+.ai-calculator__title {
+  font-size: 28px;
   font-weight: 600;
-  color: #333;
-  text-align: center;
-  margin: 30px 0 10px;
+  margin: 0 0 10px;
 }
 
-.chat__subtitle {
+.ai-calculator__subtitle {
   font-size: 16px;
-  color: #666;
-  text-align: center;
-  margin-bottom: 30px;
-  padding: 0 30px;
+  margin: 0;
+  opacity: 0.9;
 }
 
-.chat__window {
-  border-top: 1px solid #e1e5e9;
+.ai-chat {
+  padding: 0;
+}
+
+.ai-chat__messages {
+  height: 500px;
+  overflow-y: auto;
+  padding: 30px;
+  background: #fafbfc;
   border-bottom: 1px solid #e1e5e9;
 }
 
-.chat__messages {
-  height: 400px;
-  overflow-y: auto;
-  padding: 20px;
-  background: #fafbfc;
-}
-
-.message {
+.ai-chat__input-container {
   display: flex;
-  gap: 12px;
-  margin-bottom: 20px;
-  align-items: flex-start;
-}
-
-.message--user {
-  flex-direction: row-reverse;
-}
-
-.message--user .message__content {
-  background: #0056b3;
-  color: white;
-}
-
-.message--assistant .message__avatar {
-  background: #10a37f;
-  color: white;
-}
-
-.message__avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  flex-shrink: 0;
-  background: #0056b3;
-  color: white;
-}
-
-.message__content {
+  gap: 15px;
+  padding: 30px;
   background: white;
-  padding: 12px 16px;
-  border-radius: 18px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  max-width: 70%;
+  border-top: 1px solid #e1e5e9;
 }
 
-.message__text {
-  line-height: 1.4;
-  word-wrap: break-word;
-}
-
-.chat__input-container {
-  display: flex;
-  gap: 10px;
-  padding: 20px;
-  background: white;
-}
-
-.chat__input {
+.ai-chat__input {
   flex: 1;
-  padding: 12px 16px;
+  padding: 16px 20px;
   border: 2px solid #e1e5e9;
-  border-radius: 24px;
+  border-radius: 28px;
   font-size: 16px;
   font-family: 'Roboto', sans-serif;
   outline: none;
   transition: border-color 0.3s ease;
 }
 
-.chat__input:focus {
+.ai-chat__input:focus {
   border-color: #0056b3;
 }
 
-.chat__send-btn {
-  padding: 12px 24px;
+.ai-chat__send-btn {
+  padding: 16px 32px;
   background: #0056b3;
   color: white;
   border: none;
-  border-radius: 24px;
+  border-radius: 28px;
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.3s ease;
+  transition: all 0.3s ease;
+  white-space: nowrap;
 }
 
-.chat__send-btn:hover {
+.ai-chat__send-btn:hover {
   background: #003d82;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 86, 179, 0.3);
 }
 
-.chat__send-btn:disabled {
+.ai-chat__send-btn:disabled {
   background: #ccc;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
-.chat__suggestions {
-  padding: 20px;
+.ai-chat__suggestions {
+  padding: 25px 30px;
   background: #f8f9fa;
+  border-top: 1px solid #e1e5e9;
+}
+
+.suggestions-row {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   justify-content: center;
-  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.suggestions-row:last-child {
+  margin-bottom: 0;
 }
 
 .suggestion-btn {
-  padding: 8px 16px;
+  padding: 10px 18px;
   background: white;
-  border: 1px solid #e1e5e9;
-  border-radius: 20px;
+  border: 2px solid #e1e5e9;
+  border-radius: 24px;
   font-size: 14px;
   color: #0056b3;
   cursor: pointer;
   transition: all 0.3s ease;
+  font-weight: 500;
 }
 
 .suggestion-btn:hover {
   background: #0056b3;
   color: white;
+  border-color: #0056b3;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 86, 179, 0.2);
 }
 
 @media (max-width: 768px) {
