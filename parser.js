@@ -219,10 +219,37 @@ function extractBorrowers(text) {
     }
   }
 
-  // 3) If still none, try to find date-like token and treat as single borrower DOB
+  // 3) Если не найдено, ищем пары "пол + дата" в любом месте текста
   if (found.length === 0) {
-    const anyDate = text.match(/(\d{1,2}\.\d{1,2}\.\d{4})/);
-    if (anyDate) found.push({ dob: anyDate[1], gender: null });
+    const patterns = [
+      /(муж|он|мужчина)[^0-9]{0,20}(\d{1,2}\.\d{1,2}\.\d{4})/ig,
+      /(жен|она|женщина)[^0-9]{0,20}(\d{1,2}\.\d{1,2}\.\d{4})/ig
+    ];
+
+    for (const pattern of patterns) {
+      const matches = Array.from(text.matchAll(pattern));
+      for (const match of matches) {
+        const gender = /муж|он|мужчина/i.test(match[1]) ? 'm' : 'f';
+        found.push({ dob: match[2], gender: gender });
+      }
+    }
+  }
+
+  // 4) Если все еще не найдено, пробуем найти одиночную дату рядом с ключевыми словами
+  if (found.length === 0) {
+    const borrowerPatterns = [
+      /(муж|он|мужчина)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/i,
+      /(жен|она|женщина)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/i
+    ];
+
+    for (const pattern of borrowerPatterns) {
+      const match = text.match(pattern);
+      if (match) {
+        const gender = /муж|он|мужчина/i.test(match[1]) ? 'm' : 'f';
+        found.push({ dob: match[2], gender: gender });
+        break; // берем только первого найденного
+      }
+    }
   }
 
   // 4) Normalize shares: if all shares undefined -> equal share
