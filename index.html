@@ -1,61 +1,238 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ипотечный калькулятор</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Калькулятор страхования ипотеки — Ингосстрах</title>
+  <meta name="description" content="Рассчитайте стоимость страхования ипотеки онлайн. Быстрый и точный расчет с учетом всех параметров.">
+
+  <link rel="stylesheet" href="style.css?v=4">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+  <!-- Подключаем данные -->
+  <script defer src="config_banks.js?v=4"></script>
+  <script defer src="tariffs_life.js?v=4"></script>
+  <script defer src="tariffs_property.js?v=4"></script>
+
+  <!-- Логика -->
+  <script defer src="parser.js?v=4"></script>
+  <script defer src="calculator_v2.js?v=4"></script>
+
+  <!-- UI -->
+  <script defer src="ui-adapter.js?v=4"></script>
 </head>
+
 <body>
-    <div class="calculator-container">
-        <h1>Ипотечный калькулятор</h1>
-        <div class="form-container">
-            <div class="input-group">
-                <label for="bank">Выберите банк:</label>
-                <select id="bank">
-                    <option value="VTB">ВТБ</option>
-                    <option value="Sberbank">Сбербанк</option>
-                    <option value="Gazprombank">Газпромбанк</option>
-                </select>
-            </div>
-
-            <div class="input-group">
-                <label for="amount">Остаток по ипотеке:</label>
-                <input type="number" id="amount" placeholder="Введите остаток">
-            </div>
-
-            <div class="input-group">
-                <label for="term">Срок ипотеки (лет):</label>
-                <input type="number" id="term" placeholder="Введите срок">
-            </div>
-
-            <button id="calcBtn">Запросить расчет</button>
-        </div>
-
-        <div class="result">
-            <h3>Результат расчета:</h3>
-            <div id="resultDisplay">Здесь будет расчет</div>
-        </div>
-
-        <div class="chat-container">
-            <h2>Чат с расчетным помощником</h2>
-            <textarea id="chatInput" placeholder="Задайте вопрос..."></textarea>
-            <button id="chatBtn">Отправить вопрос</button>
-            <div id="chatDisplay">Тут будет диалог</div>
-        </div>
+  <!-- Шапка -->
+  <header class="header">
+    <div class="header__container">
+      <div class="header__logo">
+        <img src="logo.svg" alt="Ингосстрах" class="logo">
+      </div>
+      <div class="header__title">
+        <h1>Калькулятор страхования ипотеки</h1>
+        <p>Ингосстрах</p>
+      </div>
     </div>
+  </header>
 
-    <script src="openai.js"></script>
-    <script src="calculator_v2.js"></script>
-<script type="module">
-import { calculateWithGPT } from "./openai.js";
+  <!-- Основной контент -->
+  <main class="main">
+    <div class="container">
 
-document.getElementById("chatBtn").onclick = async () => {
-    const input = document.getElementById("chatInput").value;
-    const reply = await calculateWithGPT(input);
-    document.getElementById("chatDisplay").innerHTML += "<p><b>GPT:</b> " + reply + "</p>";
-};
-</script>
+      <!-- Навигация -->
+      <nav class="nav">
+        <div class="nav__steps">
+          <div class="nav__step nav__step--active">
+            <span class="nav__step-number">1</span>
+            <span class="nav__step-text">Расчет</span>
+          </div>
+          <div class="nav__step">
+            <span class="nav__step-number">2</span>
+            <span class="nav__step-text">Оформление</span>
+          </div>
+          <div class="nav__step">
+            <span class="nav__step-number">3</span>
+            <span class="nav__step-text">Оплата</span>
+          </div>
+        </div>
+      </nav>
+
+      <!-- Калькулятор -->
+      <div class="calculator">
+
+        <!-- Форма ввода -->
+        <div class="calculator__form">
+          <h2 class="calculator__title">Расчет стоимости страхования</h2>
+
+          <div class="form__group">
+            <label for="input-area" class="form__label">Введите запрос для расчета</label>
+            <textarea
+              id="input-area"
+              class="form__textarea"
+              placeholder="Пример: ВТБ ост 5103175 муж 15.08.1965 ст 10 кд 23.11.2020 жизнь"
+              rows="4"
+            ></textarea>
+            <div class="form__hint">
+              Введите информацию о банке, сумме остатка, заемщике и типе страхования
+            </div>
+          </div>
+
+          <button id="calculate-btn" class="btn btn--primary btn--large">
+            Рассчитать стоимость
+          </button>
+        </div>
+
+        <!-- Результат -->
+        <div id="results-section" class="calculator__results" style="display: none;">
+          <h3 class="results__title">Результат расчета</h3>
+
+          <div class="results__summary">
+            <div class="summary__item">
+              <span class="summary__label">Банк-кредитор</span>
+              <span id="result-bank" class="summary__value">-</span>
+            </div>
+            <div class="summary__item">
+              <span class="summary__label">Остаток по ипотеке</span>
+              <span id="result-amount" class="summary__value">-</span>
+            </div>
+            <div class="summary__item">
+              <span class="summary__label">Что будет застраховано</span>
+              <span id="result-risks" class="summary__value">-</span>
+            </div>
+            <div class="summary__item summary__item--total">
+              <span class="summary__label">Стоимость полиса</span>
+              <span id="result-total" class="summary__value summary__value--total">-</span>
+            </div>
+          </div>
+
+          <div id="detailed-results" class="results__details">
+            <!-- Подробные результаты будут вставлены сюда -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Примеры использования -->
+      <section class="examples">
+        <h3 class="examples__title">Примеры запросов</h3>
+        <div class="examples__grid">
+          <div class="example__item">
+            <h4>Только страхование жизни</h4>
+            <code>ВТБ ост 5103175 муж 15.08.1965 ст 10 кд 23.11.2020 жизнь</code>
+          </div>
+          <div class="example__item">
+            <h4>Жизнь и имущество</h4>
+            <code>Сбер ж+им осз = 3 232 000 дом 2022 кирпич муж 08.08.1989</code>
+          </div>
+          <div class="example__item">
+            <h4>С несколькими заемщиками</h4>
+            <code>АкБарс ост 2232907 он 50% 13.04.1968 она 50% 02.05.1968 кв-ра</code>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Футер -->
+  <footer class="footer">
+    <div class="footer__container">
+      <div class="footer__content">
+        <div class="footer__logo">
+          <img src="logo.svg" alt="Ингосстрах" class="logo logo--small">
+        </div>
+        <div class="footer__info">
+          <p>© 2025 СПАО «Ингосстрах»</p>
+          <p>Лицензии ЦБ РФ: СИ №0928, СЛ №0928, ОС №0928-03, ОС №0928-04, ОС №0928-05</p>
+        </div>
+      </div>
+      <div class="footer__contact">
+        <p><strong>Телефон контакт-центра:</strong> 8 (800) 100-77-55</p>
+        <p><strong>Страховой случай:</strong> 8 (800) 100-77-55</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Обновляем UI адаптер для работы с новым интерфейсом
+    document.addEventListener("DOMContentLoaded", () => {
+      const btn = document.getElementById("calculate-btn");
+      const input = document.getElementById("input-area");
+      const resultsSection = document.getElementById("results-section");
+      const resultBank = document.getElementById("result-bank");
+      const resultAmount = document.getElementById("result-amount");
+      const resultRisks = document.getElementById("result-risks");
+      const resultTotal = document.getElementById("result-total");
+      const detailedResults = document.getElementById("detailed-results");
+
+      btn.addEventListener("click", async () => {
+        const raw = input.value.trim();
+
+        if (raw.length < 5) {
+          showError("Пожалуйста, введите корректный запрос для расчета.");
+          return;
+        }
+
+        try {
+          btn.disabled = true;
+          btn.textContent = "Рассчитываем...";
+
+          const result = handleClientRequest(raw);
+
+          // Парсим результат для отображения в новом интерфейсе
+          displayResults(result);
+
+        } catch (e) {
+          showError("Произошла ошибка при обработке запроса: " + e.message);
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "Рассчитать стоимость";
+        }
+      });
+
+      function displayResults(htmlResult) {
+        // Извлекаем данные из HTML результата
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = htmlResult;
+
+        const bankText = tempDiv.querySelector('b')?.nextSibling?.textContent || '-';
+        const amountMatch = htmlResult.match(/Остаток долга:\s*([^<]+)/);
+        const amount = amountMatch ? amountMatch[1].trim() : '-';
+
+        // Определяем риски
+        let risks = [];
+        if (htmlResult.includes('Страхование жизни')) risks.push('жизнь и здоровье');
+        if (htmlResult.includes('Страхование имущества')) risks.push('недвижимость');
+        if (htmlResult.includes('Страхование титула')) risks.push('титул');
+
+        const risksText = risks.join(', ') || '-';
+
+        // Ищем итоговую сумму
+        const totalMatch = htmlResult.match(/ИТОГО страховая премия:\s*([^<]+)/);
+        const total = totalMatch ? totalMatch[1].trim() : '-';
+
+        // Заполняем summary
+        resultBank.textContent = bankText;
+        resultAmount.textContent = amount;
+        resultRisks.textContent = risksText;
+        resultTotal.textContent = total;
+
+        // Подробные результаты
+        detailedResults.innerHTML = htmlResult;
+
+        // Показываем результаты
+        resultsSection.style.display = 'block';
+        resultsSection.scrollIntoView({ behavior: 'smooth' });
+      }
+
+      function showError(message) {
+        detailedResults.innerHTML = `<div style="color: #e74c3c; padding: 20px; background: #fdf2f2; border-radius: 8px; margin-top: 20px;">${message}</div>`;
+        resultsSection.style.display = 'block';
+      }
+
+      console.log("Интерфейс калькулятора инициализирован");
+    });
+  </script>
 </body>
 </html>
-
