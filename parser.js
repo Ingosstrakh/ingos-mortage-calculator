@@ -139,7 +139,7 @@ function findLargeNumbers(text) { const re = /(\d[\d\s.,]{3,}\d)/g;
 // попытка извлечь сумму после ключа (осз / ост / остаток)
 function extractOszByKey(text) {
   // ключи с возможной опечаткой
-  const re = /(?:осз|ост|остаток|остаток задолженности|сумма кредита|сумма)[^\d\n\r]{0,30}([\d\s\.,]{4,})/ig;
+  const re = /(?:ост|осз|остаток|остаток задолженности|сумма кредита|сумма)[^\d\n\r]{0,30}([\d\s\.,]{4,})/ig;
   const m = re.exec(text);
   if (m) {
     const n = normalizeNumber(m[1]);
@@ -381,11 +381,10 @@ function parseTextToObject(rawText) {
     }
   }
 
-  // 4) Risks detection
+  // 4) Risks detection - сначала определяем явно указанные риски
   for (const [risk, keys] of Object.entries(RISK_KEYWORDS)) {
     for (const k of keys) if (lower.includes(k)) result.risks[risk]=true;
   }
-  // If no explicit property keyword but text contains 'дом'/'квар' etc we set property true above
 
   // 5) object type
   if (/\b(таунхаус|таун)\b/i.test(text)) result.objectType = 'townhouse';
@@ -443,14 +442,14 @@ else if (/\b(дом|жилой дом|частный дом)\b/i.test(text)) res
   const hasBorrower = result.borrowers.length > 0;
   const hasProperty = result.objectType !== 'flat' || /\b(дом|кв|имущ)/i.test(text);
 
-  // Дополнительная логика: только если есть явное упоминание или заемщик с полом
-  if (hasBorrower && result.borrowers.some(b => b.gender) && !result.risks.life) {
-    // Если есть заемщик с определенным полом и жизнь не указана - добавляем жизнь
+  // Автоматическое определение рисков на основе контента
+  if (hasBorrower && !result.risks.life) {
+    // Если есть заемщик - добавляем страхование жизни
     result.risks.life = true;
   }
 
   if (hasProperty && !result.risks.property) {
-    // Если есть объект и имущество не указано - добавляем имущество
+    // Если есть объект недвижимости - добавляем страхование имущества
     result.risks.property = true;
   }
 
