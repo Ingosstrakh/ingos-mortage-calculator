@@ -64,23 +64,55 @@ body {
   padding: 0 20px;
 }
 
-/* Заголовок страницы */
-.page-header {
-  text-align: center;
+/* Навигация */
+.nav {
   margin-bottom: 40px;
 }
 
-.page-title {
-  font-size: 32px;
-  font-weight: 500;
-  color: #333;
-  margin-bottom: 10px;
+.nav__steps {
+  display: flex;
+  justify-content: center;
+  gap: 0;
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.page-subtitle {
-  font-size: 18px;
-  color: #666;
-  margin: 0;
+.nav__step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 24px;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.nav__step--active {
+  background: #0056b3;
+  color: white;
+}
+
+.nav__step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.nav__step--active .nav__step-number {
+  background: white;
+  color: #0056b3;
+}
+
+.nav__step-text {
+  font-weight: 500;
+  font-size: 14px;
 }
 
 /* Калькулятор */
@@ -296,9 +328,9 @@ body {
 
 /* Футер */
 .footer {
-  background: #f8f9fa;
-  border-top: 1px solid #e1e5e9;
-  padding: 30px 0;
+  background: #2c3e50;
+  color: white;
+  padding: 40px 0;
   margin-top: 60px;
 }
 
@@ -309,13 +341,47 @@ body {
 }
 
 .footer__content {
-  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 20px;
 }
 
-.footer__content p {
+.footer__logo {
+  flex-shrink: 0;
+}
+
+.logo--small {
+  height: 40px;
+  width: auto;
+}
+
+.footer__info {
+  flex: 1;
+  margin: 0 20px;
+}
+
+.footer__info p {
   margin: 0;
   font-size: 14px;
-  color: #666;
+  line-height: 1.5;
+  color: #bdc3c7;
+}
+
+.footer__contact {
+  text-align: right;
+}
+
+.footer__contact p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.footer__contact strong {
+  color: #ecf0f1;
 }
 
 /* Адаптивность */
@@ -350,6 +416,15 @@ body {
 
   .examples__grid {
     grid-template-columns: 1fr;
+  }
+
+  .footer__content {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .footer__contact {
+    text-align: center;
   }
 }
 
