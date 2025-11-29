@@ -221,18 +221,30 @@ function extractBorrowers(text) {
 
   // 3) Если не найдено, ищем пары "пол + дата" в любом месте текста
   if (found.length === 0) {
-    const patterns = [
-      /(муж|он|мужчина)[^0-9]{0,20}(\d{1,2}\.\d{1,2}\.\d{4})/ig,
-      /(жен|она|женщина)[^0-9]{0,20}(\d{1,2}\.\d{1,2}\.\d{4})/ig
-    ];
+    // Ищем все уникальные комбинации "пол + дата"
+    const malePattern = /(?:муж|он|мужчина)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/gi;
+    const femalePattern = /(?:жен|она|женщина)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/gi;
 
-    for (const pattern of patterns) {
-      const matches = Array.from(text.matchAll(pattern));
-      for (const match of matches) {
-        const gender = /муж|он|мужчина/i.test(match[1]) ? 'm' : 'f';
-        found.push({ dob: match[2], gender: gender });
+    const maleMatches = Array.from(text.matchAll(malePattern));
+    const femaleMatches = Array.from(text.matchAll(femalePattern));
+
+    // Обрабатываем мужские совпадения
+    maleMatches.forEach(match => {
+      const date = match[1];
+      // Проверяем, не добавлена ли уже эта дата
+      if (!found.some(f => f.dob === date)) {
+        found.push({ dob: date, gender: 'm' });
       }
-    }
+    });
+
+    // Обрабатываем женские совпадения
+    femaleMatches.forEach(match => {
+      const date = match[1];
+      // Проверяем, не добавлена ли уже эта дата
+      if (!found.some(f => f.dob === date)) {
+        found.push({ dob: date, gender: 'f' });
+      }
+    });
   }
 
   // 4) Если все еще не найдено, пробуем найти одиночную дату рядом с ключевыми словами
@@ -431,9 +443,9 @@ else if (/\b(дом|жилой дом|частный дом)\b/i.test(text)) res
   const hasBorrower = result.borrowers.length > 0;
   const hasProperty = result.objectType !== 'flat' || /\b(дом|кв|имущ)/i.test(text);
 
-  // Дополнительная логика для случаев, когда риски частично указаны
-  if (hasBorrower && !result.risks.life) {
-    // Если есть заемщик и жизнь не указана - добавляем жизнь
+  // Дополнительная логика: только если есть явное упоминание или заемщик с полом
+  if (hasBorrower && result.borrowers.some(b => b.gender) && !result.risks.life) {
+    // Если есть заемщик с определенным полом и жизнь не указана - добавляем жизнь
     result.risks.life = true;
   }
 
