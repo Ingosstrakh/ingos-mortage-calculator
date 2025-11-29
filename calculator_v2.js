@@ -145,14 +145,12 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
       discountApplied = true;
     }
 
-    output += `&nbsp;&nbsp;Заемщик ${index + 1} (${borrower.gender === 'm' ? 'муж.' : 'жен.'}, ${borrower.age} лет, ${borrower.share}%):<br>`;
-    output += `&nbsp;&nbsp;&nbsp;&nbsp;Тариф: ${tariff.toFixed(3)}%<br>`;
-    output += `&nbsp;&nbsp;&nbsp;&nbsp;Страховая сумма: ${shareAmount.toLocaleString('ru-RU')} ₽<br>`;
-    output += `&nbsp;&nbsp;&nbsp;&nbsp;Премия: ${premium.toFixed(2)} ₽<br>`;
-    if (discountApplied) {
-      output += `&nbsp;&nbsp;&nbsp;&nbsp;Со скидкой 25%: ${discountedPremium.toFixed(2)} ₽<br>`;
+    // Клиентоориентированный вывод без технических деталей
+    if (data.borrowers.length === 1) {
+      output += `&nbsp;&nbsp;${discountedPremium.toLocaleString('ru-RU')} ₽<br>`;
+    } else {
+      output += `&nbsp;&nbsp;Заемщик ${index + 1}: ${discountedPremium.toLocaleString('ru-RU')} ₽<br>`;
     }
-    output += `<br>`;
 
     totalPremium += discountedPremium;
   });
@@ -197,14 +195,8 @@ function calculatePropertyInsurance(data, bankConfig, insuranceAmount) {
     discountApplied = true;
   }
 
-  let output = `<b>Страхование имущества (${getObjectTypeName(objectType)}):</b><br>`;
-  output += `&nbsp;&nbsp;Тариф: ${tariff.toFixed(3)}%<br>`;
-  output += `&nbsp;&nbsp;Страховая сумма: ${insuranceAmount.toLocaleString('ru-RU')} ₽<br>`;
-  output += `&nbsp;&nbsp;Премия: ${premium.toFixed(2)} ₽<br>`;
-  if (discountApplied) {
-    output += `&nbsp;&nbsp;Со скидкой 10%: ${discountedPremium.toFixed(2)} ₽<br>`;
-  }
-  output += `<br>`;
+  let output = `<b>Страхование имущества:</b><br>`;
+  output += `&nbsp;&nbsp;${discountedPremium.toLocaleString('ru-RU')} ₽<br><br>`;
 
   return {
     output: output,
@@ -218,9 +210,7 @@ function calculateTitleInsurance(insuranceAmount) {
   const premium = insuranceAmount * (tariff / 100);
 
   let output = `<b>Страхование титула:</b><br>`;
-  output += `&nbsp;&nbsp;Тариф: ${tariff.toFixed(3)}%<br>`;
-  output += `&nbsp;&nbsp;Страховая сумма: ${insuranceAmount.toLocaleString('ru-RU')} ₽<br>`;
-  output += `&nbsp;&nbsp;Премия: ${premium.toFixed(2)} ₽<br><br>`;
+  output += `&nbsp;&nbsp;${premium.toLocaleString('ru-RU')} ₽<br><br>`;
 
   return {
     output: output,
