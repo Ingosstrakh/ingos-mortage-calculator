@@ -408,7 +408,7 @@ function parseTextToObject(rawText) {
 
   // Автоматическое дополнение рисков (всегда проверяем)
   // Даже если есть явные упоминания, добавляем недостающие риски автоматически
-  const hasBorrower = result.borrowers.length > 0;
+  const hasBorrowers = result.borrowers.length > 0;
   const hasProperty = result.objectType !== null || /\b(дом|кв|квартир|таун|имущ|имуществ|частный дом|жилой дом)\b/i.test(text);
 
   // Логика дополнения рисков:
@@ -416,7 +416,7 @@ function parseTextToObject(rawText) {
   // Всегда добавляем имущество, если есть объект недвижимости
   // Это работает независимо от явных упоминаний
 
-  if (hasBorrower && !result.risks.life) {
+  if (hasBorrowers && !result.risks.life) {
     result.risks.life = true;
   }
 
@@ -475,18 +475,6 @@ function parseTextToObject(rawText) {
       }
     }
   }
-
-  // Логика определения рисков:
-  // 1. Если явно указаны - используем их
-  // 2. Если есть заемщик И есть объект недвижимости - включаем оба риска (жизнь + имущество)
-  // 3. Если есть только заемщик - жизнь
-  // 4. Если есть только объект - имущество
-  // 5. Если ничего нет - ошибка
-
-  const hasBorrower = result.borrowers.length > 0;
-  const hasProperty = result.objectType !== 'flat' || /\b(дом|кв|имущ)/i.test(text);
-
-  // Автоматическое определение рисков на основе контента
 
   // 10) normalise borrowers shares if needed (ensure sum 100 unless VTB special case is required externally)
   const sumShares = result.borrowers.reduce((s,b)=>s+(b.share||0),0);
