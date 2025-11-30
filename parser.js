@@ -406,30 +406,24 @@ function parseTextToObject(rawText) {
     hasExplicitRiskMention = true;
   }
 
-  // Автоматическое определение рисков ТОЛЬКО если НЕТ явных упоминаний
-  if (!hasExplicitRiskMention) {
-    // Автоматическое определение рисков на основе контента
-    const hasBorrower = result.borrowers.length > 0;
-    const hasProperty = result.objectType !== null || /\b(дом|кв|квартир|таун|имущ|имуществ|частный дом|жилой дом)\b/i.test(text);
+  // Автоматическое дополнение рисков (всегда проверяем)
+  // Даже если есть явные упоминания, добавляем недостающие риски автоматически
+  const hasBorrower = result.borrowers.length > 0;
+  const hasProperty = result.objectType !== null || /\b(дом|кв|квартир|таун|имущ|имуществ|частный дом|жилой дом)\b/i.test(text);
 
-    // Логика определения рисков:
-    // 1. Если есть заемщик И есть объект недвижимости - включаем оба риска (жизнь + имущество)
-    // 2. Если есть только заемщик - жизнь
-    // 3. Если есть только объект - имущество
-    // 4. Если ничего нет - оставляем как есть (ошибка)
+  // Логика дополнения рисков:
+  // Всегда добавляем жизнь, если есть заемщики
+  // Всегда добавляем имущество, если есть объект недвижимости
+  // Это работает независимо от явных упоминаний
 
-    if (hasBorrower && hasProperty) {
-      result.risks.life = true;
-      result.risks.property = true;
-    } else if (hasBorrower) {
-      result.risks.life = true;
-    } else if (hasProperty) {
-      result.risks.property = true;
-    }
+  if (hasBorrower && !result.risks.life) {
+    result.risks.life = true;
   }
-  // Если есть явные упоминания - оставляем только их, без автоматического добавления
 
-  // 5) object type
+  if (hasProperty && !result.risks.property) {
+    result.risks.property = true;
+  }
+  // 5) object type (перенесено вверх для правильного определения рисков)
   if (/(таунхаус|таун)/i.test(text)) result.objectType = 'townhouse';
   else if (/(апарт|апартам|апартаменты)/i.test(text)) result.objectType = 'apartment';
   else if (/(кварти|кв[^а-яё]|кв-|кв |квар|кв-ра)/i.test(text)) result.objectType = 'flat';
@@ -439,6 +433,8 @@ function parseTextToObject(rawText) {
     else if (/(дерев|древес|каркас|брус)/i.test(text)) result.objectType = 'house_wood';
     else result.objectType = 'house_brick'; // по умолчанию кирпич
   }
+
+  // Если есть явные упоминания - оставляем только их, без автоматического добавления
 
   // 6) material
   if (/\bкирпич|блок|блоки|кирпичное\b/i.test(text)) result.material = 'brick';
