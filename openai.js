@@ -6,7 +6,10 @@ async function processClientRequest(message) {
     // Пытаемся распарсить и рассчитать
     const result = handleClientRequest(message);
 
-    if (result && result.includes('Банк:')) {
+    console.log('processClientRequest result type:', typeof result);
+    console.log('processClientRequest result:', result);
+
+    if (result && typeof result === 'string' && result.includes('Банк:')) {
       // Это успешный расчет
       return result;
     } else {
