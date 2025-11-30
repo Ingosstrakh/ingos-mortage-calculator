@@ -68,8 +68,8 @@ function normalizeNumber(s) {
   if (s === '') return null;
   let v = Number(s);
   if (isNaN(v)) return null;
-  // если дробная часть есть, округлим до рублей
-  return Math.round(v);
+  // сохраняем точность до копеек (2 знака после запятой)
+  return Math.round(v * 100) / 100;
 }
 
 // простой левенштейн для небольших строк (для устойчивого распознавания банков)
@@ -188,128 +188,82 @@ function detectBank(text) {
 // "муж, 07.01.1985", "она 25.11.1992", "он - 23.09.1975", "он - 50% - 13.04.1968"
 // также "муж 60% - 13.04.1980", "она - 50% - 02.05.1968"
 function extractBorrowers(text) {
-  const lines = text.split(/[\n\r]/g).map(l=>l.trim()).filter(Boolean);
   const found = [];
-  // 1) scan lines for keywords "он/она/муж/жен/мужчина/женщина" plus date and optional percent
-  for (const line of lines) {
-    // try to find dob
-    const dobMatch = line.match(/(\d{1,2}\.\d{1,2}\.\d{4})/);
-    const percMatch = line.match(/(\d{1,3})\s*%/);
-    let gender = null;
-    if (/\b(он|муж|мужчина)\b/i.test(line)) gender='m';
-    if (/\b(она|жен|женщина)\b/i.test(line)) gender='f';
-    if (dobMatch) {
-      found.push({ dob: dobMatch[1], gender: gender, share: percMatch ? Number(percMatch[1]) : undefined, raw: line });
-      continue;
-    }
-    // try pattern "он - 23.09.1975"
-    const short = line.match(/\b(он|она|муж|жен)\b.*?(\d{1,2}\.\d{1,2}\.\d{4})/i);
-    if (short) {
-      const g = /он|муж/i.test(short[1]) ? 'm' : 'f';
-      found.push({ dob: short[2], gender: g, share: percMatch ? Number(percMatch[1]) : undefined, raw: line });
-    }
-  }
 
-  // 2) If none found, try global search for tokens like "он - 23.09.1975" anywhere
-  if (found.length === 0) {
-    const global = Array.from(text.matchAll(/(он|она|муж|жен|мужчина|женщина)[^0-9]{0,10}(\d{1,2}\.\d{1,2}\.\d{4})/ig));
-    for (const g of global) {
-      const gender = /он|муж|мужчина/i.test(g[1]) ? 'm' : 'f';
-      found.push({ dob: g[2], gender });
-    }
-  }
+  // 1) Ищем пары "пол + дата" в любом месте текста с приоритетом
+  // Сначала проверяем полные слова, потом сокращения
+  const patterns = [
+    /(женщина)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/ig,  // Сначала женщины
+    /(мужчина)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/ig,
+    /(она)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/ig,       // Потом "она"
+    /(он)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/ig,        // Потом "он"
+    /(жен)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{1,2}\.\d{4})/ig,
+    /(муж)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/ig
+  ];
 
-  // 3) Если не найдено, ищем пары "пол + дата" в любом месте текста
-  if (found.length === 0) {
-    // Ищем все уникальные комбинации "пол + дата"
-    const malePattern = /(?:муж|он|мужчина)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/gi;
-    const femalePattern = /(?:жен|она|женщина)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/gi;
+  for (const pattern of patterns) {
+    const matches = Array.from(text.matchAll(pattern));
+    for (const match of matches) {
+      const genderWord = match[1].toLowerCase();
+      const gender = (genderWord === 'мужчина' || genderWord === 'муж' || genderWord === 'он') ? 'm' : 'f';
+      const dob = match[2];
 
-    const maleMatches = Array.from(text.matchAll(malePattern));
-    const femaleMatches = Array.from(text.matchAll(femalePattern));
-
-    // Обрабатываем мужские совпадения
-    maleMatches.forEach(match => {
-      const date = match[1];
-      // Проверяем, не добавлена ли уже эта дата
-      if (!found.some(f => f.dob === date)) {
-        found.push({ dob: date, gender: 'm' });
-      }
-    });
-
-    // Обрабатываем женские совпадения
-    femaleMatches.forEach(match => {
-      const date = match[1];
-      // Проверяем, не добавлена ли уже эта дата
-      if (!found.some(f => f.dob === date)) {
-        found.push({ dob: date, gender: 'f' });
-      }
-    });
-  }
-
-  // 4) Если все еще не найдено, пробуем найти одиночную дату рядом с ключевыми словами
-  if (found.length === 0) {
-    const borrowerPatterns = [
-      /(муж|он|мужчина)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/i,
-      /(жен|она|женщина)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/i
-    ];
-
-    for (const pattern of borrowerPatterns) {
-      const match = text.match(pattern);
-      if (match) {
-        const gender = /муж|он|мужчина/i.test(match[1]) ? 'm' : 'f';
-        found.push({ dob: match[2], gender: gender });
-        break; // берем только первого найденного
-      }
-    }
-  }
-
-  // 4) Normalize shares: if all shares undefined -> equal share
-  if (found.length > 0) {
-    const sharesDefined = found.filter(f=>f.share!==undefined).length;
-    if (sharesDefined === 0) {
-      const equal = Math.floor(100 / found.length);
-      for (let i=0;i<found.length;i++) found[i].share = (i === found.length-1) ? (100 - equal*(found.length-1)) : equal;
-    } else {
-      // if some shares defined but not summing to 100, try to normalize proportionally
-      const sum = found.reduce((s,f)=> s + (f.share||0), 0);
-      if (sum !== 100) {
-        // distribute undefined as remaining equally
-        let rem = 100 - sum;
-        const undefCount = found.filter(f=>f.share===undefined).length;
-        if (undefCount > 0) {
-          const each = Math.floor(rem / undefCount);
-          let acc = 0;
-          for (const f of found) {
-            if (f.share === undefined) {
-              f.share = each;
-              acc += each;
-            }
-          }
-          // adjust last
-          const last = found[found.length-1];
-          last.share += (100 - (sum + acc));
-        } else {
-          // all defined but not 100 -> normalize proportionally
-          for (const f of found) f.share = Math.round(f.share * 100 / sum);
+      // Проверяем, что это не дата кредитного договора (кд)
+      if (!/\bкд\b/i.test(match[0])) {
+        // Проверяем, что такая дата еще не добавлена
+        if (!found.some(f => f.dob === dob)) {
+          const percMatch = text.match(new RegExp(`(${dob}[^%]*?(\\d{1,3})%)`)); // Ищем процент рядом с датой
+          found.push({
+            dob: dob,
+            gender: gender,
+            share: percMatch ? Number(percMatch[2]) : undefined
+          });
         }
       }
     }
   }
 
-  // 5) compute age from dob if possible
-  for (const f of found) {
-    if (f.dob) {
-      const parts = f.dob.split('.');
-      if (parts.length === 3) {
-        const yyyy = Number(parts[2]);
-        f.age = CURRENT_YEAR - yyyy;
+  // 2) Если найдено несколько заемщиков, нормализуем доли
+  if (found.length > 1) {
+    // Распределяем равные доли, если не указаны
+    const withoutShare = found.filter(f => f.share === undefined);
+    if (withoutShare.length === found.length) {
+      // Все без долей - делим поровну
+      const equalShare = Math.floor(100 / found.length);
+      found.forEach((f, i) => {
+        f.share = i < found.length - 1 ? equalShare : 100 - (equalShare * (found.length - 1));
+      });
+    } else {
+      // Некоторые с долями, некоторые без - заполняем пропуски
+      const totalSpecified = found.reduce((sum, f) => sum + (f.share || 0), 0);
+      const remaining = 100 - totalSpecified;
+      const unspecifiedCount = withoutShare.length;
+      if (unspecifiedCount > 0 && remaining > 0) {
+        const equalRemaining = Math.floor(remaining / unspecifiedCount);
+        withoutShare.forEach((f, i) => {
+          f.share = i < unspecifiedCount - 1 ? equalRemaining : remaining - (equalRemaining * (unspecifiedCount - 1));
+        });
       }
     }
+  } else if (found.length === 1) {
+    // Один заемщик - 100%
+    found[0].share = found[0].share || 100;
   }
+
+  // 3) Добавляем возраст для каждого заемщика
+  found.forEach(borrower => {
+    if (borrower.dob) {
+      const parts = borrower.dob.split('.');
+      if (parts.length === 3) {
+        const yyyy = Number(parts[2]);
+        borrower.age = CURRENT_YEAR - yyyy;
+      }
+    }
+  });
 
   return found;
 }
+
 
 // -----------------------------
 // Основная функция парсинга (public)
@@ -387,10 +341,15 @@ function parseTextToObject(rawText) {
   }
 
   // 5) object type
-  if (/\b(таунхаус|таун)\b/i.test(text)) result.objectType = 'townhouse';
-  else if (/\b(апарт|апартам|апартаменты)\b/i.test(text)) result.objectType = 'apartment';
-  else if (/\b(кварти|кв[^\w]|кв-|кв |квар)\b/i.test(text)) result.objectType = 'flat';
-else if (/\b(дом|жилой дом|частный дом)\b/i.test(text)) result.objectType = 'house';
+  if (/(таунхаус|таун)/i.test(text)) result.objectType = 'townhouse';
+  else if (/(апарт|апартам|апартаменты)/i.test(text)) result.objectType = 'apartment';
+  else if (/(кварти|кв[^а-яё]|кв-|кв |квар|кв-ра)/i.test(text)) result.objectType = 'flat';
+  else if (/(дом|жилой дом|частный дом)/i.test(text)) {
+    // Определяем тип дома по материалу
+    if (/(кирпич|блок|блоки|железобетон|ж\/б)/i.test(text)) result.objectType = 'house_brick';
+    else if (/(дерев|древес|каркас|брус)/i.test(text)) result.objectType = 'house_wood';
+    else result.objectType = 'house_brick'; // по умолчанию кирпич
+  }
 
   // 6) material
   if (/\bкирпич|блок|блоки|кирпичное\b/i.test(text)) result.material = 'brick';
