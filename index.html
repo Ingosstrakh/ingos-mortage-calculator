@@ -3,24 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Калькулятор страхования ипотеки — Ингосстрах</title>
-  <meta name="description" content="Рассчитайте стоимость страхования ипотеки онлайн. Быстрый и точный расчет с учетом всех параметров.">
+  <title>Ингосстра - ипотечный парсер(калькулятор) страхования</title>
+  <meta name="description" content="Ипотечный парсер страхования - быстрый расчет стоимости ипотечного страхования">
 
-  <link rel="stylesheet" href="style.css?v=4">
+  <link rel="stylesheet" href="style.css?v=5">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 
   <!-- Подключаем данные -->
-  <script defer src="config_banks.js?v=4"></script>
-  <script defer src="tariffs_life.js?v=4"></script>
-  <script defer src="tariffs_property.js?v=4"></script>
+  <script defer src="config_banks.js?v=5"></script>
+  <script defer src="tariffs_life.js?v=5"></script>
+  <script defer src="tariffs_property.js?v=5"></script>
 
   <!-- Логика -->
-  <script defer src="parser.js?v=4"></script>
-  <script defer src="calculator_v2.js?v=4"></script>
-  <script src="openai.js?v=4"></script>
-
-  <!-- UI -->
-  <script defer src="ui-adapter.js?v=4"></script>
+  <script defer src="parser.js?v=5"></script>
+  <script defer src="calculator_v2.js?v=5"></script>
+  <script src="openai.js?v=5"></script>
 </head>
 
 <body>
@@ -28,7 +25,8 @@
   <header class="header">
     <div class="header__container">
       <div class="header__title">
-        <h1>Калькулятор страхования ипотеки</h1>
+        <h1>Ингосстра - ипотечный парсер(калькулятор) страхования</h1>
+        <p class="header__subtitle">Быстрый и точный расчет стоимости ипотечного страхования</p>
       </div>
     </div>
   </header>
@@ -37,250 +35,168 @@
   <main class="main">
     <div class="container">
 
-      <!-- Навигация -->
-      <nav class="nav">
-        <div class="nav__steps">
-          <div class="nav__step nav__step--active">
-            <span class="nav__step-number">1</span>
-            <span class="nav__step-text">Расчет</span>
-          </div>
-          <div class="nav__step">
-            <span class="nav__step-number">2</span>
-            <span class="nav__step-text">Оформление</span>
-          </div>
-          <div class="nav__step">
-            <span class="nav__step-number">3</span>
-            <span class="nav__step-text">Оплата</span>
-          </div>
-        </div>
-      </nav>
+      <!-- Раздел расчета -->
+      <section class="calculation-section">
+        <div class="calculation-card">
+          <h2>📊 Расчет стоимости страхования</h2>
 
-      <!-- Единый интерфейс с ИИ -->
-      <div class="ai-calculator">
-
-        <!-- Заголовок -->
-        <div class="ai-calculator__header">
-          <h2 class="ai-calculator__title">🤖 Grok AI + Мощный Парсер</h2>
-          <p class="ai-calculator__subtitle">Для полного доступа к Grok авторизуйтесь на <a href="https://puter.com" target="_blank" style="color: #0056b3; text-decoration: underline;">puter.com</a></p>
-        </div>
-
-        <!-- Чат интерфейс -->
-        <div class="ai-chat">
-
-          <!-- Сообщения -->
-          <div id="ai-messages" class="ai-chat__messages">
-            <div class="message message--assistant">
-              <div class="message__avatar">🤖</div>
-              <div class="message__content">
-                <div class="message__text">🚀 <strong>Привет! Я Grok AI + Мощный Обучаемый Парсер</strong><br><br>
-                <strong>Мои возможности:</strong><br>
-                • 🧠 <strong>Grok AI</strong> - полноценный ИИ как у xAI (требует авторизации)<br>
-                • 🎓 <strong>Обучаемый парсер</strong> - учится на ваших вопросах<br>
-                • 🔢 <strong>Авто-расчеты</strong> - мгновенные расчеты из текста<br>
-                • 📚 <strong>База знаний</strong> - 50+ умных ответов<br>
-                • 💡 <strong>Персональные советы</strong> - анализ и рекомендации<br><br>
-                <strong>Для Grok AI:</strong> Авторизуйтесь на <a href="https://puter.com" target="_blank" style="color: #0056b3;">puter.com</a><br><br>
-                <em>Примеры:</em><br>
-                "Сбербанк осз 3000000 муж 15.08.1985 квартира"<br>
-                "Какие документы нужны для страхования жизни?"<br>
-                "Как получить максимальную скидку?"</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Ввод сообщения -->
-          <div class="ai-chat__input-container">
-            <input
-              type="text"
-              id="ai-input"
-              class="ai-chat__input"
-              placeholder="Например: ВТБ ост 5103175 муж 15.08.1965 жизнь"
+          <!-- Поле ввода -->
+          <div class="input-group">
+            <label for="client-input">Введите данные клиента:</label>
+            <textarea
+              id="client-input"
+              placeholder="Пример: ВТБ ост 3000000 муж 15.08.1985 дом кирпич"
+              rows="3"
               maxlength="1000"
-            >
-            <button id="ai-send" class="ai-chat__send-btn">Отправить</button>
-          </div>
-
-          <!-- Быстрые подсказки -->
-          <div class="ai-chat__suggestions">
-            <div class="suggestions-row">
-              <button class="suggestion-btn" data-text="ВТБ ост 5103175 муж 15.08.1965 ст 10 кд 23.11.2020 жизнь">💰 Расчет жизни ВТБ</button>
-              <button class="suggestion-btn" data-text="Сбербанк осз 3000000 муж 15.08.1985 квартира имущество">🏠 Расчет имущества</button>
-              <button class="suggestion-btn" data-text="Дом.РФ ост 2500000 жен 12.03.1990 дом кирпич">🏘️ Дом.РФ комплекс</button>
-            </div>
-            <div class="suggestions-row">
-              <button class="suggestion-btn" data-text="Какие документы нужны для страхования жизни?">📄 Документы жизнь</button>
-              <button class="suggestion-btn" data-text="В чем разница между видами страхования?">⚖️ Сравнение рисков</button>
-              <button class="suggestion-btn" data-text="Как получить максимальную скидку на ипотеку?">💡 Максимум скидок</button>
-            </div>
-            <div class="suggestions-row">
-              <button class="suggestion-btn" data-text="Что делать если произошел страховой случай?">🚨 Аварийная ситуация</button>
-              <button class="suggestion-btn" data-text="Объясни как работает обучение ИИ">🎓 Как работает обучение</button>
-              <button class="suggestion-btn" data-text="Расскажи о себе - кто ты и что умеешь?">🤖 О себе</button>
+            ></textarea>
+            <div class="input-help">
+              Укажите: банк, ОСЗ, данные заемщика, тип объекта
             </div>
           </div>
 
+          <!-- Кнопка отправки -->
+          <div class="button-group">
+            <button id="calculate-btn" class="btn btn-primary">
+              📈 Рассчитать
+            </button>
+            <button id="clear-btn" class="btn btn-secondary">
+              🗑️ Очистить
+            </button>
+          </div>
         </div>
 
-      </div>
-
-      <!-- Примеры использования -->
-      <section class="examples">
-        <h3 class="examples__title">Примеры запросов</h3>
-        <div class="examples__grid">
-          <div class="example__item">
-            <h4>Только страхование жизни</h4>
-            <code>ВТБ ост 5103175 муж 15.08.1965 ст 10 кд 23.11.2020 жизнь</code>
-          </div>
-          <div class="example__item">
-            <h4>Жизнь и имущество</h4>
-            <code>Сбер ж+им осз = 3 232 000 дом 2022 кирпич муж 08.08.1989</code>
-          </div>
-          <div class="example__item">
-            <h4>С несколькими заемщиками</h4>
-            <code>АкБарс ост 2232907 он 50% 13.04.1968 она 50% 02.05.1968 кв-ра</code>
+        <!-- Результаты расчета -->
+        <div id="results-section" class="results-section" style="display: none;">
+          <div class="results-card">
+            <h3>💰 Результаты расчета</h3>
+            <div id="results-content" class="results-content">
+              <!-- Здесь будут отображаться результаты -->
+            </div>
           </div>
         </div>
       </section>
 
+      <!-- Информация о поддерживаемых банках -->
+      <section class="info-section">
+        <div class="info-card">
+          <h3>🏦 Поддерживаемые банки</h3>
+          <div class="banks-grid">
+            <span class="bank-tag">Сбербанк</span>
+            <span class="bank-tag">ВТБ</span>
+            <span class="bank-tag">Дом.РФ</span>
+            <span class="bank-tag">Альфа Банк</span>
+            <span class="bank-tag">Тимер Банк</span>
+            <span class="bank-tag">Металлинвест</span>
+            <span class="bank-tag">Росбанк</span>
+            <span class="bank-tag">Райффайзен</span>
+            <span class="bank-tag">Промсвязьбанк</span>
+            <span class="bank-tag">Ак Барс</span>
+            <span class="bank-tag">Зенит</span>
+            <span class="bank-tag">ИТБ/ТКБ</span>
+            <span class="bank-tag">УБРИР</span>
+            <span class="bank-tag">Уралсиб</span>
+            <span class="bank-tag">Юникредит</span>
+          </div>
+        </div>
 
+        <div class="info-card">
+          <h3>📋 Формат ввода данных</h3>
+          <div class="format-examples">
+            <div class="format-item">
+              <strong>Банк:</strong> Сбербанк, ВТБ, Дом.РФ и т.д.
+            </div>
+            <div class="format-item">
+              <strong>ОСЗ:</strong> остаток ссудной задолженности (число)
+            </div>
+            <div class="format-item">
+              <strong>Заемщик:</strong> муж/жен DD.MM.YYYY или он/она DD.MM.YYYY
+            </div>
+            <div class="format-item">
+              <strong>Объект:</strong> квартира, дом кирпич, дом дерево
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   </main>
 
-  <!-- Футер -->
+  <!-- Подвал -->
   <footer class="footer">
-    <div class="footer__container">
-      <div class="footer__content">
-        <p>© 2025 Калькулятор страхования ипотеки</p>
-      </div>
+    <div class="container">
+      <p>&copy; 2025 Ингосстра - ипотечный парсер страхования. Все права защищены.</p>
     </div>
   </footer>
 
   <script>
-    // Единый ИИ интерфейс
-    function initializeChatInterface() {
-      const aiInput = document.getElementById('ai-input');
-      const aiSendBtn = document.getElementById('ai-send');
-      const aiMessages = document.getElementById('ai-messages');
-      const suggestionBtns = document.querySelectorAll('.suggestion-btn');
+    // Инициализация интерфейса
+    document.addEventListener('DOMContentLoaded', function() {
+      const clientInput = document.getElementById('client-input');
+      const calculateBtn = document.getElementById('calculate-btn');
+      const clearBtn = document.getElementById('clear-btn');
+      const resultsSection = document.getElementById('results-section');
+      const resultsContent = document.getElementById('results-content');
 
-      let conversationHistory = [];
+      // Обработчик кнопки расчета
+      calculateBtn.addEventListener('click', async function() {
+        const message = clientInput.value.trim();
 
-      // Функция для обработки запроса через умный ассистент
-      function processQuery(query) {
-        return new Promise(async (resolve, reject) => {
-          try {
-            console.log('Отправка запроса:', query);
-            console.log('conversationHistory:', conversationHistory);
-
-            // Проверяем доступность функции
-            if (typeof window.chatWithGrok !== 'function') {
-              console.error('Функция chatWithGrok не доступна');
-              reject(new Error('Функция chatWithGrok не доступна'));
-              return;
-            }
-
-            const response = await window.chatWithGrok(query, conversationHistory);
-            console.log('Получен ответ:', response);
-
-            conversationHistory = response.conversationHistory;
-            resolve(response.message);
-          } catch (error) {
-            console.error('Ошибка в processQuery:', error);
-            reject(error);
-          }
-        });
-      }
-
-      // Добавление сообщения в чат
-      function addMessage(content, type, isCalculation = false) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message message--${type}`;
-
-        const avatar = type === 'user' ? '👤' : '🤖';
-        const avatarBg = type === 'user' ? '#0056b3' : (isCalculation ? '#10a37f' : '#10a37f');
-
-        let messageContent = content;
-        if (isCalculation) {
-          // Для расчетов форматируем вывод
-          messageContent = `<div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #0056b3;">${content.replace(/\n/g, '<br>')}</div>`;
+        if (!message) {
+          showError('Введите данные для расчета');
+          return;
         }
 
-        messageDiv.innerHTML = `
-          <div class="message__avatar" style="background: ${avatarBg}">${avatar}</div>
-          <div class="message__content">
-            <div class="message__text">${messageContent}</div>
-          </div>
-        `;
+        // Показываем индикатор загрузки
+        calculateBtn.disabled = true;
+        calculateBtn.innerHTML = '⏳ Рассчитываем...';
 
-        aiMessages.appendChild(messageDiv);
-        aiMessages.scrollTop = aiMessages.scrollHeight;
-      }
+        try {
+          const result = await processClientRequest(message);
 
-      // Обработчик отправки
-      function sendMessage() {
-        const message = aiInput.value.trim();
-        if (!message) return;
+          // Показываем результаты
+          resultsContent.innerHTML = result;
+          resultsSection.style.display = 'block';
 
-        // Добавляем сообщение пользователя
-        addMessage(message, 'user');
-        aiInput.value = '';
-        aiSendBtn.disabled = true;
-        aiSendBtn.textContent = 'Обработка...';
+          // Прокручиваем к результатам
+          resultsSection.scrollIntoView({ behavior: 'smooth' });
 
-        // Обрабатываем запрос через умный ассистент
-        processQuery(message).then(result => {
-          addMessage(result, 'assistant');
-          aiSendBtn.disabled = false;
-          aiSendBtn.textContent = 'Отправить';
-        }).catch(error => {
-          addMessage('Извините, произошла ошибка при обработке запроса.', 'assistant');
-          aiSendBtn.disabled = false;
-          aiSendBtn.textContent = 'Отправить';
-          console.error('Processing error:', error);
-        });
-      }
-
-      // Обработчики событий
-      aiSendBtn.addEventListener('click', sendMessage);
-      aiInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-          sendMessage();
+        } catch (error) {
+          console.error('Ошибка:', error);
+          showError('Произошла ошибка при расчете. Проверьте введенные данные.');
+        } finally {
+          // Возвращаем кнопку в исходное состояние
+          calculateBtn.disabled = false;
+          calculateBtn.innerHTML = '📈 Рассчитать';
         }
       });
 
-      // Обработчики подсказок
-      suggestionBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-          const text = btn.dataset.text;
-          console.log('Кнопка подсказки нажата:', text);
-          aiInput.value = text;
-          // Небольшая задержка перед отправкой
-          setTimeout(() => {
-            if (!aiSendBtn.disabled) {
-              sendMessage();
-            }
-          }, 100);
-        });
+      // Обработчик кнопки очистки
+      clearBtn.addEventListener('click', function() {
+        clientInput.value = '';
+        resultsSection.style.display = 'none';
+        resultsContent.innerHTML = '';
+        clientInput.focus();
       });
 
-      console.log("ИИ интерфейс инициализирован");
-    }
+      // Обработчик Enter в поле ввода
+      clientInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          calculateBtn.click();
+        }
+      });
 
-    // Ждем загрузки всех скриптов, затем инициализируем интерфейс
-    function waitForScripts() {
-      if (typeof window.chatWithGrok === 'function' && typeof window.askGPTNeo === 'function') {
-        console.log('Все скрипты загружены, инициализируем интерфейс...');
-        initializeChatInterface();
-      } else {
-        console.log('Ждем загрузки скриптов...');
-        setTimeout(waitForScripts, 100);
+      // Функция показа ошибок
+      function showError(message) {
+        resultsContent.innerHTML = `<div style="color: #dc3545; padding: 15px; border: 1px solid #dc3545; border-radius: 8px; margin: 15px 0; background-color: #f8d7da;">
+          <strong>❌ ${message}</strong>
+        </div>`;
+        resultsSection.style.display = 'block';
+        resultsSection.scrollIntoView({ behavior: 'smooth' });
       }
-    }
 
-    document.addEventListener("DOMContentLoaded", () => {
-      waitForScripts();
+      // Фокус на поле ввода при загрузке
+      clientInput.focus();
     });
   </script>
-
 </body>
 </html>
