@@ -139,8 +139,8 @@ function findLargeNumbers(text) { const re = /(\d[\d\s.,]{3,}\d)/g;
 
 // попытка извлечь сумму после ключа (осз / ост / остаток)
 function extractOszByKey(text) {
-  // ключи с возможной опечаткой
-  const re = /(?:ост|осз|остаток|остаток задолженности|сумма кредита|сумма)[^\d\n\r]{0,30}(\d[\d\s\.,]*)(?:\s|$|\n|\D|$)/ig;
+  // ключи с возможной опечаткой (включая заглавные буквы)
+  const re = /(?:ост|осз|ОСЗ|остаток|остаток задолженности|сумма кредита|сумма|Остаток|Остаточная\s+сумма)[^\d\n\r]{0,30}(\d[\d\s\.,]*)(?:\s|$|\n|\D|$)/ig;
   const m = re.exec(text);
   if (m) {
     const n = normalizeNumber(m[1]);
@@ -204,6 +204,25 @@ function extractBorrowers(text) {
 
     // Специальный паттерн для дат в начале строки: "29.12.1983 мужчина"
     const dateFirstPattern = /^(\d{1,2}\.\d{1,2}\.\d{4})\s+(мужчина|женщина|муж|жен|она|он|мужч)/ig;
+
+    // Паттерн для даты перед полом: "02.03.1980 ЖЕНЩИНА"
+    const dateBeforeGenderPattern = /(\d{1,2}\.\d{1,2}\.\d{4})\s+(ЖЕНЩИНА|МУЖЧИНА|ЖЕН|МУЖ|ОНА|ОН|МУЖЧ)/ig;
+
+    // Обработка паттерна "дата перед полом"
+    const dateBeforeMatches = Array.from(text.matchAll(dateBeforeGenderPattern));
+    for (const match of dateBeforeMatches) {
+      const dob = match[1];
+      const genderWord = match[2].toLowerCase();
+      const gender = (genderWord === 'женщина' || genderWord === 'жен' || genderWord === 'она') ? 'f' : 'm';
+
+      if (!found.some(f => f.dob === dob)) {
+        found.push({
+          dob: dob,
+          gender: gender,
+          share: undefined
+        });
+      }
+    }
 
     // Сначала проверяем специальный паттерн для дат в начале
     const dateFirstMatches = Array.from(line.matchAll(dateFirstPattern));
@@ -370,13 +389,23 @@ function parseTextToObject(rawText) {
   } else {
     const large = findLargeNumbers(text);
     if (large.length>0) {
-      // heuristics: prefer first large number that appears after word 'ост' or 'осз'
-      const afterOst = text.match(/(?:ост|осз|остаток)[^\d\n\r]{0,40}(\d[\d\s\.,]*)/i);
+      // heuristics: prefer first large number that appears after word 'ост' or 'осз' or 'ОСЗ'
+      const afterOst = text.match(/(?:ост|осз|ОСЗ|остаток)[^\d\n\r]{0,10}(\d[\d\s\.,]*?)(?:\D|\n|$)/i);
       if (afterOst) {
         const n = normalizeNumber(afterOst[1]);
         if (n) { result.osz = n; result.oszCandidates.push({source:'afterKey',value:n}); }
-      } 
-      if (!result.osz) { result.osz = large[0]; result.oszCandidates.push({source:'firstLarge',value:large[0]}); }
+      }
+      if (!result.osz) {
+        // Если есть только одно большое число, и нет явных заемщиков/объектов, используем его как OSZ
+        if (large.length === 1) {
+          result.osz = large[0];
+          result.oszCandidates.push({source:'singleLarge',value:large[0]});
+        } else if (large.length > 1) {
+          // Если несколько чисел, выбираем наиболее подходящее (обычно первое)
+          result.osz = large[0];
+          result.oszCandidates.push({source:'firstOfMultiple',value:large[0]});
+        }
+      }
       // push other candidates
       for (let i=1;i<large.length;i++) result.oszCandidates.push({source:'otherLarge',value:large[i]});
     }
