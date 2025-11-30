@@ -150,7 +150,7 @@
         calculateBtn.innerHTML = '⏳ Рассчитываем...';
 
         try {
-          const result = await processClientRequest(message);
+          const result = processClientRequest(message);
 
           // Показываем результаты
           resultsContent.innerHTML = result;
