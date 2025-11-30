@@ -198,7 +198,12 @@ function calculatePropertyInsurance(data, bankConfig, insuranceAmount) {
 
   if (data.objectType === 'townhouse') {
     objectType = 'townhouse';
+  } else if (data.objectType === 'house_brick') {
+    objectType = 'house_brick';
+  } else if (data.objectType === 'house_wood') {
+    objectType = 'house_wood';
   } else if (data.objectType === 'house') {
+    // Для совместимости со старым кодом
     if (data.material === 'wood') {
       objectType = 'house_wood';
     } else {
