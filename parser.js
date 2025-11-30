@@ -382,7 +382,10 @@ function parseTextToObject(rawText) {
     }
   }
 
-  // 4) Risks detection - сначала определяем явно указанные риски
+  // 4) borrowers (перенесено вверх для правильного определения рисков)
+  result.borrowers = extractBorrowers(text);
+
+  // 5) Risks detection - сначала определяем явно указанные риски
   let hasExplicitRiskMention = false;
 
   // Проверяем явные упоминания рисков
@@ -456,8 +459,6 @@ function parseTextToObject(rawText) {
     else result.markupPercent = percents[0];
   }
 
-  // 9) borrowers
-  result.borrowers = extractBorrowers(text);
 
   // if no borrowers found but a single date present and risk life -> assume that date is borrower DOB
   if (result.borrowers.length===0 && result.risks.life) {
