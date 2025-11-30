@@ -7,18 +7,19 @@
 // Настройка: словари и параметры
 // -----------------------------
 const BANK_SYNONYMS = {
-  "Сбербанк": ["сбер", "сбербанк", "сбербанк тт", "сбербанк тат", "сбер банк"],
-  "ВТБ": ["втб", "втб банк", "втб рт", "втб ростов"],
-  "Альфа Банк": ["альфа", "альфабанк", "альфа банк"],
-  "Ак Барс": ["ак барс", "акбарс"],
+  "Сбербанк": ["сбер", "сбербанк", "сбербанк тт", "сбербанк тат", "сбер банк", "сбер мо", "сбер татарстан", "сбер новая", "сбербанк татарстан"],
+  "ВТБ": ["втб", "втб банк", "втб рт", "втб ростов", "втб екб", "втб екатеринбург"],
+  "Альфа Банк": ["альфа", "альфабанк", "альфа банк", "альфабанк новая ипотека", "альфа-банк", "альфа банк 6%", "альфа 6%", "альфа 6,8%", "альфа 8,1%"],
+  "Ак Барс": ["ак барс", "акбарс", "ак барс банк", "акбарс банк"],
   "РСХБ": ["рсхб", "россельхозбанк", "рсхб банк"],
-  "Дом.РФ": ["дом.рф","дом рф","домрф","дом рф"],
+  "Дом.РФ": ["дом.рф","дом рф","домрф","дом рф","дом. рф"],
   "Райффайзен": ["райф", "райффайзен", "райфайзенбанк"],
   "МТС": ["мтс","мтс банк"],
   "Зенит": ["зенит","зенит банк"],
   "Открытие": ["открытие", "открытие (втб)"],
   "УБРИР": ["убрир","убрир банк"],
-  "Уралсиб": ["уралсиб"],
+  "Уралсиб": ["уралсиб", "уралсиб рт"],
+  "Юникредит": ["юникредит", "юникредит рт"],
   "Абсолют": ["абсолют","абсолют банк"],
   "Металлинвест": ["металлинвест"],
   "ТКБ": ["ткб","итб"],
@@ -28,8 +29,8 @@ const BANK_SYNONYMS = {
 
 // ключевые синонимы рисков
 const RISK_KEYWORDS = {
-  life: ["жизн", "жизнь", "life", "личн", "страхование жизни"],
-  property: ["имущ", "квар", "кв-", "кв ", "дом", "апарт", "апартам", "таун", "таунхаус", "таун-", "страхование имущества"],
+  life: ["жизн", "жизнь", "life", "личн", "страхование жизни", "жизнь и здоровье"],
+  property: ["имущ", "имущество", "квар", "кв-", "кв ", "квартир", "дом", "апарт", "апартам", "таун", "таунхаус", "таун-", "частный дом", "жилой дом", "им", "имущ", "имущества", "страхование имущества"],
   titul: ["титул", "title", "страхование титула"]
 };
 
@@ -139,7 +140,7 @@ function findLargeNumbers(text) { const re = /(\d[\d\s.,]{3,}\d)/g;
 // попытка извлечь сумму после ключа (осз / ост / остаток)
 function extractOszByKey(text) {
   // ключи с возможной опечаткой
-  const re = /(?:ост|осз|остаток|остаток задолженности|сумма кредита|сумма)[^\d\n\r]{0,30}([\d\s\.,]{4,})/ig;
+  const re = /(?:ост|осз|остаток|остаток задолженности|сумма кредита|сумма)[^\d\n\r]{0,30}(\d[\d\s\.,]*?)(?:\s|$|\n)/ig;
   const m = re.exec(text);
   if (m) {
     const n = normalizeNumber(m[1]);
@@ -189,43 +190,94 @@ function detectBank(text) {
 // также "муж 60% - 13.04.1980", "она - 50% - 02.05.1968"
 function extractBorrowers(text) {
   const found = [];
+  const lines = text.split(/[\n\r]/g).map(l => l.trim()).filter(Boolean);
 
-  // 1) Ищем пары "пол + дата" в любом месте текста с приоритетом
-  // Сначала проверяем полные слова, потом сокращения
-  const patterns = [
-    /(женщина)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/ig,  // Сначала женщины
-    /(мужчина)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/ig,
-    /(она)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/ig,       // Потом "она"
-    /(он)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/ig,        // Потом "он"
-    /(жен)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{1,2}\.\d{4})/ig,
-    /(муж)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/ig
-  ];
+  // 1) Сначала ищем заемщиков в отдельных строках (более надежно)
+  for (const line of lines) {
+    // Пропускаем строки, которые явно являются датами кредитных договоров
+    if (/\bкд\b/i.test(line) || /\bкредитный договор\b/i.test(line) || /^\d{1,2}\.\d{1,2}\.\d{4}/.test(line.trim())) {
+      continue;
+    }
 
-  for (const pattern of patterns) {
-    const matches = Array.from(text.matchAll(pattern));
+    // Ищем заемщиков с долями (формат: "жен 04.06.1981- 50%" или "он - 50%- 13.04.1968")
+    const sharePattern = /(мужчина|женщина|муж|жен|он|она|мужч)[^\d]{0,20}(\d{1,2}\.\d{1,2}\.\d{4})[^\d]{0,20}(\d{1,3})\s*%/ig;
+
+    // Специальный паттерн для дат в начале строки: "29.12.1983 мужчина"
+    const dateFirstPattern = /^(\d{1,2}\.\d{1,2}\.\d{4})\s+(мужчина|женщина|муж|жен|он|она|мужч)/ig;
+
+    // Сначала проверяем специальный паттерн для дат в начале
+    const dateFirstMatches = Array.from(line.matchAll(dateFirstPattern));
+    for (const match of dateFirstMatches) {
+      const dob = match[1];
+      const genderWord = match[2].toLowerCase();
+      const gender = (genderWord === 'женщина' || genderWord === 'жен' || genderWord === 'она') ? 'f' : 'm';
+
+      if (!found.some(f => f.dob === dob)) {
+        found.push({ dob, gender, share: 100, raw: line });
+      }
+    }
+
+    const matches = Array.from(line.matchAll(sharePattern));
+
     for (const match of matches) {
       const genderWord = match[1].toLowerCase();
-      const gender = (genderWord === 'мужчина' || genderWord === 'муж' || genderWord === 'он') ? 'm' : 'f';
+      const gender = (genderWord === 'женщина' || genderWord === 'жен' || genderWord === 'она') ? 'f' : 'm';
       const dob = match[2];
+      const share = Number(match[3]);
 
-      // Проверяем, что это не дата кредитного договора (кд)
-      if (!/\bкд\b/i.test(match[0])) {
+      // Проверяем, что такая дата еще не добавлена
+      if (!found.some(f => f.dob === dob)) {
+        found.push({ dob, gender, share, raw: line });
+      }
+    }
+
+    // Если не нашли с долями, ищем просто пол + дата
+    if (!sharePattern.test(line)) {
+      const simplePattern = /(мужчина|женщина|муж|жен|он|она|мужч)[^\d]{0,20}(\d{1,2}\.\d{1,2}\.\d{4})/ig;
+      const simpleMatches = Array.from(line.matchAll(simplePattern));
+
+      for (const match of simpleMatches) {
+        const genderWord = match[1].toLowerCase();
+        const gender = (genderWord === 'женщина' || genderWord === 'жен' || genderWord === 'она') ? 'f' : 'm';
+        const dob = match[2];
+
         // Проверяем, что такая дата еще не добавлена
         if (!found.some(f => f.dob === dob)) {
-          const percMatch = text.match(new RegExp(`(${dob}[^%]*?(\\d{1,3})%)`)); // Ищем процент рядом с датой
-          found.push({
-            dob: dob,
-            gender: gender,
-            share: percMatch ? Number(percMatch[2]) : undefined
-          });
+          found.push({ dob, gender, share: undefined, raw: line });
         }
       }
     }
   }
 
-  // 2) Если найдено несколько заемщиков, нормализуем доли
+  // 2) Если все еще не найдено, ищем глобально (менее надежно)
+  if (found.length === 0) {
+    const globalPatterns = [
+      /(женщина)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/ig,
+      /(мужчина)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/ig,
+      /(мужч)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/ig,
+      /(она)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/ig,
+      /(он)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/ig,
+      /(жен)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/ig,
+      /(муж)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/ig
+    ];
+
+    for (const pattern of globalPatterns) {
+      const matches = Array.from(text.matchAll(pattern));
+      for (const match of matches) {
+        const genderWord = match[1].toLowerCase();
+        const gender = (genderWord === 'женщина' || genderWord === 'жен' || genderWord === 'она') ? 'f' : 'm';
+        const dob = match[2];
+
+        // Проверяем, что это не дата кредитного договора
+        if (!/\bкд\b/i.test(match[0]) && !found.some(f => f.dob === dob)) {
+          found.push({ dob, gender, share: undefined });
+        }
+      }
+    }
+  }
+
+  // 3) Нормализация долей
   if (found.length > 1) {
-    // Распределяем равные доли, если не указаны
     const withoutShare = found.filter(f => f.share === undefined);
     if (withoutShare.length === found.length) {
       // Все без долей - делим поровну
@@ -234,23 +286,16 @@ function extractBorrowers(text) {
         f.share = i < found.length - 1 ? equalShare : 100 - (equalShare * (found.length - 1));
       });
     } else {
-      // Некоторые с долями, некоторые без - заполняем пропуски
-      const totalSpecified = found.reduce((sum, f) => sum + (f.share || 0), 0);
-      const remaining = 100 - totalSpecified;
-      const unspecifiedCount = withoutShare.length;
-      if (unspecifiedCount > 0 && remaining > 0) {
-        const equalRemaining = Math.floor(remaining / unspecifiedCount);
-        withoutShare.forEach((f, i) => {
-          f.share = i < unspecifiedCount - 1 ? equalRemaining : remaining - (equalRemaining * (unspecifiedCount - 1));
-        });
-      }
+      // Некоторые с долями - оставляем как есть
+      found.forEach(f => {
+        if (f.share === undefined) f.share = 0;
+      });
     }
   } else if (found.length === 1) {
-    // Один заемщик - 100%
     found[0].share = found[0].share || 100;
   }
 
-  // 3) Добавляем возраст для каждого заемщика
+  // 4) Добавляем возраст
   found.forEach(borrower => {
     if (borrower.dob) {
       const parts = borrower.dob.split('.');
@@ -336,8 +381,51 @@ function parseTextToObject(rawText) {
   }
 
   // 4) Risks detection - сначала определяем явно указанные риски
+  let hasExplicitRiskMention = false;
+
+  // Проверяем явные упоминания рисков
   for (const [risk, keys] of Object.entries(RISK_KEYWORDS)) {
-    for (const k of keys) if (lower.includes(k)) result.risks[risk]=true;
+    for (const k of keys) {
+      if (lower.includes(k)) {
+        result.risks[risk] = true;
+        hasExplicitRiskMention = true;
+      }
+    }
+  }
+
+  // Дополнительная проверка для специальных случаев
+  if (lower.includes('ж+им') || lower.includes('ж + им') || lower.includes('жизнь и имущ') || lower.includes('жизнь и имущество')) {
+    result.risks.life = true;
+    result.risks.property = true;
+    hasExplicitRiskMention = true;
+  }
+
+  if (lower.includes('2 риска') || lower.includes('два риска')) {
+    result.risks.life = true;
+    result.risks.property = true;
+    hasExplicitRiskMention = true;
+  }
+
+  // Если нет явных упоминаний рисков, определяем автоматически
+  if (!hasExplicitRiskMention) {
+    // Автоматическое определение рисков на основе контента
+    const hasBorrower = result.borrowers.length > 0;
+    const hasProperty = result.objectType !== null || /\b(дом|кв|квартир|таун|имущ|имуществ|частный дом|жилой дом)\b/i.test(text);
+
+    // Логика определения рисков:
+    // 1. Если есть заемщик И есть объект недвижимости - включаем оба риска (жизнь + имущество)
+    // 2. Если есть только заемщик - жизнь
+    // 3. Если есть только объект - имущество
+    // 5. Если ничего нет - оставляем как есть (ошибка)
+
+    if (hasBorrower && hasProperty) {
+      result.risks.life = true;
+      result.risks.property = true;
+    } else if (hasBorrower) {
+      result.risks.life = true;
+    } else if (hasProperty) {
+      result.risks.property = true;
+    }
   }
 
   // 5) object type
