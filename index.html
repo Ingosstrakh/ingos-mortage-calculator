@@ -137,7 +137,7 @@
       const resultsContent = document.getElementById('results-content');
 
       // Обработчик кнопки расчета
-      calculateBtn.addEventListener('click', function() {
+      calculateBtn.addEventListener('click', async function() {
         const message = clientInput.value.trim();
 
         if (!message) {
@@ -150,7 +150,7 @@
         calculateBtn.innerHTML = '⏳ Рассчитываем...';
 
         try {
-          const result = processClientRequest(message);
+          const result = await processClientRequest(message);
 
           // Показываем результаты
           resultsContent.innerHTML = result;
