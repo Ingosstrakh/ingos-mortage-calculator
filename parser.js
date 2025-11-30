@@ -127,12 +127,17 @@ function extractPercents(text) {
 }
 
 // поиск больших чисел (кандидаты на сумму)
-function findLargeNumbers(text) { const re = /(\d[\d\s.,]{3,}\d)/g;
+function findLargeNumbers(text) {
+  const lines = text.split('\n');
   const arr = [];
-  let m;
-  while ((m=re.exec(text)) !== null) {
-    const n = normalizeNumber(m[1]);
-    if (n && n >= MIN_BIG_NUMBER) arr.push(n);
+  for (const line of lines) {
+    // Ищем числа в строке, игнорируя слова
+    const re = /\b(\d+(?:[.,]\d+)*(?:\s+\d+(?:[.,]\d+)*)*)\b/g;
+    let m;
+    while ((m = re.exec(line)) !== null) {
+      const n = normalizeNumber(m[1]);
+      if (n && n >= MIN_BIG_NUMBER) arr.push(n);
+    }
   }
   return arr;
 }
@@ -140,11 +145,15 @@ function findLargeNumbers(text) { const re = /(\d[\d\s.,]{3,}\d)/g;
 // попытка извлечь сумму после ключа (осз / ост / остаток)
 function extractOszByKey(text) {
   // ключи с возможной опечаткой (включая заглавные буквы)
-  const re = /(?:ост|осз|ОСЗ|остаток|остаток задолженности|сумма кредита|сумма|Остаток|Остаточная\s+сумма)[^\d\n\r]{0,30}(\d[\d\s\.,]*)(?:\s|$|\n|\D|$)/ig;
-  const m = re.exec(text);
-  if (m) {
-    const n = normalizeNumber(m[1]);
-    if (n) return n;
+  // Ищем ключевое слово, затем пробелы, затем число (только цифры и пробелы внутри числа)
+  const lines = text.split('\n');
+  for (const line of lines) {
+    const re = /(?:ост|осз|ОСЗ|остаток|остаток задолженности|сумма кредита|сумма|Остаток|Остаточная\s+сумма)\s+(\d+(?:\s+\d+)*)/i;
+    const m = re.exec(line);
+    if (m) {
+      const n = normalizeNumber(m[1]);
+      if (n) return n;
+    }
   }
   return null;
 }
@@ -396,7 +405,7 @@ function parseTextToObject(rawText) {
         if (n) { result.osz = n; result.oszCandidates.push({source:'afterKey',value:n}); }
       }
       if (!result.osz) {
-        // Если есть только одно большое число, и нет явных заемщиков/объектов, используем его как OSZ
+        // Если есть только одно большое число, используем его как OSZ
         if (large.length === 1) {
           result.osz = large[0];
           result.oszCandidates.push({source:'singleLarge',value:large[0]});
