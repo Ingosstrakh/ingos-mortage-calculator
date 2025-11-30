@@ -114,11 +114,15 @@ function performCalculations(data) {
   }
 
   if (data.risks.life && lifeResult) {
-    if (lifeResult.hasDiscount) {
-      output += `жизнь заемщик ${lifeResult.totalWithoutDiscount.toLocaleString('ru-RU')} Со скидкой ${lifeResult.total.toLocaleString('ru-RU')}<br>`;
-    } else {
-      output += `жизнь заемщик ${lifeResult.total.toLocaleString('ru-RU')}<br>`;
-    }
+    // Показываем каждого заемщика отдельно
+    lifeResult.borrowers.forEach((borrower, index) => {
+      const borrowerLabel = data.borrowers.length > 1 ? `заемщик ${index + 1}` : 'заемщик';
+      if (lifeResult.hasDiscount) {
+        output += `жизнь ${borrowerLabel} ${borrower.premium.toLocaleString('ru-RU')} Со скидкой ${borrower.premiumWithDiscount.toLocaleString('ru-RU')}<br>`;
+      } else {
+        output += `жизнь ${borrowerLabel} ${borrower.premium.toLocaleString('ru-RU')}<br>`;
+      }
+    });
   }
 
   if (data.risks.titul && titleResult) {
@@ -144,6 +148,7 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
   let totalPremium = 0;
   let totalPremiumWithDiscount = 0;
   let hasDiscount = bankConfig.allow_discount_life;
+  const borrowerPremiums = [];
 
   // Определяем тарифы в зависимости от банка
   let tariffTable;
@@ -176,18 +181,27 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
 
     const shareAmount = insuranceAmount * (borrower.share / 100);
     const premium = shareAmount * (tariff / 100);
+    const premiumWithDiscount = hasDiscount ? premium * 0.75 : premium;
+
+    borrowerPremiums.push({
+      gender: borrower.gender,
+      age: borrower.age,
+      share: borrower.share,
+      premium: premium,
+      premiumWithDiscount: premiumWithDiscount
+    });
 
     totalPremium += premium;
-
     if (hasDiscount) {
-      totalPremiumWithDiscount += premium * 0.75; // 25% скидка
+      totalPremiumWithDiscount += premiumWithDiscount;
     }
   });
 
   return {
     total: hasDiscount ? totalPremiumWithDiscount : totalPremium,
     totalWithoutDiscount: totalPremium,
-    hasDiscount: hasDiscount
+    hasDiscount: hasDiscount,
+    borrowers: borrowerPremiums
   };
 }
 
