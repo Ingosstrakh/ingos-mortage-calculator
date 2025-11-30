@@ -1,4 +1,4 @@
-/* style.css - Дизайн в стиле Ингосстраха */
+/* style.css - Упрощенный дизайн для парсера страхования */
 
 * {
   margin: 0;
@@ -11,7 +11,7 @@ body {
   font-size: 16px;
   line-height: 1.6;
   color: #333;
-  background-color: #f5f7fa;
+  background-color: #f8f9fa;
 }
 
 /* Шапка */
@@ -19,7 +19,7 @@ body {
   background: linear-gradient(135deg, #0056b3 0%, #003d82 100%);
   color: white;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  padding: 20px 0;
+  padding: 30px 0;
 }
 
 .header__container {
@@ -30,477 +30,254 @@ body {
 }
 
 .header__title h1 {
-  font-size: 32px;
-  font-weight: 400;
-  margin: 0;
+  font-size: 28px;
+  font-weight: 500;
+  margin: 0 0 10px 0;
   color: white;
+}
+
+.header__subtitle {
+  font-size: 16px;
+  opacity: 0.9;
+  margin: 0;
 }
 
 /* Основной контент */
 .main {
   padding: 40px 0;
   background: white;
+  min-height: calc(100vh - 200px);
 }
 
 .container {
-  max-width: 1200px;
+  max-width: 1000px;
   margin: 0 auto;
   padding: 0 20px;
 }
 
-/* Навигация */
-.nav {
+/* Раздел расчета */
+.calculation-section {
   margin-bottom: 40px;
 }
 
-.nav__steps {
-  display: flex;
-  justify-content: center;
-  gap: 0;
-  background: #f8f9fa;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.nav__step {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 24px;
-  border-radius: 6px;
-  transition: all 0.3s ease;
-}
-
-.nav__step--active {
-  background: #0056b3;
-  color: white;
-}
-
-.nav__step-number {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
-  font-weight: 600;
-  font-size: 14px;
-}
-
-.nav__step--active .nav__step-number {
-  background: white;
-  color: #0056b3;
-}
-
-.nav__step-text {
-  font-weight: 500;
-  font-size: 14px;
-}
-
-/* Калькулятор */
-.calculator {
+.calculation-card {
   background: white;
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  overflow: hidden;
-  margin-bottom: 60px;
-}
-
-.calculator__form,
-.calculator__results {
-  padding: 40px;
-}
-
-.calculator__title {
-  font-size: 24px;
-  font-weight: 500;
-  color: #333;
+  padding: 30px;
   margin-bottom: 30px;
+}
+
+.calculation-card h2 {
+  color: #0056b3;
+  font-size: 24px;
+  margin-bottom: 25px;
   text-align: center;
 }
 
-/* Форма */
-.form__group {
-  margin-bottom: 30px;
+/* Поле ввода */
+.input-group {
+  margin-bottom: 25px;
 }
 
-.form__label {
+.input-group label {
   display: block;
-  font-size: 16px;
   font-weight: 500;
-  color: #333;
   margin-bottom: 8px;
+  color: #333;
 }
 
-.form__textarea {
+.input-group textarea {
   width: 100%;
-  min-height: 120px;
-  padding: 16px;
+  padding: 15px;
   border: 2px solid #e1e5e9;
   border-radius: 8px;
   font-size: 16px;
-  font-family: 'Roboto', sans-serif;
+  font-family: inherit;
   resize: vertical;
-  transition: all 0.3s ease;
-  background: #fafbfc;
+  min-height: 80px;
+  transition: border-color 0.3s ease;
 }
 
-.form__textarea:focus {
+.input-group textarea:focus {
   outline: none;
   border-color: #0056b3;
-  background: white;
   box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.1);
 }
 
-.form__hint {
+.input-help {
   font-size: 14px;
   color: #666;
-  margin-top: 8px;
-  font-style: italic;
+  margin-top: 5px;
 }
 
 /* Кнопки */
-.btn {
-  display: inline-flex;
-  align-items: center;
+.button-group {
+  display: flex;
+  gap: 15px;
   justify-content: center;
-  padding: 14px 32px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 12px 24px;
   border: none;
   border-radius: 8px;
   font-size: 16px;
   font-weight: 500;
-  text-decoration: none;
   cursor: pointer;
   transition: all 0.3s ease;
-  text-align: center;
+  min-width: 140px;
 }
 
-.btn--primary {
+.btn-primary {
   background: #0056b3;
   color: white;
 }
 
-.btn--primary:hover {
+.btn-primary:hover:not(:disabled) {
   background: #003d82;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 86, 179, 0.3);
+  transform: translateY(-2px);
 }
 
-.btn--large {
-  padding: 18px 40px;
-  font-size: 18px;
-  font-weight: 600;
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background: #545b62;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
 
 /* Результаты */
-.calculator__results {
-  background: #f8f9fa;
-  border-top: 1px solid #e1e5e9;
+.results-section {
+  margin-top: 30px;
 }
 
-.results__title {
-  font-size: 20px;
-  font-weight: 500;
-  color: #333;
-  margin-bottom: 30px;
-  text-align: center;
-}
-
-.results__summary {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
-  margin-bottom: 40px;
-}
-
-.summary__item {
+.results-card {
   background: white;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  border: 1px solid #e1e5e9;
-}
-
-.summary__item--total {
-  background: linear-gradient(135deg, #0056b3 0%, #003d82 100%);
-  color: white;
-  border: none;
-}
-
-.summary__label {
-  display: block;
-  font-size: 12px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
-  opacity: 0.8;
-}
-
-.summary__value {
-  display: block;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.summary__value--total {
-  font-size: 24px;
-  color: white;
-}
-
-.results__details {
-  background: white;
-  border-radius: 8px;
-  padding: 30px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  border: 1px solid #e1e5e9;
-}
-
-.results__details b {
-  color: #0056b3;
-  font-weight: 600;
-}
-
-/* Примеры */
-.examples {
-  margin-top: 60px;
-  padding: 40px 0;
-}
-
-.examples__title {
-  font-size: 24px;
-  font-weight: 500;
-  color: #333;
-  text-align: center;
-  margin-bottom: 40px;
-}
-
-.examples__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 30px;
-}
-
-.example__item {
-  background: white;
-  padding: 30px;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e1e5e9;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  padding: 30px;
 }
 
-.example__item h4 {
-  font-size: 18px;
-  font-weight: 600;
+.results-card h3 {
+  color: #28a745;
+  font-size: 20px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.results-content {
+  line-height: 1.7;
+}
+
+.results-content b {
   color: #0056b3;
+}
+
+.results-content hr {
+  border: none;
+  height: 1px;
+  background: #e1e5e9;
+  margin: 20px 0;
+}
+
+/* Информационные секции */
+.info-section {
+  margin-top: 40px;
+}
+
+.info-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.06);
+  padding: 25px;
+  margin-bottom: 20px;
+}
+
+.info-card h3 {
+  color: #0056b3;
+  font-size: 18px;
   margin-bottom: 15px;
 }
 
-.example__item code {
-  display: block;
-  background: #f8f9fa;
-  padding: 16px;
-  border-radius: 6px;
-  font-family: 'Courier New', monospace;
-  font-size: 14px;
-  color: #333;
-  border: 1px solid #e1e5e9;
-  word-break: break-all;
+/* Сетка банков */
+.banks-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-/* Футер */
-.footer {
+.bank-tag {
+  background: #e3f2fd;
+  color: #0056b3;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Форматы ввода */
+.format-examples {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.format-item {
+  padding: 10px;
   background: #f8f9fa;
-  border-top: 1px solid #e1e5e9;
+  border-radius: 6px;
+  border-left: 3px solid #0056b3;
+}
+
+/* Подвал */
+.footer {
+  background: #343a40;
+  color: white;
   padding: 20px 0;
   margin-top: 60px;
 }
 
-.footer__container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 20px;
-}
-
-.footer__content {
+.footer .container {
   text-align: center;
 }
 
-.footer__content p {
+.footer p {
   margin: 0;
   font-size: 14px;
-  color: #666;
+  opacity: 0.8;
 }
 
 /* Адаптивность */
-/* Единый ИИ интерфейс */
-.ai-calculator {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  overflow: hidden;
-  margin-bottom: 60px;
-}
-
-.ai-calculator__header {
-  background: linear-gradient(135deg, #0056b3 0%, #003d82 100%);
-  color: white;
-  padding: 40px 30px;
-  text-align: center;
-}
-
-.ai-calculator__title {
-  font-size: 28px;
-  font-weight: 600;
-  margin: 0 0 10px;
-}
-
-.ai-calculator__subtitle {
-  font-size: 16px;
-  margin: 0;
-  opacity: 0.9;
-}
-
-.ai-chat {
-  padding: 0;
-}
-
-.ai-chat__messages {
-  height: 500px;
-  overflow-y: auto;
-  padding: 30px;
-  background: #fafbfc;
-  border-bottom: 1px solid #e1e5e9;
-}
-
-.ai-chat__input-container {
-  display: flex;
-  gap: 15px;
-  padding: 30px;
-  background: white;
-  border-top: 1px solid #e1e5e9;
-}
-
-.ai-chat__input {
-  flex: 1;
-  padding: 16px 20px;
-  border: 2px solid #e1e5e9;
-  border-radius: 28px;
-  font-size: 16px;
-  font-family: 'Roboto', sans-serif;
-  outline: none;
-  transition: border-color 0.3s ease;
-}
-
-.ai-chat__input:focus {
-  border-color: #0056b3;
-}
-
-.ai-chat__send-btn {
-  padding: 16px 32px;
-  background: #0056b3;
-  color: white;
-  border: none;
-  border-radius: 28px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  white-space: nowrap;
-}
-
-.ai-chat__send-btn:hover {
-  background: #003d82;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 86, 179, 0.3);
-}
-
-.ai-chat__send-btn:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-.ai-chat__suggestions {
-  padding: 25px 30px;
-  background: #f8f9fa;
-  border-top: 1px solid #e1e5e9;
-}
-
-.suggestions-row {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  margin-bottom: 12px;
-}
-
-.suggestions-row:last-child {
-  margin-bottom: 0;
-}
-
-.suggestion-btn {
-  padding: 10px 18px;
-  background: white;
-  border: 2px solid #e1e5e9;
-  border-radius: 24px;
-  font-size: 14px;
-  color: #0056b3;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-weight: 500;
-}
-
-.suggestion-btn:hover {
-  background: #0056b3;
-  color: white;
-  border-color: #0056b3;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 86, 179, 0.2);
-}
-
 @media (max-width: 768px) {
-  .header__container {
-    flex-direction: column;
-    text-align: center;
-    gap: 20px;
-  }
-
   .header__title h1 {
     font-size: 24px;
   }
 
-  .nav__steps {
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .nav__step {
-    justify-content: center;
-  }
-
-  .calculator__form,
-  .calculator__results {
+  .calculation-card {
     padding: 20px;
   }
 
-  .results__summary {
-    grid-template-columns: 1fr;
-  }
-
-  .examples__grid {
-    grid-template-columns: 1fr;
-  }
-
-  .footer__content {
+  .button-group {
     flex-direction: column;
-    text-align: center;
+    align-items: center;
   }
 
-  .footer__contact {
-    text-align: center;
+  .btn {
+    width: 100%;
+    max-width: 300px;
+  }
+
+  .banks-grid {
+    justify-content: center;
   }
 }
 
@@ -509,16 +286,11 @@ body {
     padding: 0 15px;
   }
 
-  .header__container {
+  .calculation-card {
     padding: 15px;
   }
 
-  .calculator__form,
-  .calculator__results {
-    padding: 15px;
-  }
-
-  .btn--large {
-    width: 100%;
+  .header__title h1 {
+    font-size: 20px;
   }
 }
