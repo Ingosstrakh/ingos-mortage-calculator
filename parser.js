@@ -406,7 +406,7 @@ function parseTextToObject(rawText) {
     hasExplicitRiskMention = true;
   }
 
-  // Если нет явных упоминаний рисков, определяем автоматически
+  // Автоматическое определение рисков ТОЛЬКО если НЕТ явных упоминаний
   if (!hasExplicitRiskMention) {
     // Автоматическое определение рисков на основе контента
     const hasBorrower = result.borrowers.length > 0;
@@ -416,7 +416,7 @@ function parseTextToObject(rawText) {
     // 1. Если есть заемщик И есть объект недвижимости - включаем оба риска (жизнь + имущество)
     // 2. Если есть только заемщик - жизнь
     // 3. Если есть только объект - имущество
-    // 5. Если ничего нет - оставляем как есть (ошибка)
+    // 4. Если ничего нет - оставляем как есть (ошибка)
 
     if (hasBorrower && hasProperty) {
       result.risks.life = true;
@@ -427,6 +427,7 @@ function parseTextToObject(rawText) {
       result.risks.property = true;
     }
   }
+  // Если есть явные упоминания - оставляем только их, без автоматического добавления
 
   // 5) object type
   if (/(таунхаус|таун)/i.test(text)) result.objectType = 'townhouse';
@@ -490,15 +491,6 @@ function parseTextToObject(rawText) {
   const hasProperty = result.objectType !== 'flat' || /\b(дом|кв|имущ)/i.test(text);
 
   // Автоматическое определение рисков на основе контента
-  if (hasBorrower && !result.risks.life) {
-    // Если есть заемщик - добавляем страхование жизни
-    result.risks.life = true;
-  }
-
-  if (hasProperty && !result.risks.property) {
-    // Если есть объект недвижимости - добавляем страхование имущества
-    result.risks.property = true;
-  }
 
   // 10) normalise borrowers shares if needed (ensure sum 100 unless VTB special case is required externally)
   const sumShares = result.borrowers.reduce((s,b)=>s+(b.share||0),0);
