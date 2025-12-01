@@ -118,7 +118,8 @@
 
   <script>
     // Оптимизация для мобильных устройств
-    document.addEventListener('DOMContentLoaded', function() {
+    // Ждем загрузки всех скриптов
+    function initMobileCalculator() {
       const clientInput = document.getElementById('client-input');
       const calculateBtn = document.getElementById('calculate-btn');
       const clearBtn = document.getElementById('clear-btn');
@@ -160,11 +161,17 @@
         }
       });
 
-      function calculate() {
+      async function calculate() {
         const message = clientInput.value.trim();
 
         if (!message) {
           showError('Введите данные для расчета');
+          return;
+        }
+
+        // Проверяем, загружены ли скрипты
+        if (typeof processClientRequest === 'undefined') {
+          showError('Система расчетов загружается. Попробуйте еще раз через секунду.');
           return;
         }
 
@@ -173,7 +180,7 @@
         calculateBtn.innerHTML = '<span class="loading">⏳</span> Рассчитываем...';
 
         try {
-          const result = processClientRequest(message);
+          const result = await processClientRequest(message);
           resultsContent.innerHTML = result.replace(/\n/g, '<br>');
           resultsSection.style.display = 'block';
 
@@ -210,6 +217,22 @@
       setTimeout(() => {
         clientInput.focus();
       }, 500);
+    }
+
+    // Инициализация после загрузки всех скриптов
+    function checkScriptsLoaded() {
+      if (typeof processClientRequest !== 'undefined' &&
+          typeof parseTextToObject !== 'undefined' &&
+          typeof performCalculations !== 'undefined') {
+        initMobileCalculator();
+      } else {
+        setTimeout(checkScriptsLoaded, 100);
+      }
+    }
+
+    // Начинаем проверку после загрузки DOM
+    document.addEventListener('DOMContentLoaded', function() {
+      checkScriptsLoaded();
     });
 
     // Предотвращаем zoom на iOS
@@ -219,11 +242,11 @@
   </script>
 
   <!-- Подключаем данные и логику -->
-  <script defer src="config_banks.js"></script>
-  <script defer src="tariffs_life.js"></script>
-  <script defer src="tariffs_property.js"></script>
-  <script defer src="parser.js"></script>
-  <script defer src="calculator_v2.js"></script>
+  <script src="config_banks.js"></script>
+  <script src="tariffs_life.js"></script>
+  <script src="tariffs_property.js"></script>
+  <script src="parser.js"></script>
+  <script src="calculator_v2.js"></script>
   <script src="openai.js"></script>
 </body>
 </html>
