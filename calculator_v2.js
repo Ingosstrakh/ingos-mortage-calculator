@@ -46,12 +46,20 @@ function performCalculations(data) {
   // Расчет страховой суммы с надбавкой
   let insuranceAmount = data.osz;
   if (bankConfig.add_percent && bankConfig.add_percent > 0) {
+    // Фиксированная надбавка из конфигурации банка
     const markup = data.osz * (bankConfig.add_percent / 100);
     insuranceAmount = data.osz + markup;
     output += `<b>Надбавка ${bankConfig.add_percent}%:</b> ${markup.toLocaleString('ru-RU')} ₽<br>`;
     output += `<b>Страховая сумма:</b> ${insuranceAmount.toLocaleString('ru-RU')} ₽<br><br>`;
+  } else if (bankConfig.add_percent === null && data.markupPercent) {
+    // Клиент сам указывает надбавку (для Альфа Банка и УБРИР)
+    const markup = data.osz * (data.markupPercent / 100);
+    insuranceAmount = data.osz + markup;
+    output += `<b>Надбавка ${data.markupPercent}% (клиент):</b> ${markup.toLocaleString('ru-RU')} ₽<br>`;
+    output += `<b>Страховая сумма:</b> ${insuranceAmount.toLocaleString('ru-RU')} ₽<br><br>`;
   } else if (bankConfig.add_percent === null) {
-    output += `<b>Внимание:</b> Для этого банка надбавка вводится вручную клиентом<br><br>`;
+    // Надбавка не указана клиентом
+    output += `<b>Внимание:</b> Для этого банка укажите надбавку в процентах (например: "15% надбавка")<br><br>`;
   } else {
     output += `<b>Страховая сумма:</b> ${insuranceAmount.toLocaleString('ru-RU')} ₽<br><br>`;
   }
