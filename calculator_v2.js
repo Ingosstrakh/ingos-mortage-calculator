@@ -112,6 +112,10 @@ function performCalculations(data) {
     if (calc.hasDiscount) hasAnyDiscount = true;
   });
 
+  // Округляем итоговые суммы до 2 знаков
+  totalWithoutDiscount = Math.round(totalWithoutDiscount * 100) / 100;
+  totalWithDiscount = Math.round(totalWithDiscount * 100) / 100;
+
   // Вывод результатов
   if (data.risks.property && propertyResult) {
     if (propertyResult.hasDiscount) {
@@ -188,8 +192,8 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
     }
 
     const shareAmount = insuranceAmount * (borrower.share / 100);
-    const premium = shareAmount * (tariff / 100);
-    const premiumWithDiscount = hasDiscount ? premium * 0.75 : premium;
+    const premium = Math.round(shareAmount * (tariff / 100) * 100) / 100;
+    const premiumWithDiscount = hasDiscount ? Math.round(premium * 0.75 * 100) / 100 : premium;
 
     borrowerPremiums.push({
       gender: borrower.gender,
@@ -242,7 +246,7 @@ function calculatePropertyInsurance(data, bankConfig, insuranceAmount) {
     };
   }
 
-  const premium = insuranceAmount * (tariff / 100);
+  const premium = Math.round(insuranceAmount * (tariff / 100) * 100) / 100;
 
   // Применяем скидку 10%, если разрешено банком
   let discountedPremium = premium;
@@ -262,7 +266,7 @@ function calculatePropertyInsurance(data, bankConfig, insuranceAmount) {
 // Расчет страхования титула
 function calculateTitleInsurance(insuranceAmount) {
   const tariff = 0.2; // 0.2% для всех банков
-  const premium = insuranceAmount * (tariff / 100);
+  const premium = Math.round(insuranceAmount * (tariff / 100) * 100) / 100;
 
   return {
     total: premium,
