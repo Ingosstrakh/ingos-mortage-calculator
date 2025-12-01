@@ -148,10 +148,17 @@ function extractOszByKey(text) {
   // Ищем ключевое слово, затем пробелы, затем число (только цифры и пробелы внутри числа)
   const lines = text.split('\n');
   for (const line of lines) {
-    const re = /(?:ост|осз|ОСЗ|остаток|остаток задолженности|сумма кредита|сумма|Остаток|Остаточная\s+сумма)\s+(\d+(?:\s+\d+)*)/i;
+    const re = /(?:ост|осз|ОСЗ|остаток|остаток задолженности|сумма кредита|сумма|Остаток|Остаточная\s+сумма)\s+(\d+(?:\s+\d+)*(?:\.\d+)?)/i;
     const m = re.exec(line);
     if (m) {
-      const n = normalizeNumber(m[1]);
+      // Проверяем, что найденное число не является процентом надбавки
+      const fullMatch = m[0];
+      const numberPart = m[1];
+      // Если после числа идет %, то это процент, а не OSZ
+      if (fullMatch.includes('%') || text.substring(m.index + fullMatch.length).trim().startsWith('%')) {
+        continue;
+      }
+      const n = normalizeNumber(numberPart);
       if (n) return n;
     }
   }
@@ -391,33 +398,35 @@ function parseTextToObject(rawText) {
   }
 
   // 3) OSZ (остаток/осз)
-  const oszByKey = extractOszByKey(text);
-  if (oszByKey) {
-    result.osz = oszByKey;
-    result.oszCandidates.push({source:'key', value:oszByKey});
-  } else {
-    const large = findLargeNumbers(text);
-    if (large.length>0) {
-      // heuristics: prefer first large number that appears after word 'ост' or 'осз' or 'ОСЗ'
-      const afterOst = text.match(/(?:ост|осз|ОСЗ|остаток)[^\d\n\r]{0,10}(\d[\d\s\.,]*?)(?:\D|\n|$)/i);
+  const large = findLargeNumbers(text);
+  if (large.length>0) {
+    // heuristics: prefer numbers that appear before word 'ост' or 'осз' or 'ОСЗ'
+    const beforeOst = text.match(/(\d[\d\s\.,]*?)[^\d\n\r]{0,10}(?:ост|осз|ОСЗ|остаток)/i);
+    if (beforeOst) {
+      const n = normalizeNumber(beforeOst[1]);
+      if (n && n >= MIN_BIG_NUMBER) { result.osz = n; result.oszCandidates.push({source:'beforeKey',value:n}); }
+    }
+    // also check numbers after keywords (but exclude percentages)
+    if (!result.osz) {
+      const afterOst = text.match(/(?:ост|осз|ОСЗ|остаток)[^\d\n\r]{0,10}(\d[\d\s\.,]*?)(?!\s*%|%)(?:\D|\n|$)/i);
       if (afterOst) {
         const n = normalizeNumber(afterOst[1]);
-        if (n) { result.osz = n; result.oszCandidates.push({source:'afterKey',value:n}); }
+        if (n && n >= MIN_BIG_NUMBER) { result.osz = n; result.oszCandidates.push({source:'afterKey',value:n}); }
       }
-      if (!result.osz) {
-        // Если есть только одно большое число, используем его как OSZ
-        if (large.length === 1) {
-          result.osz = large[0];
-          result.oszCandidates.push({source:'singleLarge',value:large[0]});
-        } else if (large.length > 1) {
-          // Если несколько чисел, выбираем наиболее подходящее (обычно первое)
-          result.osz = large[0];
-          result.oszCandidates.push({source:'firstOfMultiple',value:large[0]});
-        }
-      }
-      // push other candidates
-      for (let i=1;i<large.length;i++) result.oszCandidates.push({source:'otherLarge',value:large[i]});
     }
+    if (!result.osz) {
+      // Если есть только одно большое число, используем его как OSZ
+      if (large.length === 1) {
+        result.osz = large[0];
+        result.oszCandidates.push({source:'singleLarge',value:large[0]});
+      } else if (large.length > 1) {
+        // Если несколько чисел, выбираем наиболее подходящее (обычно первое)
+        result.osz = large[0];
+        result.oszCandidates.push({source:'firstOfMultiple',value:large[0]});
+      }
+    }
+    // push other candidates
+    for (let i=1;i<large.length;i++) result.oszCandidates.push({source:'otherLarge',value:large[i]});
   }
 
   // 4) borrowers (перенесено вверх для правильного определения рисков)
