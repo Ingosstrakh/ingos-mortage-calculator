@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Ингосстрах - калькулятор страхования</title>
+  <meta name="description" content="Ингосстрах - быстрый расчет стоимости ипотечного страхования">
+
+  <!-- Мобильная оптимизация -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+  <link rel="stylesheet" href="ingosstrax_mobile.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* Базовые стили для корректного отображения */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Roboto', Arial, sans-serif;
+      background: #f8fafc;
+      color: #1a1a1a;
+      min-height: 100vh;
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Шапка -->
+  <header class="header">
+    <div class="header-content">
+      <div class="logo">
+        <div class="logo-icon">🏛️</div>
+        <div class="logo-text">
+          <h1>Ингосстрах</h1>
+          <p>Калькулятор страхования</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Основной контент -->
+  <main class="main">
+    <!-- Блок расчета -->
+    <section class="calc-section">
+      <div class="calc-card">
+        <h2 class="section-title">💰 Расчет стоимости</h2>
+
+        <!-- Поле ввода -->
+        <div class="input-group">
+          <label class="input-label">Данные клиента</label>
+          <div class="input-wrapper">
+            <textarea
+              id="client-input"
+              placeholder="Пример: ВТБ ост 3000000 муж 15.08.1985 квартира"
+              rows="3"
+              maxlength="1000"
+            ></textarea>
+          </div>
+          <div class="input-help">
+            <span class="help-icon">💡</span>
+            Укажите банк, ОСЗ, данные заемщика, тип объекта
+          </div>
+        </div>
+
+        <!-- Кнопки -->
+        <div class="button-group">
+          <button id="calculate-btn" class="btn-primary">
+            <span class="btn-icon">⚡</span>
+            Рассчитать
+          </button>
+          <button id="clear-btn" class="btn-secondary">
+            <span class="btn-icon">🗑️</span>
+            Очистить
+          </button>
+        </div>
+      </div>
+
+      <!-- Результаты -->
+      <div id="results-section" class="results-section" style="display: none;">
+        <div class="results-card">
+          <h3 class="results-title">Результаты расчета</h3>
+          <div id="results-content" class="results-content"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Информация о банках -->
+    <section class="banks-section">
+      <h3 class="section-title-mini">🏦 Поддерживаемые банки</h3>
+      <div class="banks-grid">
+        <div class="bank-item">Сбербанк</div>
+        <div class="bank-item">ВТБ</div>
+        <div class="bank-item">Дом.РФ</div>
+        <div class="bank-item">Альфа Банк</div>
+        <div class="bank-item">Тимер Банк</div>
+        <div class="bank-item">Металлинвест</div>
+        <div class="bank-item">Росбанк</div>
+        <div class="bank-item">Райффайзен</div>
+        <div class="bank-item">Промсвязьбанк</div>
+        <div class="bank-item">Ак Барс</div>
+        <div class="bank-item">Зенит</div>
+        <div class="bank-item">ИТБ/ТКБ</div>
+        <div class="bank-item">УБРИР</div>
+        <div class="bank-item">Уралсиб</div>
+        <div class="bank-item">Юникредит</div>
+        <div class="bank-item">РСХБ</div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Подвал -->
+  <footer class="footer">
+    <p>&copy; 2025 Ингосстрах. Все права защищены.</p>
+  </footer>
+
+  <script>
+    // Оптимизация для мобильных устройств
+    document.addEventListener('DOMContentLoaded', function() {
+      const clientInput = document.getElementById('client-input');
+      const calculateBtn = document.getElementById('calculate-btn');
+      const clearBtn = document.getElementById('clear-btn');
+      const resultsSection = document.getElementById('results-section');
+      const resultsContent = document.getElementById('results-content');
+
+      // Touch-friendly обработчики
+      calculateBtn.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        this.style.transform = 'scale(0.95)';
+      });
+
+      calculateBtn.addEventListener('touchend', function(e) {
+        e.preventDefault();
+        this.style.transform = 'scale(1)';
+        calculate();
+      });
+
+      clearBtn.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        this.style.transform = 'scale(0.95)';
+      });
+
+      clearBtn.addEventListener('touchend', function(e) {
+        e.preventDefault();
+        this.style.transform = 'scale(1)';
+        clearData();
+      });
+
+      // Клик для десктопов
+      calculateBtn.addEventListener('click', calculate);
+      clearBtn.addEventListener('click', clearData);
+
+      // Enter в поле ввода
+      clientInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          calculate();
+        }
+      });
+
+      function calculate() {
+        const message = clientInput.value.trim();
+
+        if (!message) {
+          showError('Введите данные для расчета');
+          return;
+        }
+
+        // Показываем загрузку
+        calculateBtn.disabled = true;
+        calculateBtn.innerHTML = '<span class="loading">⏳</span> Рассчитываем...';
+
+        try {
+          const result = processClientRequest(message);
+          resultsContent.innerHTML = result.replace(/\n/g, '<br>');
+          resultsSection.style.display = 'block';
+
+          // Прокрутка к результатам
+          setTimeout(() => {
+            resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }, 100);
+
+        } catch (error) {
+          console.error('Ошибка:', error);
+          showError('Произошла ошибка при расчете. Проверьте введенные данные.');
+        } finally {
+          calculateBtn.disabled = false;
+          calculateBtn.innerHTML = '<span class="btn-icon">⚡</span> Рассчитать';
+        }
+      }
+
+      function clearData() {
+        clientInput.value = '';
+        resultsSection.style.display = 'none';
+        resultsContent.innerHTML = '';
+        clientInput.focus();
+      }
+
+      function showError(message) {
+        resultsContent.innerHTML = `<div class="error-message">
+          <div class="error-icon">❌</div>
+          <div class="error-text">${message}</div>
+        </div>`;
+        resultsSection.style.display = 'block';
+      }
+
+      // Фокус на поле ввода при загрузке
+      setTimeout(() => {
+        clientInput.focus();
+      }, 500);
+    });
+
+    // Предотвращаем zoom на iOS
+    document.addEventListener('gesturestart', function(e) {
+      e.preventDefault();
+    });
+  </script>
+
+  <!-- Подключаем данные и логику -->
+  <script defer src="config_banks.js"></script>
+  <script defer src="tariffs_life.js"></script>
+  <script defer src="tariffs_property.js"></script>
+  <script defer src="parser.js"></script>
+  <script defer src="calculator_v2.js"></script>
+  <script src="openai.js"></script>
+</body>
+</html>
