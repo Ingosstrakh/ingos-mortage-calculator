@@ -9,6 +9,79 @@
   <link rel="stylesheet" href="ingosstrax_style_3d.css?v=8">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
 
+  <!-- Автоматическое определение устройства и управление версиями -->
+  <script>
+    (function() {
+      // Проверка на мобильное устройство
+      function isMobile() {
+        // Проверка по User-Agent
+        const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
+        const isMobileUA = mobileRegex.test(navigator.userAgent);
+
+        // Проверка по размеру экрана (планшеты считаем десктопом)
+        const isSmallScreen = window.innerWidth <= 768 && window.innerHeight <= 1024;
+
+        // Проверка на touch-устройства
+        const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+        return (isMobileUA && isSmallScreen) || (hasTouch && isSmallScreen);
+      }
+
+      // Проверка на планшет
+      function isTablet() {
+        return /iPad|Android(?=.*\bMobile\b)|Tablet/i.test(navigator.userAgent) ||
+               (window.innerWidth > 768 && window.innerWidth <= 1024);
+      }
+
+      // Получение параметра версии из URL
+      function getVersionParam() {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('version');
+      }
+
+      // Определение нужной версии
+      function getTargetVersion() {
+        const versionParam = getVersionParam();
+
+        // Принудительное указание версии через URL параметр
+        if (versionParam === 'mobile') return 'mobile';
+        if (versionParam === 'desktop') return 'desktop';
+
+        // Автоматическое определение
+        if (isMobile()) return 'mobile';
+        if (isTablet()) return 'desktop'; // Планшеты используют десктоп версию
+
+        return 'desktop'; // По умолчанию десктоп
+      }
+
+      const currentVersion = window.location.href.includes('mobile') ? 'mobile' : 'desktop';
+      const targetVersion = getTargetVersion();
+
+      // Перенаправление если нужно
+      if (currentVersion !== targetVersion) {
+        const newUrl = targetVersion === 'mobile' ? 'index_mobile.html' : 'index.html';
+        window.location.href = newUrl + window.location.search;
+      }
+
+      // Добавление ссылок для переключения версий (для тестирования)
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        setTimeout(() => {
+          const versionSwitcher = document.createElement('div');
+          versionSwitcher.innerHTML = `
+            <div style="position: fixed; top: 10px; right: 10px; z-index: 1000; background: rgba(0,0,0,0.8); color: white; padding: 8px 12px; border-radius: 6px; font-size: 12px;">
+              Версия: ${currentVersion === 'mobile' ? 'Мобильная' : 'Десктоп'}
+              <br>
+              <a href="?version=mobile" style="color: #4ade80; text-decoration: none;">Моб.</a> |
+              <a href="?version=desktop" style="color: #60a5fa; text-decoration: none;">Деск.</a> |
+              <a href="version_test.html" style="color: #fbbf24; text-decoration: none;">Тест</a>
+            </div>
+          `;
+          document.body.appendChild(versionSwitcher);
+        }, 1000);
+      }
+    })();
+  </script>
+
   <!-- Fallback стили на случай проблем с загрузкой CSS -->
   <style>
     /* Базовые стили для корректного отображения */
