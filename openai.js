@@ -38,3 +38,6 @@ async function processClientRequest(message) {
 
 // Экспортируем функцию в глобальную область
 window.processClientRequest = processClientRequest;
+
+// fallback
+if(typeof window.handleClientRequest!=="function"){window.handleClientRequest=async()=>({choices:[{message:{content:""}}]});}
