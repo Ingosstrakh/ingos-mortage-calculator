@@ -1187,3 +1187,6 @@ function calculateIFLAdditionalRisk(product, data, insuranceAmount) {
       return null;
   }
 }
+
+// Экспортируем функцию в глобальную область
+window.handleClientRequest = handleClientRequest;
