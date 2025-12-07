@@ -449,7 +449,8 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
   if (!bestProduct || bestDifference < 200) {
     return null;
   }
-  
+
+  // Если разница больше 2000, добавляем дополнительные объекты/риски для уменьшения разницы до 1500-2000
   let finalProduct = bestProduct;
   let additionalRisks = [];
   let currentTotal = bestProduct.total;
@@ -463,9 +464,8 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
   // Итеративно добавляем/увеличиваем риски, пока разница не попадет в нужный диапазон
   let iterations = 0;
   const maxIterations = 10; // Защита от бесконечного цикла
-  let previousTotal = currentTotal; // Для отслеживания изменений
   
-  while (currentDifference > targetMax && iterations < maxIterations && currentDifference > 0) {
+  while (currentDifference > targetMax && iterations < maxIterations) {
     iterations++;
     const neededIncrease = currentDifference - targetMiddle; // Сколько нужно добавить, чтобы разница была около 1750
     
@@ -509,12 +509,6 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
           ...bestProduct,
           total: currentTotal
         };
-        
-        // Проверяем, изменилась ли сумма (защита от бесконечного цикла)
-        if (Math.abs(currentTotal - previousTotal) < 0.01) {
-          break; // Сумма не изменилась, выходим из цикла
-        }
-        previousTotal = currentTotal;
       } else {
         break; // Не удалось добавить/увеличить риски
       }
@@ -530,12 +524,6 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
         };
         currentTotal = finalProduct.total;
         currentDifference = variant1Total - currentTotal;
-        
-        // Проверяем, изменилась ли сумма (защита от бесконечного цикла)
-        if (Math.abs(currentTotal - previousTotal) < 0.01) {
-          break; // Сумма не изменилась, выходим из цикла
-        }
-        previousTotal = currentTotal;
       } else {
         break; // Не удалось найти более дорогой пакет
       }
@@ -551,12 +539,6 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
           ...bestProduct,
           total: currentTotal
         };
-        
-        // Проверяем, изменилась ли сумма (защита от бесконечного цикла)
-        if (Math.abs(currentTotal - previousTotal) < 0.01) {
-          break; // Сумма не изменилась, выходим из цикла
-        }
-        previousTotal = currentTotal;
       } else {
         break; // Не удалось добавить конструктивный элемент
       }
@@ -617,11 +599,9 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
 function addBastionConstructive(data, insuranceAmount, neededIncrease) {
   const isFlat = data.objectType === 'flat' || data.objectType === null;
   const objectType = isFlat ? 'flat' : 'house';
-  const bastionTariff = window.T_BASTION && window.T_BASTION[objectType];
+  const bastionTariff = window.T_BASTION[objectType];
   
-  if (!bastionTariff || !bastionTariff.cons || !bastionTariff.cons.min || !bastionTariff.cons.max || !bastionTariff.cons.rate) {
-    return null;
-  }
+  if (!bastionTariff) return null;
 
   const consMin = bastionTariff.cons.min;
   const consMax = Math.min(bastionTariff.cons.max, insuranceAmount);
@@ -688,8 +668,8 @@ function addAdditionalRisksForMoyaKvartira(data, insuranceAmount, neededIncrease
   let remainingIncrease = neededIncrease;
   
   // Проверяем, какие риски уже есть
-  let hasMovable = existingRisks.some(r => r.objects === 'движимое имущество');
-  let hasGO = existingRisks.some(r => r.objects === 'гражданская ответственность');
+  const hasMovable = existingRisks.some(r => r.objects === 'движимое имущество');
+  const hasGO = existingRisks.some(r => r.objects === 'гражданская ответственность');
 
   // baseFinishSum передается из вызывающей функции - это сумма отделки, которая уже используется
 
@@ -702,11 +682,7 @@ function addAdditionalRisksForMoyaKvartira(data, insuranceAmount, neededIncrease
     if (hasMovable) {
       // Увеличиваем существующее движимое имущество
       const existingMovable = existingRisks.find(r => r.objects === 'движимое имущество');
-      if (!existingMovable || !existingMovable.sum || !existingMovable.premium) {
-        // Если данные некорректны, переходим к добавлению нового
-        hasMovable = false;
-      } else {
-        const currentMovableSum = existingMovable.sum;
+      const currentMovableSum = existingMovable.sum;
       
       // Увеличиваем сумму на 25-50% от текущей, но не больше максимума
       const testSums = [
@@ -751,15 +727,8 @@ function addAdditionalRisksForMoyaKvartira(data, insuranceAmount, neededIncrease
         });
         totalPremium += bestMovable.premium - existingMovable.premium; // Только разница
         remainingIncrease -= (bestMovable.premium - existingMovable.premium);
-        hasMovable = true; // Успешно обновили
-      } else {
-        // Не удалось увеличить существующий, переходим к добавлению нового
-        hasMovable = false;
       }
-      }
-    }
-    
-    if (!hasMovable) {
+    } else {
     // Пробуем суммы для движимого имущества, близкие к сумме отделки
     // Генерируем больше вариантов в разумном диапазоне
     const testSums = [];
@@ -816,11 +785,7 @@ function addAdditionalRisksForMoyaKvartira(data, insuranceAmount, neededIncrease
     if (hasGO) {
       // Увеличиваем существующее ГО
       const existingGO = existingRisks.find(r => r.objects === 'гражданская ответственность');
-      if (!existingGO || !existingGO.sum || !existingGO.premium) {
-        // Если данные некорректны, переходим к добавлению нового
-        hasGO = false;
-      } else {
-        const currentGOSum = existingGO.sum;
+      const currentGOSum = existingGO.sum;
       const maxReasonableGO = Math.min(500000, baseFinishSum * 1.5);
       
       // Увеличиваем сумму на 25-50% от текущей, но не больше максимума
@@ -864,15 +829,8 @@ function addAdditionalRisksForMoyaKvartira(data, insuranceAmount, neededIncrease
           premium: bestGO.premium
         });
         totalPremium += bestGO.premium - existingGO.premium; // Только разница
-        hasGO = true; // Успешно обновили
-      } else {
-        // Не удалось увеличить существующий, переходим к добавлению нового
-        hasGO = false;
       }
-      }
-    }
-    
-    if (!hasGO) {
+    } else {
       // Добавляем новое ГО
       const maxReasonableGO = Math.min(500000, baseFinishSum * 1.5);
       const testSums = [];
@@ -1187,6 +1145,3 @@ function calculateIFLAdditionalRisk(product, data, insuranceAmount) {
       return null;
   }
 }
-
-// Экспортируем функцию в глобальную область
-window.handleClientRequest = handleClientRequest;
