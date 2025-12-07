@@ -33,6 +33,124 @@ function handleClientRequest(clientText) {
   }
 }
 
+// Расчет доп. риска для продуктов IFL (объявляем раньше для hoisting)
+function calculateIFLAdditionalRisk(product, data, insuranceAmount) {
+  if (!window.T_BASTION || !window.EXPRESS_PACKS || !window.EXPRESS_GO_PACKS || !window.T_MOYA) {
+    return null;
+  }
+
+  switch (product) {
+    case 'bastion': {
+      // Бастион - военные риски
+      const isFlat = data.objectType === 'flat' || data.objectType === null;
+      const objectType = isFlat ? 'flat' : 'house';
+      const bastionTariff = window.T_BASTION[objectType];
+      
+      if (!bastionTariff) return null;
+
+      // Используем отделку для расчета
+      const finishMin = bastionTariff.finish.min;
+      const finishMax = Math.min(bastionTariff.finish.max, insuranceAmount);
+      
+      // Если страховая сумма меньше минимума, используем минимум
+      // Если страховая сумма больше минимума, используем процент от суммы, но не меньше минимума
+      // Для равномерности используем разумный процент, не слишком большой
+      let finishSum;
+      if (insuranceAmount < finishMin) {
+        // Если страховая сумма меньше минимума, используем минимум (если он не превышает максимум)
+        finishSum = Math.min(finishMin, finishMax);
+      } else if (insuranceAmount > 5000000) {
+        // Для больших сумм используем меньший процент (5%), но не больше чем минимум * 3 для равномерности
+        const maxReasonable = finishMin * 3; // Максимально разумная сумма для равномерности
+        finishSum = Math.min(finishMax, Math.min(maxReasonable, Math.max(finishMin, insuranceAmount * 0.05)));
+      } else {
+        // Для обычных сумм используем 10% от страховой суммы, но не меньше минимума
+        // И не больше чем минимум * 3 для равномерности
+        const maxReasonable = finishMin * 3;
+        finishSum = Math.min(finishMax, Math.min(maxReasonable, Math.max(finishMin, insuranceAmount * 0.1)));
+      }
+      
+      if (finishSum < finishMin || finishSum > finishMax) return null;
+
+      const premium = Math.round(finishSum * bastionTariff.finish.rate * 100) / 100;
+      return {
+        productName: 'Бастион',
+        riskName: 'военные риски',
+        premium: premium
+      };
+    }
+
+    case 'express': {
+      // Экспресс квартира - выбираем пакет с минимальной ценой
+      const packs = window.EXPRESS_PACKS;
+      if (!packs || packs.length === 0) return null;
+
+      // Выбираем пакет без ГО (noGo) с минимальной ценой
+      const minPack = packs.reduce((min, p) => p.noGo < min.noGo ? p : min, packs[0]);
+      return {
+        productName: 'Экспресс квартира',
+        riskName: 'отделка и движимое имущество',
+        premium: minPack.noGo
+      };
+    }
+
+    case 'express_go': {
+      // Экспресс ГО - выбираем пакет с минимальной ценой
+      const packs = window.EXPRESS_GO_PACKS;
+      if (!packs || packs.length === 0) return null;
+
+      const minPack = packs.reduce((min, p) => p.price < min.price ? p : min, packs[0]);
+      return {
+        productName: 'Экспресс ГО',
+        riskName: 'гражданская ответственность',
+        premium: minPack.price
+      };
+    }
+
+    case 'moyakvartira': {
+      // Моя квартира - НЕ используем конструктивный элемент (запрещено во 2 варианте)
+      // Используем только отделку
+      const moyaTariff = window.T_MOYA;
+      if (!moyaTariff) return null;
+
+      // Рассчитываем по отделке (используем разумную сумму в пределах диапазона)
+      // Для больших страховых сумм используем меньший процент или минимальную сумму
+      let finishSum;
+      if (insuranceAmount > 5000000) {
+        // Для очень больших сумм используем минимальную сумму из первого диапазона
+        finishSum = 200000;
+      } else {
+        // Для обычных сумм используем 5-10% от страховой суммы, но в пределах диапазона
+        finishSum = Math.min(500000, Math.max(200000, insuranceAmount * 0.08));
+      }
+      
+      const finishRate = moyaTariff.finish.find(r => finishSum >= r.min && finishSum <= r.max);
+      
+      if (!finishRate) {
+        // Если не попали в диапазон, используем минимальный диапазон
+        const minRate = moyaTariff.finish[0];
+        finishSum = 200000;
+        const premium = Math.round(finishSum * minRate.rate * 100) / 100;
+        return {
+          productName: 'Моя квартира',
+          riskName: 'отделка и инженерное оборудование',
+          premium: premium
+        };
+      }
+
+      const premium = Math.round(finishSum * finishRate.rate * 100) / 100;
+      return {
+        productName: 'Моя квартира',
+        riskName: 'отделка и инженерное оборудование',
+        premium: premium
+      };
+    }
+
+    default:
+      return null;
+  }
+}
+
 // Функция выполнения всех расчетов
 function performCalculations(data) {
   const bankConfig = window.BANKS[data.bank];
@@ -1070,127 +1188,8 @@ function getAdditionalRiskDetails(product, data, insuranceAmount, premium, addit
   }
 }
 
-// Расчет доп. риска для продуктов IFL
-function calculateIFLAdditionalRisk(product, data, insuranceAmount) {
-  if (!window.T_BASTION || !window.EXPRESS_PACKS || !window.EXPRESS_GO_PACKS || !window.T_MOYA) {
-    return null;
-  }
-
-  switch (product) {
-    case 'bastion': {
-      // Бастион - военные риски
-      const isFlat = data.objectType === 'flat' || data.objectType === null;
-      const objectType = isFlat ? 'flat' : 'house';
-      const bastionTariff = window.T_BASTION[objectType];
-      
-      if (!bastionTariff) return null;
-
-      // Используем отделку для расчета
-      const finishMin = bastionTariff.finish.min;
-      const finishMax = Math.min(bastionTariff.finish.max, insuranceAmount);
-      
-      // Если страховая сумма меньше минимума, используем минимум
-      // Если страховая сумма больше минимума, используем процент от суммы, но не меньше минимума
-      // Для равномерности используем разумный процент, не слишком большой
-      let finishSum;
-      if (insuranceAmount < finishMin) {
-        // Если страховая сумма меньше минимума, используем минимум (если он не превышает максимум)
-        finishSum = Math.min(finishMin, finishMax);
-      } else if (insuranceAmount > 5000000) {
-        // Для больших сумм используем меньший процент (5%), но не больше чем минимум * 3 для равномерности
-        const maxReasonable = finishMin * 3; // Максимально разумная сумма для равномерности
-        finishSum = Math.min(finishMax, Math.min(maxReasonable, Math.max(finishMin, insuranceAmount * 0.05)));
-      } else {
-        // Для обычных сумм используем 10% от страховой суммы, но не меньше минимума
-        // И не больше чем минимум * 3 для равномерности
-        const maxReasonable = finishMin * 3;
-        finishSum = Math.min(finishMax, Math.min(maxReasonable, Math.max(finishMin, insuranceAmount * 0.1)));
-      }
-      
-      if (finishSum < finishMin || finishSum > finishMax) return null;
-
-      const premium = Math.round(finishSum * bastionTariff.finish.rate * 100) / 100;
-      return {
-        productName: 'Бастион',
-        riskName: 'военные риски',
-        premium: premium
-      };
-    }
-
-    case 'express': {
-      // Экспресс квартира - выбираем пакет с минимальной ценой
-      const packs = window.EXPRESS_PACKS;
-      if (!packs || packs.length === 0) return null;
-
-      // Выбираем пакет без ГО (noGo) с минимальной ценой
-      const minPack = packs.reduce((min, p) => p.noGo < min.noGo ? p : min, packs[0]);
-      return {
-        productName: 'Экспресс квартира',
-        riskName: 'отделка и движимое имущество',
-        premium: minPack.noGo
-      };
-    }
-
-    case 'express_go': {
-      // Экспресс ГО - выбираем пакет с минимальной ценой
-      const packs = window.EXPRESS_GO_PACKS;
-      if (!packs || packs.length === 0) return null;
-
-      const minPack = packs.reduce((min, p) => p.price < min.price ? p : min, packs[0]);
-      return {
-        productName: 'Экспресс ГО',
-        riskName: 'гражданская ответственность',
-        premium: minPack.price
-      };
-    }
-
-    case 'moyakvartira': {
-      // Моя квартира - НЕ используем конструктивный элемент (запрещено во 2 варианте)
-      // Используем только отделку
-      const moyaTariff = window.T_MOYA;
-      if (!moyaTariff) return null;
-
-      // Рассчитываем по отделке (используем разумную сумму в пределах диапазона)
-      // Для больших страховых сумм используем меньший процент или минимальную сумму
-      let finishSum;
-      if (insuranceAmount > 5000000) {
-        // Для очень больших сумм используем минимальную сумму из первого диапазона
-        finishSum = 200000;
-      } else {
-        // Для обычных сумм используем 5-10% от страховой суммы, но в пределах диапазона
-        finishSum = Math.min(500000, Math.max(200000, insuranceAmount * 0.08));
-      }
-      
-      const finishRate = moyaTariff.finish.find(r => finishSum >= r.min && finishSum <= r.max);
-      
-      if (!finishRate) {
-        // Если не попали в диапазон, используем минимальный диапазон
-        const minRate = moyaTariff.finish[0];
-        finishSum = 200000;
-        const premium = Math.round(finishSum * minRate.rate * 100) / 100;
-        return {
-          productName: 'Моя квартира',
-          riskName: 'отделка и инженерное оборудование',
-          premium: premium
-        };
-      }
-
-      const premium = Math.round(finishSum * finishRate.rate * 100) / 100;
-      return {
-        productName: 'Моя квартира',
-        riskName: 'отделка и инженерное оборудование',
-        premium: premium
-      };
-    }
-
-    default:
-      return null;
-  }
-}
 
 // Экспортируем функцию в глобальную область
 if (typeof window !== 'undefined') {
   window.handleClientRequest = handleClientRequest;
-}
-
 }
