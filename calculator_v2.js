@@ -1189,6 +1189,4 @@ function calculateIFLAdditionalRisk(product, data, insuranceAmount) {
 }
 
 // Экспортируем функцию в глобальную область
-if (typeof window !== 'undefined') {
-  window.handleClientRequest = handleClientRequest;
-}
+window.handleClientRequest = handleClientRequest;
