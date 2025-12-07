@@ -126,5 +126,21 @@ window.BANKS = {
     add_percent: 0,
     allow_discount_property: true,
     allow_discount_life: true
+  },
+
+  "Банк СПБ": {
+    aliases: ["банк спб", "спб", "спб банк", "банк санкт-петербург"],
+    add_percent: 10,
+    allow_discount_property: false, // запрещена
+    allow_discount_life: false      // запрещена
+  },
+
+  "МКБ": {
+    aliases: ["мкб", "мкб банк", "московский кредитный банк"],
+    add_percent: 0,
+    allow_discount_property: true,
+    allow_discount_life: true,
+    discount_property_percent: 15,  // скидка 15%
+    discount_life_percent: 15        // скидка 15%
   }
 };
