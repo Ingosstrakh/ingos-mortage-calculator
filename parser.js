@@ -502,8 +502,8 @@ function parseTextToObject(rawText) {
   // 8) markup / ставка
   const percents = extractPercents(text);
   if (percents.length>0) {
-    // heuristics: if there's "ставка" word around the percent - it's rate; if percent followed by "ставк" it's manual markup
-    const m = text.match(/(ставк[ае]|ставка|ставк:)[^\d]{0,20}(\d+(?:[.,]\d+)?)\s*%/i);
+    // heuristics: if there's "ставка" word around the percent - it's rate; if percent followed by "ставк" or "ст" it's manual markup
+    const m = text.match(/(ставк[ае]|ставка|ставк:|ст\s)[^\d]{0,20}(\d+(?:[.,]\d+)?)\s*%/i);
     if (m) result.markupPercent = Number(String(m[2]).replace(',','.'));
     else result.markupPercent = percents[0];
   }
