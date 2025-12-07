@@ -401,7 +401,7 @@
         }
 
         // Проверяем, что все необходимые функции загружены
-        if (typeof processClientRequest === 'undefined') {
+        if (typeof processClientRequest === 'undefined' || typeof handleClientRequest === 'undefined') {
           showError('Система расчетов загружается. Пожалуйста, подождите несколько секунд и попробуйте снова.');
           return;
         }
