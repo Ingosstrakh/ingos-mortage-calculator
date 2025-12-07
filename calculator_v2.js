@@ -168,6 +168,10 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
     tariffTable = window.LIFE_TARIFF_DOMRF || LIFE_TARIFF_DOMRF;
   } else if (data.bank === "РСХБ") {
     tariffTable = window.LIFE_TARIFF_RSHB_LOSS || LIFE_TARIFF_RSHB_LOSS;
+  } else if (data.bank === "Банк СПБ") {
+    tariffTable = window.LIFE_TARIFF_SPB || LIFE_TARIFF_SPB;
+  } else if (data.bank === "МКБ") {
+    tariffTable = window.LIFE_TARIFF_MKB || LIFE_TARIFF_MKB;
   } else {
     tariffTable = window.LIFE_TARIFF_BASE || LIFE_TARIFF_BASE;
   }
@@ -193,7 +197,13 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
 
     const shareAmount = insuranceAmount * (borrower.share / 100);
     const premium = Math.round(shareAmount * (tariff / 100) * 100) / 100;
-    const premiumWithDiscount = hasDiscount ? Math.round(premium * 0.75 * 100) / 100 : premium;
+    
+    // Применяем скидку: стандартная 25% (0.75) или кастомная из конфигурации банка
+    let discountMultiplier = 0.75; // стандартная скидка 25%
+    if (hasDiscount && bankConfig.discount_life_percent) {
+      discountMultiplier = 1 - (bankConfig.discount_life_percent / 100);
+    }
+    const premiumWithDiscount = hasDiscount ? Math.round(premium * discountMultiplier * 100) / 100 : premium;
 
     borrowerPremiums.push({
       gender: borrower.gender,
@@ -248,11 +258,15 @@ function calculatePropertyInsurance(data, bankConfig, insuranceAmount) {
 
   const premium = Math.round(insuranceAmount * (tariff / 100) * 100) / 100;
 
-  // Применяем скидку 10%, если разрешено банком
+  // Применяем скидку: стандартная 10% (0.9) или кастомная из конфигурации банка
   let discountedPremium = premium;
   let discountApplied = false;
   if (bankConfig.allow_discount_property) {
-    discountedPremium = premium * 0.9; // 10% скидка = умножить на 0.9
+    let discountMultiplier = 0.9; // стандартная скидка 10%
+    if (bankConfig.discount_property_percent) {
+      discountMultiplier = 1 - (bankConfig.discount_property_percent / 100);
+    }
+    discountedPremium = Math.round(premium * discountMultiplier * 100) / 100;
     discountApplied = true;
   }
 
