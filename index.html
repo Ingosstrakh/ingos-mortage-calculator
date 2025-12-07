@@ -151,9 +151,9 @@
   <script defer src="tariffs_ifl.js?v=7"></script>
 
   <!-- Логика -->
-  <script src="parser.js?v=7"></script>
-  <script src="calculator_v2.js?v=7"></script>
-  <script src="openai.js?v=7"></script>
+  <script defer src="parser.js?v=7"></script>
+  <script defer src="calculator_v2.js?v=7"></script>
+  <script defer src="openai.js?v=7"></script>
 </head>
 
 <body>
@@ -383,51 +383,22 @@
   </footer>
 
   <script>
-    // Функция для проверки загрузки всех необходимых скриптов
-    function waitForScripts(callback, maxAttempts = 50) {
-      let attempts = 0;
-      const checkScripts = () => {
-        attempts++;
-        if (typeof handleClientRequest !== 'undefined' && 
-            typeof processClientRequest !== 'undefined' && 
-            typeof parseTextToObject !== 'undefined') {
-          callback();
-        } else if (attempts < maxAttempts) {
-          setTimeout(checkScripts, 100);
-        } else {
-          console.error('Не удалось загрузить необходимые скрипты');
-          const resultsContent = document.getElementById('results-content');
-          if (resultsContent) {
-            resultsContent.innerHTML = '<div style="color: #dc3545; padding: 15px;">Ошибка загрузки системы расчетов. Пожалуйста, обновите страницу.</div>';
-          }
-        }
-      };
-      checkScripts();
-    }
-
     // Инициализация интерфейса
     document.addEventListener('DOMContentLoaded', function() {
-      waitForScripts(function() {
-        const clientInput = document.getElementById('client-input');
-        const calculateBtn = document.getElementById('calculate-btn');
-        const clearBtn = document.getElementById('clear-btn');
-        const resultsSection = document.getElementById('results-section');
-        const resultsContent = document.getElementById('results-content');
+      const clientInput = document.getElementById('client-input');
+      const calculateBtn = document.getElementById('calculate-btn');
+      const clearBtn = document.getElementById('clear-btn');
+      const resultsSection = document.getElementById('results-section');
+      const resultsContent = document.getElementById('results-content');
 
-        // Обработчик кнопки расчета
-        calculateBtn.addEventListener('click', async function() {
-          const message = clientInput.value.trim();
+      // Обработчик кнопки расчета
+      calculateBtn.addEventListener('click', async function() {
+        const message = clientInput.value.trim();
 
-          if (!message) {
-            showError('Введите данные для расчета');
-            return;
-          }
-
-          // Проверяем, что все необходимые функции загружены
-          if (typeof processClientRequest === 'undefined' || typeof handleClientRequest === 'undefined') {
-            showError('Система расчетов загружается. Пожалуйста, подождите несколько секунд и попробуйте снова.');
-            return;
-          }
+        if (!message) {
+          showError('Введите данные для расчета');
+          return;
+        }
 
         // Показываем индикатор загрузки
         calculateBtn.disabled = true;
@@ -479,9 +450,10 @@
         resultsSection.scrollIntoView({ behavior: 'smooth' });
       }
 
-        // Фокус на поле ввода при загрузке
+      // Фокус на поле ввода при загрузке
+      setTimeout(() => {
         clientInput.focus();
-      });
+      }, 500);
     });
   </script>
 </body>
