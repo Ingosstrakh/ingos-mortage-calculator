@@ -468,7 +468,18 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
     // Добавляем дополнительные риски в зависимости от продукта
     if (bestProduct.product === 'moyakvartira') {
       // Для "Моя квартира" можно добавить движимое имущество и ГО
-      const additionalRisksResult = addAdditionalRisksForMoyaKvartira(data, insuranceAmount, neededIncrease);
+      // Определяем базовую сумму отделки, которая была использована
+      const moyaTariff = window.T_MOYA;
+      let baseFinishSum = 200000; // По умолчанию минимум
+      if (moyaTariff) {
+        if (insuranceAmount > 5000000) {
+          baseFinishSum = 200000;
+        } else {
+          baseFinishSum = Math.min(500000, Math.max(200000, insuranceAmount * 0.08));
+        }
+      }
+      
+      const additionalRisksResult = addAdditionalRisksForMoyaKvartira(data, insuranceAmount, neededIncrease, baseFinishSum);
       if (additionalRisksResult && additionalRisksResult.risks.length > 0) {
         additionalRisks = additionalRisksResult.risks;
         currentTotal += additionalRisksResult.totalPremium;
@@ -545,7 +556,7 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
 }
 
 // Добавление дополнительных рисков для "Моя квартира" для уменьшения разницы
-function addAdditionalRisksForMoyaKvartira(data, insuranceAmount, neededIncrease) {
+function addAdditionalRisksForMoyaKvartira(data, insuranceAmount, neededIncrease, baseFinishSum = 200000) {
   const moyaTariff = window.T_MOYA;
   if (!moyaTariff) return null;
 
@@ -553,31 +564,46 @@ function addAdditionalRisksForMoyaKvartira(data, insuranceAmount, neededIncrease
   let totalPremium = 0;
   let remainingIncrease = neededIncrease;
 
-  // Пытаемся добавить движимое имущество
-  // Подбираем сумму так, чтобы премия была близка к neededIncrease
+  // baseFinishSum передается из вызывающей функции - это сумма отделки, которая уже используется
+
+  // Для равномерности: движимое имущество должно быть примерно такого же порядка, как отделка
+  // Максимальная разница не должна превышать 2x от базовой суммы для равномерности
+  const maxReasonableMovable = baseFinishSum * 2.5; // Максимум 500 000 для равномерности
+
   if (remainingIncrease > 300) {
-    // Пробуем разные суммы для движимого имущества
-    const testSums = [
-      Math.min(2000000, Math.max(50000, insuranceAmount * 0.15)),
-      Math.min(2000000, Math.max(50000, insuranceAmount * 0.12)),
-      Math.min(2000000, Math.max(50000, insuranceAmount * 0.1)),
-      Math.min(2000000, Math.max(50000, insuranceAmount * 0.08))
-    ];
+    // Пробуем суммы для движимого имущества, близкие к сумме отделки
+    // Генерируем больше вариантов в разумном диапазоне
+    const testSums = [];
+    for (let multiplier = 1; multiplier <= 2.5; multiplier += 0.25) {
+      const testSum = Math.round(baseFinishSum * multiplier);
+      if (testSum >= 50000 && testSum <= Math.min(2000000, maxReasonableMovable)) {
+        testSums.push(testSum);
+      }
+    }
     
     let bestMovable = null;
-    let bestDiff = Infinity;
+    let bestScore = Infinity;
     
     for (const testSum of testSums) {
       const movableRate = moyaTariff.movable.find(r => testSum >= r.min && testSum <= r.max);
       if (movableRate) {
         const movablePremium = Math.round(testSum * movableRate.rate * 100) / 100;
         const diff = Math.abs(movablePremium - remainingIncrease);
-        if (diff < bestDiff && movablePremium <= remainingIncrease + 2000) {
+        
+        // Оценка равномерности: штраф за отклонение от базовой суммы
+        // Чем ближе к базовой сумме, тем лучше
+        const uniformityPenalty = Math.abs(testSum - baseFinishSum) / baseFinishSum * 2000;
+        // Оценка точности: насколько близка премия к нужной
+        const accuracyScore = diff;
+        // Комбинированная оценка: приоритет равномерности, но учитываем нужную премию
+        const combinedScore = accuracyScore + uniformityPenalty;
+        
+        if (combinedScore < bestScore && movablePremium <= remainingIncrease + 2000) {
           bestMovable = {
             sum: Math.round(testSum),
             premium: movablePremium
           };
-          bestDiff = diff;
+          bestScore = combinedScore;
         }
       }
     }
@@ -595,28 +621,49 @@ function addAdditionalRisksForMoyaKvartira(data, insuranceAmount, neededIncrease
   }
 
   // Пытаемся добавить ГО, если еще нужно
+  // ГО тоже должна быть разумной суммы, не слишком большой
+  // Для равномерности ГО должна быть примерно равна или меньше отделки
   if (remainingIncrease > 200) {
-    // Пробуем разные суммы для ГО
-    const testSums = [
-      Math.min(500000, Math.max(100000, insuranceAmount * 0.08)),
-      Math.min(500000, Math.max(100000, insuranceAmount * 0.06)),
-      Math.min(500000, Math.max(100000, insuranceAmount * 0.05))
-    ];
+    // Для ГО используем суммы в диапазоне 100 000 - не больше чем отделка * 1.5
+    const maxReasonableGO = Math.min(500000, baseFinishSum * 1.5);
+    const testSums = [];
+    for (let sum = 100000; sum <= maxReasonableGO; sum += 50000) {
+      testSums.push(sum);
+    }
+    // Добавляем также суммы близкие к базовой
+    if (baseFinishSum >= 100000 && baseFinishSum <= 500000) {
+      testSums.push(baseFinishSum);
+      testSums.push(Math.round(baseFinishSum * 0.8));
+      testSums.push(Math.round(baseFinishSum * 1.2));
+    }
+    
+    // Убираем дубликаты и сортируем
+    const uniqueSums = [...new Set(testSums)].sort((a, b) => a - b);
     
     let bestGO = null;
-    let bestDiff = Infinity;
+    let bestScore = Infinity;
     
-    for (const testSum of testSums) {
+    for (const testSum of uniqueSums) {
+      if (testSum < 100000 || testSum > 500000) continue; // Проверяем диапазон
+      
       const goRate = moyaTariff.go.pack.find(r => testSum >= r.min && testSum <= r.max);
       if (goRate) {
         const goPremium = Math.round(testSum * goRate.rate * 100) / 100;
         const diff = Math.abs(goPremium - remainingIncrease);
-        if (diff < bestDiff && goPremium <= remainingIncrease + 1000) {
+        
+        // Оценка равномерности: предпочитаем суммы близкие к базовой или меньше
+        const uniformityPenalty = testSum > baseFinishSum ? (testSum - baseFinishSum) / baseFinishSum * 1500 : 0;
+        // Оценка точности
+        const accuracyScore = diff;
+        // Комбинированная оценка
+        const combinedScore = accuracyScore + uniformityPenalty;
+        
+        if (combinedScore < bestScore && goPremium <= remainingIncrease + 1000) {
           bestGO = {
             sum: Math.round(testSum),
             premium: goPremium
           };
-          bestDiff = diff;
+          bestScore = combinedScore;
         }
       }
     }
@@ -692,9 +739,13 @@ function getAdditionalRiskDetails(product, data, insuranceAmount, premium, addit
       if (insuranceAmount < finishMin) {
         finishSum = Math.min(finishMin, finishMax);
       } else if (insuranceAmount > 5000000) {
-        finishSum = Math.min(finishMax, Math.max(finishMin, insuranceAmount * 0.05));
+        // Для больших сумм используем меньший процент, но не больше чем минимум * 3 для равномерности
+        const maxReasonable = finishMin * 3;
+        finishSum = Math.min(finishMax, Math.min(maxReasonable, Math.max(finishMin, insuranceAmount * 0.05)));
       } else {
-        finishSum = Math.min(finishMax, Math.max(finishMin, insuranceAmount * 0.1));
+        // Для обычных сумм используем 10%, но не больше чем минимум * 3 для равномерности
+        const maxReasonable = finishMin * 3;
+        finishSum = Math.min(finishMax, Math.min(maxReasonable, Math.max(finishMin, insuranceAmount * 0.1)));
       }
       
       const objectName = isFlat ? 'квартира' : 'дом';
@@ -777,16 +828,20 @@ function calculateIFLAdditionalRisk(product, data, insuranceAmount) {
       
       // Если страховая сумма меньше минимума, используем минимум
       // Если страховая сумма больше минимума, используем процент от суммы, но не меньше минимума
+      // Для равномерности используем разумный процент, не слишком большой
       let finishSum;
       if (insuranceAmount < finishMin) {
         // Если страховая сумма меньше минимума, используем минимум (если он не превышает максимум)
         finishSum = Math.min(finishMin, finishMax);
       } else if (insuranceAmount > 5000000) {
-        // Для больших сумм используем меньший процент
-        finishSum = Math.min(finishMax, Math.max(finishMin, insuranceAmount * 0.05));
+        // Для больших сумм используем меньший процент (5%), но не больше чем минимум * 3 для равномерности
+        const maxReasonable = finishMin * 3; // Максимально разумная сумма для равномерности
+        finishSum = Math.min(finishMax, Math.min(maxReasonable, Math.max(finishMin, insuranceAmount * 0.05)));
       } else {
         // Для обычных сумм используем 10% от страховой суммы, но не меньше минимума
-        finishSum = Math.min(finishMax, Math.max(finishMin, insuranceAmount * 0.1));
+        // И не больше чем минимум * 3 для равномерности
+        const maxReasonable = finishMin * 3;
+        finishSum = Math.min(finishMax, Math.min(maxReasonable, Math.max(finishMin, insuranceAmount * 0.1)));
       }
       
       if (finishSum < finishMin || finishSum > finishMax) return null;
