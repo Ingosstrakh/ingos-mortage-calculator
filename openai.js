@@ -3,6 +3,15 @@
 // Основная функция для обработки запросов клиентов
 async function processClientRequest(message) {
   try {
+    // Проверяем, что handleClientRequest определена
+    if (typeof handleClientRequest === 'undefined') {
+      console.error('handleClientRequest не определена. Убедитесь, что calculator_v2.js загружен.');
+      return `<div style="color: #dc3545; padding: 15px; border: 1px solid #dc3545; border-radius: 8px; margin: 15px 0; background-color: #f8d7da;">
+        <strong>❌ Ошибка загрузки системы</strong><br><br>
+        Система расчетов еще загружается. Пожалуйста, подождите несколько секунд и попробуйте снова.
+      </div>`;
+    }
+    
     // Пытаемся распарсить и рассчитать
     const result = handleClientRequest(message);
 
