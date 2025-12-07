@@ -61,6 +61,7 @@ function performCalculations(data) {
     // Надбавка не указана клиентом
     output += `<b>Внимание:</b> Для этого банка укажите надбавку в процентах (например: "15% надбавка")<br><br>`;
   } else {
+    // add_percent = 0 - надбавки нет, используем остаток как страховую сумму
     output += `<b>Страховая сумма:</b> ${insuranceAmount.toLocaleString('ru-RU')} ₽<br><br>`;
   }
 
@@ -502,7 +503,9 @@ function getAdditionalRiskDetails(product, data, insuranceAmount, premium) {
       const finishMax = Math.min(bastionTariff.finish.max, insuranceAmount);
       // Используем ту же логику, что и в calculateIFLAdditionalRisk
       let finishSum;
-      if (insuranceAmount > 5000000) {
+      if (insuranceAmount < finishMin) {
+        finishSum = Math.min(finishMin, finishMax);
+      } else if (insuranceAmount > 5000000) {
         finishSum = Math.min(finishMax, Math.max(finishMin, insuranceAmount * 0.05));
       } else {
         finishSum = Math.min(finishMax, Math.max(finishMin, insuranceAmount * 0.1));
@@ -510,6 +513,8 @@ function getAdditionalRiskDetails(product, data, insuranceAmount, premium) {
       
       const objectName = isFlat ? 'квартира' : 'дом';
       const formattedSum = Math.round(finishSum).toLocaleString('ru-RU');
+      // Указываем правильно: страхуется отделка и инженерное оборудование (не конструктивный элемент)
+      // Конструктивный элемент имеет минимум 500 000 для квартиры, отделка - 300 000
       return {
         objects: `отделка и инженерное оборудование ${objectName}`,
         sum: `на сумму ${formattedSum} ₽ премия`
@@ -582,12 +587,18 @@ function calculateIFLAdditionalRisk(product, data, insuranceAmount) {
       // Используем отделку для расчета
       const finishMin = bastionTariff.finish.min;
       const finishMax = Math.min(bastionTariff.finish.max, insuranceAmount);
-      // Используем разумную сумму для расчета (5-10% от страховой суммы, но в пределах диапазона)
-      // Для больших сумм используем меньший процент
+      
+      // Если страховая сумма меньше минимума, используем минимум
+      // Если страховая сумма больше минимума, используем процент от суммы, но не меньше минимума
       let finishSum;
-      if (insuranceAmount > 5000000) {
+      if (insuranceAmount < finishMin) {
+        // Если страховая сумма меньше минимума, используем минимум (если он не превышает максимум)
+        finishSum = Math.min(finishMin, finishMax);
+      } else if (insuranceAmount > 5000000) {
+        // Для больших сумм используем меньший процент
         finishSum = Math.min(finishMax, Math.max(finishMin, insuranceAmount * 0.05));
       } else {
+        // Для обычных сумм используем 10% от страховой суммы, но не меньше минимума
         finishSum = Math.min(finishMax, Math.max(finishMin, insuranceAmount * 0.1));
       }
       
