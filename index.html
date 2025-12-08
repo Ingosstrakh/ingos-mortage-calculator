@@ -153,7 +153,7 @@
   <!-- Логика -->
   <script defer src="parser.js?v=7"></script>
   <script defer src="calculator_v2.js?v=7"></script>
-  <script defer src="openai.js?v=7"></script>
+  <script src="openai.js?v=7"></script>
 </head>
 
 <body>
@@ -451,9 +451,7 @@
       }
 
       // Фокус на поле ввода при загрузке
-      setTimeout(() => {
-        clientInput.focus();
-      }, 500);
+      clientInput.focus();
     });
   </script>
 </body>
