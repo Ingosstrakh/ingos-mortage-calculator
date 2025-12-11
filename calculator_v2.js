@@ -421,8 +421,8 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
   } else {
     // Если ничего явно не попало в диапазоны — попытаемся выбрать продукт, дающий разницу в пределах 600-1200
     // Ищем продукт, у которого variant1Total - p.total в ближайшем расстоянии к целевому интервалу
-    const targetMin = 600;
-    const targetMax = 1200;
+    const targetMin = 500;
+    const targetMax = 2000;
     let bestScore = Infinity;
     for (const p of productResults) {
       const diff = Math.abs(variant1Total - p.total);
@@ -447,7 +447,7 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
 
   const targetMin = 600;
   const targetMax = 1200;
-  const targetMiddle = (targetMin + targetMax) / 2; // 900
+  const targetMiddle = 1000; // 900
 
   // Если текущая разница больше targetMax, нужно увеличить finalProduct.total (добавить премии)
   if (currentDiff > targetMax) {
