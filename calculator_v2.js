@@ -117,39 +117,30 @@ function performCalculations(data) {
   totalWithoutDiscount = Math.round(totalWithoutDiscount * 100) / 100;
   totalWithDiscount = Math.round(totalWithDiscount * 100) / 100;
 
-  // === ВАРИАНТ 0: Без скидок вообще ===
+  // === ВАРИАНТ 1: Без скидок вообще ===
   output += `<b>Вариант 1 (без скидок):</b><br>`;
 
-  // Расчет без скидок
-  const lifeResultNoDiscount = data.risks.life ? calculateLifeInsuranceNoDiscount(data, bankConfig, insuranceAmount) : null;
-  const propertyResultNoDiscount = data.risks.property ? calculatePropertyInsuranceNoDiscount(data, bankConfig, insuranceAmount) : null;
-  const titleResultNoDiscount = data.risks.titul ? calculateTitleInsurance(insuranceAmount) : null;
-
-  let totalVariant0 = 0;
-
-  if (data.risks.property && propertyResultNoDiscount) {
-    output += `Имущество ${propertyResultNoDiscount.total.toLocaleString('ru-RU')}<br>`;
-    totalVariant0 += propertyResultNoDiscount.total;
+  if (data.risks.property && propertyResult) {
+    output += `Имущество ${(propertyResult.totalWithoutDiscount || propertyResult.total).toLocaleString('ru-RU')}<br>`;
   }
 
-  if (data.risks.life && lifeResultNoDiscount) {
-    lifeResultNoDiscount.borrowers.forEach((borrower, index) => {
+  if (data.risks.life && lifeResult) {
+    lifeResult.borrowers.forEach((borrower, index) => {
       const borrowerLabel = data.borrowers.length > 1 ? `заемщик ${index + 1}` : 'заемщик';
       output += `жизнь ${borrowerLabel} ${borrower.premium.toLocaleString('ru-RU')}<br>`;
     });
-    totalVariant0 += lifeResultNoDiscount.total;
   }
 
-  if (data.risks.titul && titleResultNoDiscount) {
-    output += `титул ${titleResultNoDiscount.total.toLocaleString('ru-RU')}<br>`;
+  if (data.risks.titul && titleResult) {
+    output += `титул ${titleResult.total.toLocaleString('ru-RU')}<br>`;
   }
 
-  totalVariant0 += titleResultNoDiscount ? titleResultNoDiscount.total : 0;
-  output += `ИТОГО тариф/ взнос ${Math.round(totalVariant0 * 100) / 100.toLocaleString('ru-RU')}<br><br>`;
+  output += `ИТОГО тариф/ взнос ${totalWithoutDiscount.toLocaleString('ru-RU')}<br><br>`;
 
-  // === ВАРИАНТ 1: Стандартные скидки ===
+  // === ВАРИАНТ 2: Стандартные скидки ===
   output += `<b>Вариант 2 (стандартные скидки):</b><br>`;
 
+  // Вывод результатов варианта 2 (как раньше, без заголовка)
   if (data.risks.property && propertyResult) {
     if (propertyResult.hasDiscount) {
       output += `Имущество ${propertyResult.totalWithoutDiscount.toLocaleString('ru-RU')} Со скидкой ${propertyResult.total.toLocaleString('ru-RU')}<br>`;
@@ -176,12 +167,12 @@ function performCalculations(data) {
 
   // Итого вариант 1
   if (hasAnyDiscount) {
-    output += `ИТОГО тариф/ взнос ${totalWithoutDiscount.toLocaleString('ru-RU')} Со скидкой ${totalWithDiscount.toLocaleString('ru-RU')}<br><br>`;
+    output += `ИТОГО тариф/ взнос ${totalWithoutDiscount.toLocaleString('ru-RU')} Со скидкой ${totalWithDiscount.toLocaleString('ru-RU')}`;
   } else {
-    output += `ИТОГО тариф/ взнос ${totalWithDiscount.toLocaleString('ru-RU')}<br><br>`;
+    output += `ИТОГО тариф/ взнос ${totalWithDiscount.toLocaleString('ru-RU')}`;
   }
 
-  // === ВАРИАНТ 2: Повышенные скидки + доп. риски ===
+  // Расчет варианта 3 (если применимо)
   const variant2Result = calculateVariant2(data, bankConfig, insuranceAmount, totalWithDiscount);
   if (variant2Result) {
     output += `<b>Вариант 3 (повышенные скидки + доп. риски):</b><br>`;
@@ -189,100 +180,6 @@ function performCalculations(data) {
   }
 
   return output;
-}
-
-// Расчет страхования жизни без скидок
-function calculateLifeInsuranceNoDiscount(data, bankConfig, insuranceAmount) {
-  if (!data.borrowers || data.borrowers.length === 0) {
-    return null;
-  }
-
-  let totalPremium = 0;
-  const borrowerPremiums = [];
-
-  // Определяем тарифы в зависимости от банка
-  let tariffTable;
-  if (data.bank === "Дом.РФ") {
-    tariffTable = window.LIFE_TARIFF_DOMRF || LIFE_TARIFF_DOMRF;
-  } else if (data.bank === "РСХБ") {
-    tariffTable = window.LIFE_TARIFF_RSHB_LOSS || LIFE_TARIFF_RSHB_LOSS;
-  } else if (data.bank === "Банк СПБ") {
-    tariffTable = window.LIFE_TARIFF_SPB || LIFE_TARIFF_SPB;
-  } else if (data.bank === "МКБ") {
-    tariffTable = window.LIFE_TARIFF_MKB || LIFE_TARIFF_MKB;
-  } else {
-    tariffTable = window.LIFE_TARIFF_BASE || LIFE_TARIFF_BASE;
-  }
-
-  data.borrowers.forEach((borrower, index) => {
-    if (!borrower.age || !borrower.gender) {
-      return null;
-    }
-
-    let tariff;
-    if (data.bank === "РСХБ") {
-      // Для РСХБ тарифы по индексу возраста (18-64 лет)
-      const ageIndex = Math.max(0, Math.min(borrower.age - 18, tariffTable[borrower.gender].length - 1));
-      tariff = tariffTable[borrower.gender][ageIndex];
-    } else {
-      // Для остальных банков тарифы по возрасту
-      tariff = tariffTable[borrower.gender][borrower.age];
-    }
-
-    if (!tariff) {
-      return null;
-    }
-
-    // Расчет премии без скидок
-    const premium = insuranceAmount * (tariff / 100);
-    totalPremium += premium;
-    borrowerPremiums.push({
-      premium: Math.round(premium * 100) / 100
-    });
-  });
-
-  return {
-    total: Math.round(totalPremium * 100) / 100,
-    borrowers: borrowerPremiums,
-    hasDiscount: false
-  };
-}
-
-// Расчет страхования имущества без скидок
-function calculatePropertyInsuranceNoDiscount(data, bankConfig, insuranceAmount) {
-  // Определяем тип объекта
-  let objectType = 'flat'; // по умолчанию квартира
-
-  if (data.objectType === 'townhouse') {
-    objectType = 'townhouse';
-  } else if (data.objectType === 'house_brick') {
-    objectType = 'house_brick';
-  } else if (data.objectType === 'house_wood') {
-    objectType = 'house_wood';
-  } else if (data.objectType === 'house') {
-    // Для совместимости со старым кодом
-    if (data.material === 'wood') {
-      objectType = 'house_wood';
-    } else {
-      objectType = 'house_brick';
-    }
-  }
-
-  // Получаем тариф
-  const tariff = (window.getPropertyTariff || getPropertyTariff)(data.bank, objectType);
-  if (!tariff) {
-    return {
-      output: `<b>Страхование имущества:</b> тариф для типа объекта не найден<br><br>`,
-      total: 0
-    };
-  }
-
-  const premium = Math.round(insuranceAmount * (tariff / 100) * 100) / 100;
-
-  return {
-    total: premium,
-    hasDiscount: false
-  };
 }
 
 // Расчет страхования жизни
@@ -332,7 +229,7 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
     const shareAmount = insuranceAmount * (borrower.share / 100);
     const premium = Math.round(shareAmount * (tariff / 100) * 100) / 100;
     
-    // Применяем скидку: стандартная 25% (0.75) или кастомная из конфигурации банка
+    // Применяем скидку: стандартная 20% (0.8) или кастомная из конфигурации банка
     let discountMultiplier = 0.8; // стандартная скидка 20%
     if (hasDiscount && bankConfig.discount_life_percent) {
       discountMultiplier = 1 - (bankConfig.discount_life_percent / 100);
@@ -396,7 +293,7 @@ function calculatePropertyInsurance(data, bankConfig, insuranceAmount) {
   let discountedPremium = premium;
   let discountApplied = false;
   if (bankConfig.allow_discount_property) {
-    let discountMultiplier = 0.93; // стандартная скидка 7%
+    let discountMultiplier = 0.9; // стандартная скидка 10%
     if (bankConfig.discount_property_percent) {
       discountMultiplier = 1 - (bankConfig.discount_property_percent / 100);
     }
@@ -434,9 +331,9 @@ function getObjectTypeName(type) {
   return names[type] || type;
 }
 
-// Расчет варианта 3 с доп. рисками IFL
+// Расчет варианта 2 с доп. рисками IFL
 function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
-  // Исключение: если только жизнь - не показываем вариант 3
+  // Исключение: если только жизнь - не показываем вариант 2
   if (data.risks.life && !data.risks.property) {
     return null;
   }
@@ -454,14 +351,13 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
     // Для дома (кирпич или дерево) - только Бастион
     availableProducts = ['bastion'];
   } else {
-    // Для других типов объектов не показываем вариант 3
+    // Для других типов объектов не показываем вариант 2
     return null;
   }
 
-  // Рассчитываем вариант 3 с скидками 30%
+  // Рассчитываем вариант 2 с скидками 30%
   let propertyPremiumV2 = 0;
   let lifePremiumV2 = 0;
-  let titlePremiumV2 = 0;
 
   // Расчет имущества с скидкой 30% (где разрешено)
   if (data.risks.property) {
@@ -493,23 +389,13 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
     }
   }
 
-  // Расчет титула с скидкой 30%
-  if (data.risks.titul) {
-    const titleResult = calculateTitleInsurance(insuranceAmount);
-    if (titleResult) {
-      // Применяем скидку 30% для титула
-      const basePremium = titleResult.totalWithoutDiscount || titleResult.total;
-      titlePremiumV2 = Math.round(basePremium * 0.7 * 100) / 100; // 30% скидка
-    }
-  }
-
   // Рассчитываем доп. риски для каждого доступного продукта
   const productResults = [];
   
   for (const product of availableProducts) {
     const additionalRisk = calculateIFLAdditionalRisk(product, data, insuranceAmount);
     if (additionalRisk) {
-      const totalV2 = propertyPremiumV2 + lifePremiumV2 + titlePremiumV2 + additionalRisk.premium;
+      const totalV2 = propertyPremiumV2 + lifePremiumV2 + additionalRisk.premium;
       productResults.push({
         product: product,
         productName: additionalRisk.productName,
@@ -582,8 +468,8 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
     }
   }
   
-  // Если не нашли подходящий продукт (разница меньше 200), не показываем вариант 3
-  if (!bestProduct || bestDifference < 500) {
+  // Если не нашли подходящий продукт (разница меньше 200), не показываем вариант 2
+  if (!bestProduct || bestDifference < 200) {
     return null;
   }
 
@@ -593,23 +479,58 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
   let currentTotal = bestProduct.total;
   let currentDifference = variant1Total - currentTotal;
   
-  // Целевая разница: 600-1500
-  const targetMin = 600;
-  const targetMax = 1500;
-  const targetMiddle = (targetMin + targetMax) / 2; // 1050
+  // Целевая разница: 1500-2000
+  const targetMin = 1500;
+  const targetMax = 2000;
+  const targetMiddle = (targetMin + targetMax) / 2; // 1750
 
-  // Если разница больше targetMax, увеличиваем страховые суммы по доп. рискам
+  // Если разница больше 2000, добавляем дополнительные риски
   if (currentDifference > targetMax) {
-    // Увеличиваем суммы по отделке, движимому имуществу, гражданской ответственности
-    const increasedProduct = increaseInsuranceSums(data, insuranceAmount, bestProduct, currentDifference, targetMax, propertyPremiumV2, lifePremiumV2, titlePremiumV2);
-    if (increasedProduct) {
-      finalProduct = increasedProduct;
-      currentTotal = finalProduct.total;
-      currentDifference = variant1Total - currentTotal;
+    const neededIncrease = currentDifference - targetMiddle; // Сколько нужно добавить, чтобы разница была около 1750
+    
+    // Добавляем дополнительные риски в зависимости от продукта
+    if (bestProduct.product === 'moyakvartira') {
+      // Для "Моя квартира" можно добавить движимое имущество и ГО
+      // Определяем базовую сумму отделки, которая была использована
+      const moyaTariff = window.T_MOYA;
+      let baseFinishSum = 200000; // По умолчанию минимум
+      if (moyaTariff) {
+        if (insuranceAmount > 5000000) {
+          baseFinishSum = 200000;
+        } else {
+          baseFinishSum = Math.min(500000, Math.max(200000, insuranceAmount * 0.08));
+        }
+      }
+      
+      const additionalRisksResult = addAdditionalRisksForMoyaKvartira(data, insuranceAmount, neededIncrease, baseFinishSum);
+      if (additionalRisksResult && additionalRisksResult.risks.length > 0) {
+        additionalRisks = additionalRisksResult.risks;
+        currentTotal += additionalRisksResult.totalPremium;
+        currentDifference = variant1Total - currentTotal;
+        
+        // Обновляем финальный продукт с учетом дополнительных рисков
+        finalProduct = {
+          ...bestProduct,
+          total: currentTotal
+        };
+      }
+    } else if (bestProduct.product === 'express') {
+      // Для "Экспресс квартира" выбираем более дорогой пакет
+      const upgradedPack = upgradeExpressPack(neededIncrease);
+      if (upgradedPack && upgradedPack.premium > bestProduct.premium) {
+        finalProduct = {
+          ...bestProduct,
+          premium: upgradedPack.premium,
+          total: propertyPremiumV2 + lifePremiumV2 + upgradedPack.premium,
+          packDetails: upgradedPack
+        };
+        currentTotal = finalProduct.total;
+        currentDifference = variant1Total - currentTotal;
+      }
     }
   }
 
-  // Формируем вывод варианта 3
+  // Формируем вывод варианта 2
   let output = '';
   if (data.risks.property) {
     // Форматируем с 2 знаками после запятой
@@ -622,12 +543,7 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
     const formattedLife = lifePremiumV2.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
     output += `жизнь ${borrowerLabel} ${formattedLife}<br>`;
   }
-  if (data.risks.titul) {
-    // Форматируем с 2 знаками после запятой
-    const formattedTitle = titlePremiumV2.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-    output += `титул ${formattedTitle}<br>`;
-  }
-
+  
   // Получаем детали доп. риска
   const riskDetails = getAdditionalRiskDetails(finalProduct.product, data, insuranceAmount, finalProduct.premium, additionalRisks, finalProduct.packDetails);
   
@@ -640,9 +556,8 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
   }
   
   // Добавляем дополнительные риски, если есть
-  const allAdditionalRisks = [...(additionalRisks || []), ...(finalProduct.increasedRisks || [])];
-  if (allAdditionalRisks.length > 0) {
-    allAdditionalRisks.forEach(risk => {
+  if (additionalRisks.length > 0) {
+    additionalRisks.forEach(risk => {
       const formattedRiskPremium = risk.premium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
       output += `<br>доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${formattedRiskPremium}`;
     });
@@ -826,63 +741,6 @@ function upgradeExpressPack(neededIncrease) {
   };
 }
 
-// Функция для увеличения страховых сумм по доп. рискам
-function increaseInsuranceSums(data, insuranceAmount, product, currentDifference, targetMax, propertyPremiumV2, lifePremiumV2, titlePremiumV2) {
-  const neededIncrease = currentDifference - targetMax;
-
-  if (product.product === 'moyakvartira') {
-    const moyaTariff = window.T_MOYA;
-    if (!moyaTariff) return null;
-
-    let increasedPremium = product.premium;
-
-    // Увеличиваем сумму отделки
-    let currentFinishSum = 200000; // Базовая сумма
-    if (insuranceAmount > 5000000) {
-      currentFinishSum = 200000;
-    } else {
-      currentFinishSum = Math.min(500000, Math.max(200000, insuranceAmount * 0.08));
-    }
-
-    // Пробуем увеличить до максимума
-    const maxFinishSum = 500000;
-    if (currentFinishSum < maxFinishSum) {
-      const newFinishSum = Math.min(maxFinishSum, currentFinishSum + neededIncrease * 2); // Увеличиваем агрессивно
-      const finishRate = moyaTariff.finish.find(r => newFinishSum >= r.min && newFinishSum <= r.max);
-      if (finishRate) {
-        const newFinishPremium = Math.round(newFinishSum * finishRate.rate * 100) / 100;
-        increasedPremium = newFinishPremium;
-      }
-    }
-
-    // Добавляем движимое имущество с максимальной суммой
-    const movableMax = moyaTariff.movable[moyaTariff.movable.length - 1];
-    const movableSum = movableMax.max;
-    const movablePremium = Math.round(movableSum * movableMax.rate * 100) / 100;
-
-    // Добавляем ГО с максимальной суммой
-    const goMax = moyaTariff.go.pack[moyaTariff.go.pack.length - 1];
-    const goSum = goMax.max;
-    const goPremium = Math.round(goSum * goMax.rate * 100) / 100;
-
-    const additionalPremium = movablePremium + goPremium;
-    const totalPremium = increasedPremium + additionalPremium;
-
-    return {
-      ...product,
-      premium: totalPremium,
-      total: propertyPremiumV2 + lifePremiumV2 + titlePremiumV2 + totalPremium,
-      increasedRisks: [
-        { name: 'Моя квартира', objects: 'отделка и инженерное оборудование', sum: Math.round(currentFinishSum), premium: increasedPremium },
-        { name: 'Моя квартира', objects: 'движимое имущество', sum: movableSum, premium: movablePremium },
-        { name: 'Моя квартира', objects: 'гражданская ответственность', sum: goSum, premium: goPremium }
-      ]
-    };
-  }
-
-  return null;
-}
-
 // Получение деталей доп. риска для вывода
 function getAdditionalRiskDetails(product, data, insuranceAmount, premium, additionalRisks = [], packDetails = null) {
   if (!window.T_BASTION || !window.EXPRESS_PACKS || !window.EXPRESS_GO_PACKS || !window.T_MOYA) {
@@ -1047,7 +905,7 @@ function calculateIFLAdditionalRisk(product, data, insuranceAmount) {
     }
 
     case 'moyakvartira': {
-      // Моя квартира - НЕ используем конструктивный элемент (запрещено в варианте 3)
+      // Моя квартира - НЕ используем конструктивный элемент (запрещено во 2 варианте)
       // Используем только отделку
       const moyaTariff = window.T_MOYA;
       if (!moyaTariff) return null;
