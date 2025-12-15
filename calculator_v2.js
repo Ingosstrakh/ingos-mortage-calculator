@@ -165,11 +165,11 @@ function performCalculations(data) {
     output += `титул ${titleResult.total.toLocaleString('ru-RU')}<br>`;
   }
 
-  // Итого вариант 1
+  // Итого вариант 2
   if (hasAnyDiscount) {
-    output += `ИТОГО тариф/ взнос ${totalWithoutDiscount.toLocaleString('ru-RU')} Со скидкой ${totalWithDiscount.toLocaleString('ru-RU')}`;
+    output += `ИТОГО тариф/ взнос ${totalWithoutDiscount.toLocaleString('ru-RU')} Со скидкой ${totalWithDiscount.toLocaleString('ru-RU')}<br><br>`;
   } else {
-    output += `ИТОГО тариф/ взнос ${totalWithDiscount.toLocaleString('ru-RU')}`;
+    output += `ИТОГО тариф/ взнос ${totalWithDiscount.toLocaleString('ru-RU')}<br><br>`;
   }
 
   // Расчет варианта 3 (если применимо)
