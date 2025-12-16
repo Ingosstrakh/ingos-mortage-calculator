@@ -548,14 +548,15 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
         currentTotal = propertyPremiumV2 + lifePremiumV2 + additionalRisksResult.totalPremium;
         currentDifference = variant1Total - currentTotal;
 
-        // Обновляем финальный продукт
+        // Обновляем финальный продукт с увеличенными суммами
         finalProduct = {
           product: 'moyakvartira',
           productName: 'Моя квартира',
           riskName: 'отделка и инженерное оборудование',
           premium: additionalRisksResult.totalPremium,
           total: currentTotal,
-          increasedRisks: additionalRisks
+          increasedRisks: additionalRisks,
+          useIncreasedRisksOnly: true // Флаг, что показывать только increasedRisks
         };
       }
     } else if (bestProduct.product === 'bastion') {
@@ -592,23 +593,31 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
     output += `жизнь ${borrowerLabel} ${formattedLife}<br>`;
   }
   
-  // Получаем детали доп. риска
-  const riskDetails = getAdditionalRiskDetails(finalProduct.product, data, insuranceAmount, finalProduct.premium, additionalRisks, finalProduct.packDetails);
-  
-  // Форматируем доп. риск с деталями
-  const formattedRisk = finalProduct.premium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-  if (riskDetails.sum) {
-    output += `доп риск - ${finalProduct.productName} (${riskDetails.objects}) ${riskDetails.sum} ${formattedRisk}`;
-  } else {
-    output += `доп риск - ${finalProduct.productName} (${riskDetails.objects}) ${formattedRisk}`;
-  }
-  
-  // Добавляем дополнительные риски, если есть
-  if (additionalRisks.length > 0) {
+  // Если используем только увеличенные риски (без основного продукта)
+  if (finalProduct.useIncreasedRisksOnly && additionalRisks.length > 0) {
     additionalRisks.forEach(risk => {
       const formattedRiskPremium = risk.premium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-      output += `<br>доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${formattedRiskPremium}`;
+      output += `доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${formattedRiskPremium}<br>`;
     });
+  } else {
+    // Стандартная логика с основным продуктом
+    const riskDetails = getAdditionalRiskDetails(finalProduct.product, data, insuranceAmount, finalProduct.premium, additionalRisks, finalProduct.packDetails);
+
+    // Форматируем доп. риск с деталями
+    const formattedRisk = finalProduct.premium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    if (riskDetails.sum) {
+      output += `доп риск - ${finalProduct.productName} (${riskDetails.objects}) ${riskDetails.sum} ${formattedRisk}`;
+    } else {
+      output += `доп риск - ${finalProduct.productName} (${riskDetails.objects}) ${formattedRisk}`;
+    }
+
+    // Добавляем дополнительные риски, если есть
+    if (additionalRisks.length > 0) {
+      additionalRisks.forEach(risk => {
+        const formattedRiskPremium = risk.premium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+        output += `<br>доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${formattedRiskPremium}`;
+      });
+    }
   }
   
   // Добавляем перенос строки перед итого, если есть дополнительные риски
@@ -641,9 +650,11 @@ function increaseMoyaKvartiraSumsForDifference(data, insuranceAmount, currentDif
   // Увеличиваем отделку, если нужно
   if (finishPremium < neededPremium) {
     const maxFinish = 500000;
-    const additionalFinishNeeded = Math.min(maxFinish - finishSum, Math.round(neededPremium / 0.009)); // Примерная ставка
-    if (additionalFinishNeeded > 0) {
-      finishSum = Math.min(maxFinish, finishSum + additionalFinishNeeded);
+    // Используем правильную ставку из тарифа
+    const currentRate = moyaTariff.finish.find(r => finishSum >= r.min && finishSum <= r.max)?.rate || 0.0095;
+    const additionalSumNeeded = Math.min(maxFinish - finishSum, Math.round((neededPremium - finishPremium) / currentRate));
+    if (additionalSumNeeded > 0) {
+      finishSum = Math.min(maxFinish, finishSum + additionalSumNeeded);
       finishPremium = Math.round(finishSum * moyaTariff.finish.find(r => finishSum >= r.min && finishSum <= r.max)?.rate * 100) / 100 || finishPremium;
     }
   }
@@ -657,7 +668,7 @@ function increaseMoyaKvartiraSumsForDifference(data, insuranceAmount, currentDif
 
   let totalPremium = finishPremium;
 
-  // Добавляем движимое имущество
+  // Добавляем движимое имущество с максимальной суммой
   if (totalPremium < neededPremium && moyaTariff.movable.length > 0) {
     const movableMax = moyaTariff.movable[moyaTariff.movable.length - 1];
     const movableSum = movableMax.max;
@@ -673,7 +684,7 @@ function increaseMoyaKvartiraSumsForDifference(data, insuranceAmount, currentDif
     totalPremium += movablePremium;
   }
 
-  // Добавляем ГО, если все еще нужно
+  // Добавляем ГО с максимальной суммой, если все еще нужно
   if (totalPremium < neededPremium && moyaTariff.go.pack.length > 0) {
     const goMax = moyaTariff.go.pack[moyaTariff.go.pack.length - 1];
     const goSum = goMax.max;
