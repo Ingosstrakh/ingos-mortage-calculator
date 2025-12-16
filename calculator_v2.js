@@ -137,46 +137,16 @@ function performCalculations(data) {
 
   output += `ИТОГО тариф/ взнос ${totalWithoutDiscount.toLocaleString('ru-RU')}<br><br>`;
 
-  // === ВАРИАНТ 2: Стандартные скидки ===
-  output += `<b>Вариант 2 (стандартные скидки):</b><br>`;
-
-  // Вывод результатов варианта 2 (как раньше, без заголовка)
-  if (data.risks.property && propertyResult) {
-    if (propertyResult.hasDiscount) {
-      output += `Имущество ${propertyResult.totalWithoutDiscount.toLocaleString('ru-RU')} Со скидкой ${propertyResult.total.toLocaleString('ru-RU')}<br>`;
-    } else {
-      output += `Имущество ${propertyResult.total.toLocaleString('ru-RU')}<br>`;
+  // Расчет варианта 2 (повышенные скидки + доп. риски)
+  try {
+    const variant2Result = calculateVariant2(data, bankConfig, insuranceAmount, totalWithoutDiscount);
+    if (variant2Result && variant2Result.output) {
+      output += `<b>Вариант 2 (повышенные скидки + доп. риски):</b><br>`;
+      output += variant2Result.output;
     }
-  }
-
-  if (data.risks.life && lifeResult) {
-    // Показываем каждого заемщика отдельно
-    lifeResult.borrowers.forEach((borrower, index) => {
-      const borrowerLabel = data.borrowers.length > 1 ? `заемщик ${index + 1}` : 'заемщик';
-      if (lifeResult.hasDiscount) {
-        output += `жизнь ${borrowerLabel} ${borrower.premium.toLocaleString('ru-RU')} Со скидкой ${borrower.premiumWithDiscount.toLocaleString('ru-RU')}<br>`;
-      } else {
-        output += `жизнь ${borrowerLabel} ${borrower.premium.toLocaleString('ru-RU')}<br>`;
-      }
-    });
-  }
-
-  if (data.risks.titul && titleResult) {
-    output += `титул ${titleResult.total.toLocaleString('ru-RU')}<br>`;
-  }
-
-  // Итого вариант 2
-  if (hasAnyDiscount) {
-    output += `ИТОГО тариф/ взнос ${totalWithoutDiscount.toLocaleString('ru-RU')} Со скидкой ${totalWithDiscount.toLocaleString('ru-RU')}<br><br>`;
-  } else {
-    output += `ИТОГО тариф/ взнос ${totalWithDiscount.toLocaleString('ru-RU')}<br><br>`;
-  }
-
-  // Расчет варианта 3 (если применимо)
-  const variant2Result = calculateVariant2(data, bankConfig, insuranceAmount, totalWithDiscount);
-  if (variant2Result) {
-    output += `<b>Вариант 3 (повышенные скидки + доп. риски):</b><br>`;
-    output += variant2Result.output;
+  } catch (error) {
+    console.error('Ошибка расчета варианта 2:', error);
+    // Не показываем ошибку пользователю, просто пропускаем вариант
   }
 
   return output;
@@ -336,6 +306,20 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
   // Исключение: если только жизнь - не показываем вариант 2
   if (data.risks.life && !data.risks.property) {
     return null;
+  }
+
+  // Проверяем наличие необходимых данных для расчета
+  // Для мобильных устройств или при проблемах с загрузкой пропускаем вариант 2
+  if (!window.T_MOYA || !window.EXPRESS_PACKS || !window.EXPRESS_GO_PACKS || !window.T_BASTION) {
+    console.warn('Необходимые данные тарифов не загружены - пропускаем вариант 2');
+    return null;
+  }
+
+  // Для мобильных устройств упрощаем расчет - ограничиваем количество продуктов
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  if (isMobile && availableProducts.length > 2) {
+    // На мобильных устройствах оставляем только 2 наиболее приоритетных продукта
+    availableProducts = availableProducts.slice(0, 2);
   }
 
   // Определяем доступные продукты IFL
