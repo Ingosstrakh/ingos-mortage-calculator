@@ -138,11 +138,16 @@ function performCalculations(data) {
   output += `ИТОГО тариф/ взнос ${totalWithoutDiscount.toLocaleString('ru-RU')}<br><br>`;
 
   // Расчет варианта 2 (повышенные скидки + доп. риски)
+  console.log('Начинаем расчет варианта 2...');
   try {
     const variant2Result = calculateVariant2(data, bankConfig, insuranceAmount, totalWithoutDiscount);
+    console.log('Результат расчета варианта 2:', variant2Result);
     if (variant2Result && variant2Result.output) {
+      console.log('Добавляем вариант 2 в вывод');
       output += `<b>Вариант 2 (повышенные скидки + доп. риски):</b><br>`;
       output += variant2Result.output;
+    } else {
+      console.log('Вариант 2 не будет показан - нет результата или пустой output');
     }
   } catch (error) {
     console.error('Ошибка расчета варианта 2:', error);
@@ -309,14 +314,69 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
   }
 
   // Проверяем наличие необходимых данных для расчета
-  // Для мобильных устройств или при проблемах с загрузкой пропускаем вариант 2
-  if (!window.T_MOYA || !window.EXPRESS_PACKS || !window.EXPRESS_GO_PACKS || !window.T_BASTION) {
-    console.warn('Необходимые данные тарифов не загружены - пропускаем вариант 2');
-    return null;
+  const hasFullData = window.T_MOYA && window.EXPRESS_PACKS && window.EXPRESS_GO_PACKS && window.T_BASTION;
+  console.log('Полные данные загружены:', hasFullData);
+
+  // Проверяем, является ли устройство мобильным
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  console.log('isMobile:', isMobile);
+
+  // Для мобильных устройств или при проблемах с загрузкой создаем упрощенный вариант
+  if (!hasFullData) {
+    console.log('Используем упрощенный вариант - данные не загружены');
+
+    // Создаем упрощенный вариант 2: просто скидки 30% без дополнительных рисков
+    let propertyPremiumV2 = 0;
+    let lifePremiumV2 = 0;
+
+    // Расчет имущества с скидкой 30%
+    if (data.risks.property) {
+      const propertyResult = calculatePropertyInsurance(data, bankConfig, insuranceAmount);
+      if (propertyResult && bankConfig.allow_discount_property) {
+        const basePremium = propertyResult.totalWithoutDiscount;
+        propertyPremiumV2 = Math.round(basePremium * 0.7 * 100) / 100;
+      }
+    }
+
+    // Расчет жизни с скидкой 30%
+    if (data.risks.life) {
+      const lifeResult = calculateLifeInsurance(data, bankConfig, insuranceAmount);
+      if (lifeResult && bankConfig.allow_discount_life) {
+        const basePremium = lifeResult.totalWithoutDiscount;
+        lifePremiumV2 = Math.round(basePremium * 0.7 * 100) / 100;
+      }
+    }
+
+    const totalV2 = propertyPremiumV2 + lifePremiumV2;
+
+    // Формируем упрощенный вывод
+    let output = '';
+    if (data.risks.property && propertyPremiumV2 > 0) {
+      output += `имущество ${propertyPremiumV2.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}<br>`;
+    }
+    if (data.risks.life && lifePremiumV2 > 0) {
+      const borrowerLabel = data.borrowers.length > 1 ? 'заемщики' : 'заемщик';
+      output += `жизнь ${borrowerLabel} ${lifePremiumV2.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}<br>`;
+    }
+
+    output += `<br>Итого тариф взнос ${totalV2.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}`;
+
+    return {
+      output: output,
+      total: totalV2
+    };
   }
 
-  // Для мобильных устройств упрощаем расчет - ограничиваем количество продуктов
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  // Для мобильных устройств используем полную версию, но с ограничениями
+  if (isMobile) {
+    console.log('Мобильное устройство - используем полную версию с ограничениями');
+    // Ограничиваем количество продуктов для мобильных
+    if (availableProducts.length > 2) {
+      availableProducts = availableProducts.slice(0, 2);
+    }
+  }
+
+  // Полная версия для десктопных устройств
   if (isMobile && availableProducts.length > 2) {
     // На мобильных устройствах оставляем только 2 наиболее приоритетных продукта
     availableProducts = availableProducts.slice(0, 2);
