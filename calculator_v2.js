@@ -433,87 +433,57 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
     }
   }
 
-  // Новая логика: рассчитываем нужную сумму дополнительных рисков
-  // Цель - разница между вариантом 1 и 2 около 3000 рублей максимум
-  const targetDifference = 3000; // Максимальная желаемая разница
+  // Новая логика: приоритет "Моя квартира" для больших разниц, "Экспресс квартира" для маленьких
   const baseVariant2Total = propertyPremiumV2 + lifePremiumV2;
-  const neededAdditionalPremium = variant1Total - baseVariant2Total - targetDifference;
-
-  console.log('Базовый вариант 2:', baseVariant2Total, 'Вариант 1:', variant1Total, 'Нужная премия доп. рисков:', neededAdditionalPremium);
+  const currentDifference = variant1Total - baseVariant2Total;
 
   let finalProduct = null;
-  let currentTotal = baseVariant2Total;
-  let currentDifference = variant1Total - currentTotal;
 
-  // Если нужна отрицательная премия (вариант 2 уже близок к варианту 1), используем минимальные суммы
-  if (neededAdditionalPremium <= 0) {
-    // Используем минимальные суммы для продуктов
+  // Если разница большая (>3000), используем "Моя квартира" с увеличенными суммами
+  if (currentDifference > 3000 && availableProducts.includes('moyakvartira')) {
+    const targetAdditionalPremium = currentDifference - 3000; // Сколько нужно добавить, чтобы разница стала 3000
+    finalProduct = createOptimalMoyaKvartiraVariant(data, insuranceAmount, targetAdditionalPremium, propertyPremiumV2, lifePremiumV2, variant1Total);
+
+  // Если разница небольшая (≤3000), используем "Экспресс квартира" с подходящим пакетом для разницы ~1500
+  } else if (currentDifference <= 3000 && availableProducts.includes('express')) {
+    const targetDifference = 1500; // Для экспресс квартиры целимся в 1500 разницы
+    const targetAdditionalPremium = currentDifference - targetDifference;
+    finalProduct = createOptimalExpressVariant(insuranceAmount, targetAdditionalPremium, propertyPremiumV2, lifePremiumV2, variant1Total);
+  }
+
+  // Если ничего не подошло, используем минимальные варианты
+  if (!finalProduct) {
+    // Используем минимальные суммы для имеющихся продуктов
     const productResults = [];
 
     for (const product of availableProducts) {
       const additionalRisk = calculateIFLAdditionalRisk(product, data, insuranceAmount);
       if (additionalRisk) {
         const totalV2 = propertyPremiumV2 + lifePremiumV2 + additionalRisk.premium;
-        productResults.push({
-          product: product,
-          productName: additionalRisk.productName,
-          riskName: additionalRisk.riskName,
-          premium: additionalRisk.premium,
-          total: totalV2
-        });
-      }
-    }
-
-    if (productResults.length === 0) {
-      return null;
-    }
-
-    // Выбираем продукт с разницей closest к targetDifference
-    for (const product of productResults) {
-      const difference = variant1Total - product.total;
-      if (difference >= 200 && difference <= targetDifference * 1.5) { // Разрешаем до 4500
-        if (!finalProduct || Math.abs(difference - targetDifference) < Math.abs(currentDifference - targetDifference)) {
-          finalProduct = product;
-          currentTotal = product.total;
-          currentDifference = difference;
+        const difference = variant1Total - totalV2;
+        if (difference >= 200 && difference <= 4000) { // Разница от 200 до 4000
+          productResults.push({
+            product: product,
+            productName: additionalRisk.productName,
+            riskName: additionalRisk.riskName,
+            premium: additionalRisk.premium,
+            total: totalV2,
+            difference: difference
+          });
         }
       }
     }
 
-    if (!finalProduct) {
-      return null;
-    }
+    if (productResults.length > 0) {
+      // Выбираем продукт с разницей closest к 3000 для больших разниц или 1500 для маленьких
+      const targetDiff = currentDifference > 3000 ? 3000 : 1500;
 
-  } else {
-    // Нужна положительная премия - увеличиваем суммы дополнительных рисков
-    console.log('Нужна премия дополнительных рисков:', neededAdditionalPremium);
+      productResults.forEach(product => {
+        product.diffFromTarget = Math.abs(product.difference - targetDiff);
+      });
 
-    // Пытаемся найти подходящую комбинацию для "Моя квартира" (самый гибкий продукт)
-    if (availableProducts.includes('moyakvartira')) {
-      const increasedProduct = findOptimalMoyaKvartiraRisks(data, insuranceAmount, neededAdditionalPremium, propertyPremiumV2, lifePremiumV2, variant1Total);
-      if (increasedProduct) {
-        finalProduct = increasedProduct;
-        currentTotal = finalProduct.total;
-        currentDifference = variant1Total - currentTotal;
-        console.log('Найдена оптимальная комбинация Моя квартира, разница:', currentDifference);
-      }
-    }
-
-    // Если не нашли для "Моя квартира", пробуем "Экспресс квартира"
-    if (!finalProduct && availableProducts.includes('express')) {
-      const increasedProduct = findOptimalExpressRisk(insuranceAmount, neededAdditionalPremium, propertyPremiumV2, lifePremiumV2, variant1Total);
-      if (increasedProduct) {
-        finalProduct = increasedProduct;
-        currentTotal = finalProduct.total;
-        currentDifference = variant1Total - currentTotal;
-        console.log('Найдена оптимальная комбинация Экспресс квартира, разница:', currentDifference);
-      }
-    }
-
-    // Если ничего не нашли, возвращаем null
-    if (!finalProduct) {
-      console.log('Не удалось найти подходящую комбинацию дополнительных рисков');
-      return null;
+      productResults.sort((a, b) => a.diffFromTarget - b.diffFromTarget);
+      finalProduct = productResults[0];
     }
   }
 
@@ -565,12 +535,12 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
   };
 }
 
-// Функция для поиска оптимальной комбинации рисков "Моя квартира"
-function findOptimalMoyaKvartiraRisks(data, insuranceAmount, neededPremium, propertyPremiumV2, lifePremiumV2, variant1Total) {
+// Функция для создания оптимального варианта "Моя квартира"
+function createOptimalMoyaKvartiraVariant(data, insuranceAmount, targetAdditionalPremium, propertyPremiumV2, lifePremiumV2, variant1Total) {
   const moyaTariff = window.T_MOYA;
   if (!moyaTariff) return null;
 
-  // Базовая сумма отделки
+  // Базовые суммы для отделки
   let baseFinishSum;
   if (insuranceAmount > 5000000) {
     baseFinishSum = 200000;
@@ -578,66 +548,60 @@ function findOptimalMoyaKvartiraRisks(data, insuranceAmount, neededPremium, prop
     baseFinishSum = Math.min(500000, Math.max(200000, insuranceAmount * 0.08));
   }
 
-  // Рассчитываем базовую премию отделки
+  // Начинаем с отделки и постепенно добавляем другие риски
+  let totalPremium = 0;
+  let totalSum = 0;
+  const risks = [];
+
+  // Добавляем отделку
   const finishRate = moyaTariff.finish.find(r => baseFinishSum >= r.min && baseFinishSum <= r.max);
-  if (!finishRate) return null;
-
-  const baseFinishPremium = Math.round(baseFinishSum * finishRate.rate * 100) / 100;
-  let totalPremium = baseFinishPremium;
-  let totalSum = baseFinishSum;
-
-  // Список найденных рисков
-  const risks = [{
-    name: 'Моя квартира',
-    objects: 'отделка и инженерное оборудование',
-    sum: baseFinishSum,
-    premium: baseFinishPremium
-  }];
-
-  const remainingPremium = neededPremium - baseFinishPremium;
-
-  if (remainingPremium > 0) {
-    // Добавляем движимое имущество
-    const movableMax = moyaTariff.movable[moyaTariff.movable.length - 1];
-    const movableSum = movableMax.max;
-    const movablePremium = Math.round(movableSum * movableMax.rate * 100) / 100;
-
-    if (totalPremium + movablePremium <= neededPremium * 1.5) { // Не превышаем в 1.5 раза нужную премию
-      risks.push({
-        name: 'Моя квартира',
-        objects: 'движимое имущество',
-        sum: movableSum,
-        premium: movablePremium
-      });
-      totalPremium += movablePremium;
-      totalSum += movableSum;
-    }
-
-    // Добавляем ГО, если еще нужно
-    const remainingAfterMovable = neededPremium - totalPremium;
-    if (remainingAfterMovable > 500) {
-      const goMax = moyaTariff.go.pack[moyaTariff.go.pack.length - 1];
-      const goSum = goMax.max;
-      const goPremium = Math.round(goSum * goMax.rate * 100) / 100;
-
-      if (totalPremium + goPremium <= neededPremium * 1.5) {
-        risks.push({
-          name: 'Моя квартира',
-          objects: 'гражданская ответственность',
-          sum: goSum,
-          premium: goPremium
-        });
-        totalPremium += goPremium;
-        totalSum += goSum;
-      }
-    }
+  if (finishRate) {
+    const finishPremium = Math.round(baseFinishSum * finishRate.rate * 100) / 100;
+    totalPremium += finishPremium;
+    totalSum += baseFinishSum;
+    risks.push({
+      name: 'Моя квартира',
+      objects: 'отделка и инженерное оборудование',
+      sum: baseFinishSum,
+      premium: finishPremium
+    });
   }
 
-  // Проверяем, что разница не слишком большая
+  // Добавляем движимое имущество с максимальной суммой
+  const movableMax = moyaTariff.movable[moyaTariff.movable.length - 1];
+  if (movableMax) {
+    const movableSum = movableMax.max;
+    const movablePremium = Math.round(movableSum * movableMax.rate * 100) / 100;
+    totalPremium += movablePremium;
+    totalSum += movableSum;
+    risks.push({
+      name: 'Моя квартира',
+      objects: 'движимое имущество',
+      sum: movableSum,
+      premium: movablePremium
+    });
+  }
+
+  // Добавляем ГО с максимальной суммой
+  const goMax = moyaTariff.go.pack[moyaTariff.go.pack.length - 1];
+  if (goMax) {
+    const goSum = goMax.max;
+    const goPremium = Math.round(goSum * goMax.rate * 100) / 100;
+    totalPremium += goPremium;
+    totalSum += goSum;
+    risks.push({
+      name: 'Моя квартира',
+      objects: 'гражданская ответственность',
+      sum: goSum,
+      premium: goPremium
+    });
+  }
+
   const totalV2 = propertyPremiumV2 + lifePremiumV2 + totalPremium;
   const difference = variant1Total - totalV2;
 
-  if (difference >= 500 && difference <= 4000) { // Разница от 500 до 4000 рублей
+  // Проверяем, что разница в разумных пределах (2000-4000)
+  if (difference >= 2000 && difference <= 4000) {
     return {
       product: 'moyakvartira',
       productName: 'Моя квартира',
@@ -651,17 +615,21 @@ function findOptimalMoyaKvartiraRisks(data, insuranceAmount, neededPremium, prop
   return null;
 }
 
-// Функция для поиска оптимального риска "Экспресс квартира"
-function findOptimalExpressRisk(insuranceAmount, neededPremium, propertyPremiumV2, lifePremiumV2, variant1Total) {
+// Функция для создания оптимального варианта "Экспресс квартира"
+function createOptimalExpressVariant(insuranceAmount, targetAdditionalPremium, propertyPremiumV2, lifePremiumV2, variant1Total) {
   const packs = window.EXPRESS_PACKS;
   if (!packs) return null;
 
-  // Ищем пакет, премия которого closest к neededPremium
+  // Ищем пакет, который даст разницу около 1500 рублей
+  const targetTotalV2 = variant1Total - 1500; // Целевая сумма варианта 2
+  const targetPremium = targetTotalV2 - propertyPremiumV2 - lifePremiumV2;
+
+  // Находим пакет с премией closest к целевой
   let bestPack = null;
   let bestDiff = Infinity;
 
   for (const pack of packs) {
-    const diff = Math.abs(pack.noGo - neededPremium);
+    const diff = Math.abs(pack.noGo - targetPremium);
     if (diff < bestDiff) {
       bestPack = pack;
       bestDiff = diff;
@@ -672,7 +640,8 @@ function findOptimalExpressRisk(insuranceAmount, neededPremium, propertyPremiumV
     const totalV2 = propertyPremiumV2 + lifePremiumV2 + bestPack.noGo;
     const difference = variant1Total - totalV2;
 
-    if (difference >= 500 && difference <= 4000) {
+    // Проверяем, что разница в разумных пределах (500-2500)
+    if (difference >= 500 && difference <= 2500) {
       return {
         product: 'express',
         productName: 'Экспресс квартира',
