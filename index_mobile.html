@@ -170,7 +170,7 @@
         }
 
         // Проверяем, загружены ли скрипты
-        if (typeof processClientRequest === 'undefined') {
+        if (typeof handleClientRequest === 'undefined') {
           showError('Система расчетов загружается. Попробуйте еще раз через секунду.');
           return;
         }
@@ -180,7 +180,7 @@
         calculateBtn.innerHTML = '<span class="loading">⏳</span> Рассчитываем...';
 
         try {
-          const result = await processClientRequest(message);
+          const result = handleClientRequest(message);
           resultsContent.innerHTML = result.replace(/\n/g, '<br>');
           resultsSection.style.display = 'block';
 
@@ -221,7 +221,7 @@
 
     // Инициализация после загрузки всех скриптов
     function checkScriptsLoaded() {
-      if (typeof processClientRequest !== 'undefined' &&
+      if (typeof handleClientRequest !== 'undefined' &&
           typeof parseTextToObject !== 'undefined' &&
           typeof performCalculations !== 'undefined') {
         initMobileCalculator();
@@ -245,6 +245,7 @@
   <script src="config_banks.js"></script>
   <script src="tariffs_life.js"></script>
   <script src="tariffs_property.js"></script>
+  <script src="tariffs_ifl.js"></script>
   <script src="parser.js"></script>
   <script src="calculator_v2.js"></script>
   <script src="openai.js"></script>
