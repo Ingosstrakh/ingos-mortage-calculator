@@ -566,7 +566,7 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
       }
 
       // Увеличиваем суммы для достижения разницы около 3000
-      const additionalRisksResult = increaseMoyaKvartiraSumsForDifference(data, insuranceAmount, currentDifference, targetDifferenceLarge, baseFinishSum);
+      const additionalRisksResult = increaseMoyaKvartiraSumsForDifference(data, insuranceAmount, currentDifference, targetDifferenceLarge, baseFinishSum, variant1Total, propertyPremiumV2, lifePremiumV2);
       if (additionalRisksResult && additionalRisksResult.risks.length > 0) {
         additionalRisks = additionalRisksResult.risks;
         currentTotal = propertyPremiumV2 + lifePremiumV2 + additionalRisksResult.totalPremium;
@@ -734,7 +734,7 @@ function calculateVariant3(data, bankConfig, insuranceAmount, discountPercent) {
 }
 
 // Функция для увеличения сумм "Моя квартира" для достижения разницы около 3000
-function increaseMoyaKvartiraSumsForDifference(data, insuranceAmount, currentDifference, targetDifference, baseFinishSum) {
+function increaseMoyaKvartiraSumsForDifference(data, insuranceAmount, currentDifference, targetDifference, baseFinishSum, variant1Total, propertyPremiumV2, lifePremiumV2) {
   const moyaTariff = window.T_MOYA;
   if (!moyaTariff) return null;
 
