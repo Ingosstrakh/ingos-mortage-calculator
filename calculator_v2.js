@@ -26,6 +26,19 @@ function handleClientRequest(clientText) {
     // Выполняем расчеты
     const result = performCalculations(parsedData);
 
+    // Автоматически копируем результат в буфер обмена, если он содержит варианты расчета
+    if (result && (result.includes('Вариант 1') || result.includes('Вариант 2'))) {
+      // Преобразуем HTML в обычный текст для копирования
+      const textForClipboard = result
+        .replace(/<br\s*\/?>/gi, '\n')  // Заменяем <br> на переносы строк
+        .replace(/<b>/gi, '')           // Убираем жирный шрифт
+        .replace(/<\/b>/gi, '')         // Убираем закрывающий тег жирного шрифта
+        .replace(/<[^>]*>/g, '')        // Убираем остальные HTML теги
+        .trim();
+
+      copyToClipboard(textForClipboard);
+    }
+
     return result;
   } catch (error) {
     console.error("Ошибка в handleClientRequest:", error);
@@ -174,6 +187,46 @@ function performCalculations(data) {
   }
 
   return output;
+}
+
+// Функция для копирования текста в буфер обмена
+function copyToClipboard(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    // Используем новый Clipboard API если доступно
+    return navigator.clipboard.writeText(text).then(() => {
+      console.log('Результат скопирован в буфер обмена');
+      return true;
+    }).catch(err => {
+      console.error('Ошибка копирования в буфер обмена:', err);
+      return false;
+    });
+  } else {
+    // Fallback для старых браузеров
+    try {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+
+      const successful = document.execCommand('copy');
+      textArea.remove();
+
+      if (successful) {
+        console.log('Результат скопирован в буфер обмена (fallback)');
+        return true;
+      } else {
+        console.error('Не удалось скопировать в буфер обмена (fallback)');
+        return false;
+      }
+    } catch (err) {
+      console.error('Ошибка копирования в буфер обмена (fallback):', err);
+      return false;
+    }
+  }
 }
 
 // Расчет страхования жизни
