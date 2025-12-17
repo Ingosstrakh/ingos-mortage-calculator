@@ -118,7 +118,7 @@ function performCalculations(data) {
   totalWithDiscount = Math.round(totalWithDiscount * 100) / 100;
 
   // === ВАРИАНТ 1: Без скидок вообще ===
-  output += `<b>Вариант 1 (без скидок):</b><br>`;
+  output += `<b>Вариант 1:</b><br>`;
 
   if (data.risks.property && propertyResult) {
     output += `Имущество ${(propertyResult.totalWithoutDiscount || propertyResult.total).toLocaleString('ru-RU')}<br>`;
@@ -602,13 +602,46 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
         console.log('- новая currentDifference:', variant1Total - currentTotal);
       }
     } else if (bestProduct.product === 'bastion') {
-      // Для Бастиона увеличиваем сумму конструктива
+          // Для Бастиона увеличиваем сумму конструктива
       const bastionResult = increaseBastionSumsForDifference(data, insuranceAmount, currentDifference, targetDifferenceLarge, propertyPremiumV2, lifePremiumV2, variant1Total);
       if (bastionResult) {
         finalProduct = bastionResult.finalProduct;
         additionalRisks = bastionResult.additionalRisks;
         currentTotal = bastionResult.currentTotal;
         currentDifference = bastionResult.currentDifference;
+
+        // Для Бастиона добавляем отделку как дополнительный риск
+        const isFlat = data.objectType === 'flat' || data.objectType === null;
+        const objectType = isFlat ? 'flat' : 'house';
+        const bastionTariff = window.T_BASTION[objectType];
+        if (bastionTariff) {
+          const finishMin = bastionTariff.finish.min;
+          const finishMax = Math.min(bastionTariff.finish.max, insuranceAmount);
+          let finishSum;
+          if (insuranceAmount < finishMin) {
+            finishSum = Math.min(finishMin, finishMax);
+          } else if (insuranceAmount > 5000000) {
+            const maxReasonable = finishMin * 3;
+            finishSum = Math.min(finishMax, Math.min(maxReasonable, Math.max(finishMin, insuranceAmount * 0.05)));
+          } else {
+            const maxReasonable = finishMin * 3;
+            finishSum = Math.min(finishMax, Math.min(maxReasonable, Math.max(finishMin, insuranceAmount * 0.1)));
+          }
+
+          const finishPremium = Math.round(finishSum * bastionTariff.finish.rate * 100) / 100;
+
+          // Добавляем отделку как дополнительный риск
+          additionalRisks.push({
+            name: 'Бастион',
+            objects: `отделка и инженерное оборудование ${isFlat ? 'квартира' : 'дом'}`,
+            sum: finishSum,
+            premium: finishPremium
+          });
+
+          // Обновляем итоговую сумму
+          currentTotal += finishPremium;
+          finalProduct.total = currentTotal;
+        }
       }
     } else if (bestProduct.product === 'express') {
       // Для "Экспресс квартира" выбираем пакет с большей суммой
@@ -635,8 +668,14 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
     output += `жизнь ${borrowerLabel} ${formattedLife}<br>`;
   }
   
-  // Если используем только увеличенные риски (без основного продукта)
+  // Если используем только увеличенные риски (без основного продукта) или Бастион с дополнительными рисками
   if (finalProduct.useIncreasedRisksOnly && additionalRisks.length > 0) {
+    additionalRisks.forEach(risk => {
+      const formattedRiskPremium = risk.premium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+      output += `доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${formattedRiskPremium}<br>`;
+    });
+  } else if (finalProduct.product === 'bastion' && additionalRisks.length > 0) {
+    // Для Бастиона с дополнительными рисками показываем только дополнительные риски
     additionalRisks.forEach(risk => {
       const formattedRiskPremium = risk.premium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
       output += `доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${formattedRiskPremium}<br>`;
@@ -1141,32 +1180,34 @@ function getAdditionalRiskDetails(product, data, insuranceAmount, premium, addit
 
   switch (product) {
     case 'bastion': {
+      // Для Бастиона с увеличенными суммами не показываем основной продукт,
+      // только дополнительные риски (отделка + конструктив)
+      if (additionalRisks && additionalRisks.length > 0) {
+        return { objects: '', sum: '' }; // Не показываем основной продукт
+      }
+
+      // Базовая логика - отделка
       const isFlat = data.objectType === 'flat' || data.objectType === null;
       const objectType = isFlat ? 'flat' : 'house';
       const bastionTariff = window.T_BASTION[objectType];
-      
+
       if (!bastionTariff) return { objects: 'военные риски', sum: '' };
 
       const finishMin = bastionTariff.finish.min;
       const finishMax = Math.min(bastionTariff.finish.max, insuranceAmount);
-      // Используем ту же логику, что и в calculateIFLAdditionalRisk
       let finishSum;
       if (insuranceAmount < finishMin) {
         finishSum = Math.min(finishMin, finishMax);
       } else if (insuranceAmount > 5000000) {
-        // Для больших сумм используем меньший процент, но не больше чем минимум * 3 для равномерности
         const maxReasonable = finishMin * 3;
         finishSum = Math.min(finishMax, Math.min(maxReasonable, Math.max(finishMin, insuranceAmount * 0.05)));
       } else {
-        // Для обычных сумм используем 10%, но не больше чем минимум * 3 для равномерности
         const maxReasonable = finishMin * 3;
         finishSum = Math.min(finishMax, Math.min(maxReasonable, Math.max(finishMin, insuranceAmount * 0.1)));
       }
-      
+
       const objectName = isFlat ? 'квартира' : 'дом';
       const formattedSum = Math.round(finishSum).toLocaleString('ru-RU');
-      // Указываем правильно: страхуется отделка и инженерное оборудование (не конструктивный элемент)
-      // Конструктивный элемент имеет минимум 500 000 для квартиры, отделка - 300 000
       return {
         objects: `отделка и инженерное оборудование ${objectName}`,
         sum: `на сумму ${formattedSum} ₽ премия`
