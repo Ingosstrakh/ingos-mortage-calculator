@@ -421,6 +421,7 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
   // Рассчитываем вариант 2 с скидками 30%
   console.log('=== НАЧАЛО РАСЧЕТА ВАРИАНТА 2 ===');
   console.log('variant1Total =', variant1Total);
+  console.log('insuranceAmount =', insuranceAmount);
   let propertyPremiumV2 = 0;
   let lifePremiumV2 = 0;
 
@@ -494,6 +495,11 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
   let bestDifference = null;
   const targetDifference = 2200; // Целевая разница
 
+  console.log('Поиск лучшего продукта среди', productResults.length, 'вариантов:');
+  productResults.forEach(p => {
+    console.log(`- ${p.product}: total=${p.total}, difference=${variant1Total - p.total}`);
+  });
+
   // Сначала проверяем приоритетные продукты
   for (const product of priorityProducts) {
     const difference = variant1Total - product.total;
@@ -542,10 +548,17 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
   }
 
   // Если разница больше 3000, увеличиваем страховые суммы для достижения разницы около 3000
+  console.log('Выбран лучший продукт:', bestProduct ? `${bestProduct.product} (total: ${bestProduct.total})` : 'null');
+  console.log('bestDifference:', bestDifference);
+
   let finalProduct = bestProduct;
   let additionalRisks = [];
   let currentTotal = bestProduct.total;
   let currentDifference = variant1Total - currentTotal;
+
+  console.log('До увеличения сумм:');
+  console.log('- currentTotal (bestProduct.total):', currentTotal);
+  console.log('- currentDifference (variant1Total - currentTotal):', currentDifference);
 
   // Целевая разница: около 3000 рублей
   const targetDifferenceLarge = 3000;
@@ -582,6 +595,11 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
           increasedRisks: additionalRisks,
           useIncreasedRisksOnly: true // Флаг, что показывать только increasedRisks
         };
+
+        console.log('После увеличения сумм:');
+        console.log('- additionalRisksResult.totalPremium:', additionalRisksResult.totalPremium);
+        console.log('- новый currentTotal:', currentTotal);
+        console.log('- новая currentDifference:', variant1Total - currentTotal);
       }
     } else if (bestProduct.product === 'bastion') {
       // Для Бастиона увеличиваем сумму конструктива
@@ -650,6 +668,11 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
   }
   
   // Проверяем, что вариант 2 действительно дешевле варианта 1
+  console.log('Финальная проверка:');
+  console.log('- currentTotal:', currentTotal);
+  console.log('- variant1Total:', variant1Total);
+  console.log('- difference:', variant1Total - currentTotal);
+
   if (currentTotal >= variant1Total) {
     console.log('Вариант 2 получился дороже или равен варианту 1, не показываем:', currentTotal, '>=', variant1Total);
     return null;
@@ -748,8 +771,9 @@ function increaseMoyaKvartiraSumsForDifference(data, insuranceAmount, currentDif
   console.log('- variant1Total:', variant1Total);
   console.log('- базовый вариант 2 (property + life):', propertyPremiumV2 + lifePremiumV2);
   console.log('- targetDifference:', targetDifference);
-  console.log('- targetTotalPremium:', targetTotalPremium);
+  console.log('- targetTotalPremium (variant1Total - targetDifference - baseV2):', targetTotalPremium);
   console.log('- neededAdditionalPremium:', neededAdditionalPremium);
+  console.log('- currentDifference (из вызова):', currentDifference);
 
   if (neededAdditionalPremium <= 0) {
     return null; // Ничего не нужно добавлять
@@ -758,67 +782,46 @@ function increaseMoyaKvartiraSumsForDifference(data, insuranceAmount, currentDif
   const risks = [];
   let totalPremium = 0;
 
-  // Шаг 1: Отделка - увеличиваем до нужной суммы для достижения neededAdditionalPremium
+  // ШАГ 1: Добавляем отделку "Моя квартира" с рассчитанной суммой
   if (moyaTariff.finish && moyaTariff.finish.length > 0) {
-    // Находим максимальную возможную отделку
-    const maxFinishSum = 500000;
-    const finishRate = moyaTariff.finish.find(r => maxFinishSum >= r.min && maxFinishSum <= r.max)?.rate || 0.0095;
-    const maxFinishPremium = Math.round(maxFinishSum * finishRate * 100) / 100;
+    // Используем среднюю ставку для расчета нужной суммы
+    const avgFinishRate = 0.008; // Примерная ставка
+    const targetFinishSum = Math.round(neededAdditionalPremium / avgFinishRate);
+    const actualFinishSum = Math.max(50000, Math.min(500000, targetFinishSum));
 
-    if (maxFinishPremium >= neededAdditionalPremium) {
-      // Можем уложиться только в отделку - рассчитываем нужную сумму
-      const targetFinishPremium = neededAdditionalPremium;
-      const targetFinishSum = Math.round(targetFinishPremium / finishRate);
+    // Находим правильную ставку для рассчитанной суммы
+    const finishRate = moyaTariff.finish.find(r => actualFinishSum >= r.min && actualFinishSum <= r.max)?.rate || 0.0095;
+    const finishPremium = Math.round(actualFinishSum * finishRate * 100) / 100;
 
-      // Округляем до разумных границ
-      const actualFinishSum = Math.max(50000, Math.min(maxFinishSum, targetFinishSum));
-      const actualFinishRate = moyaTariff.finish.find(r => actualFinishSum >= r.min && actualFinishSum <= r.max)?.rate || finishRate;
-      const actualFinishPremium = Math.round(actualFinishSum * actualFinishRate * 100) / 100;
+    risks.push({
+      name: 'Моя квартира',
+      objects: 'отделка и инженерное оборудование',
+      sum: actualFinishSum,
+      premium: finishPremium
+    });
 
-      risks.push({
-        name: 'Моя квартира',
-        objects: 'отделка и инженерное оборудование',
-        sum: actualFinishSum,
-        premium: actualFinishPremium
-      });
+    totalPremium = finishPremium;
+    console.log('Добавлена отделка:', actualFinishSum, '->', finishPremium, '(итого:', totalPremium, ', нужно:', neededAdditionalPremium + ')');
 
-      console.log('Только отделка:', actualFinishSum, '->', actualFinishPremium);
-      return {
-        risks: risks,
-        totalPremium: actualFinishPremium
-      };
-    } else {
-      // Добавляем максимальную отделку и переходим к другим рискам
-      risks.push({
-        name: 'Моя квартира',
-        objects: 'отделка и инженерное оборудование',
-        sum: maxFinishSum,
-        premium: maxFinishPremium
-      });
-
-      totalPremium = maxFinishPremium;
-      console.log('Максимальная отделка:', maxFinishSum, '->', maxFinishPremium);
+    // Если достаточно, возвращаем
+    if (totalPremium >= neededAdditionalPremium) {
+      return { risks: risks, totalPremium: totalPremium };
     }
   }
 
-  // Шаг 2: Добавляем движимое имущество, если нужно
+  // ШАГ 2: Добавляем движимое имущество (если нужно)
   if (totalPremium < neededAdditionalPremium && moyaTariff.movable && moyaTariff.movable.length > 0) {
     const remainingNeeded = neededAdditionalPremium - totalPremium;
-    console.log('Осталось набрать после отделки:', remainingNeeded);
 
-    // Рассчитываем нужную сумму движимого имущества
-    const movableRates = moyaTariff.movable.sort((a, b) => a.rate - b.rate); // Сортируем по ставке
-    const avgRate = movableRates[Math.floor(movableRates.length / 2)].rate; // Средняя ставка
-
-    const targetMovableSum = Math.round(remainingNeeded / avgRate);
-    const maxMovableRange = moyaTariff.movable[moyaTariff.movable.length - 1];
-    const actualMovableSum = Math.min(maxMovableRange.max, Math.max(maxMovableRange.min, targetMovableSum));
+    // Рассчитываем сумму движимого имущества
+    const avgMovableRate = 0.004; // Примерная ставка для движимого
+    const targetMovableSum = Math.round(remainingNeeded / avgMovableRate);
 
     // Находим подходящий диапазон
-    const suitableRange = moyaTariff.movable.find(r =>
-      actualMovableSum >= r.min && actualMovableSum <= r.max
-    ) || maxMovableRange;
+    const suitableRange = moyaTariff.movable.find(r => targetMovableSum >= r.min && targetMovableSum <= r.max) ||
+                         moyaTariff.movable[moyaTariff.movable.length - 1]; // Максимальный диапазон
 
+    const actualMovableSum = Math.min(suitableRange.max, Math.max(suitableRange.min, targetMovableSum));
     const movablePremium = Math.round(actualMovableSum * suitableRange.rate * 100) / 100;
 
     risks.push({
@@ -829,34 +832,27 @@ function increaseMoyaKvartiraSumsForDifference(data, insuranceAmount, currentDif
     });
 
     totalPremium += movablePremium;
-    console.log('Добавлено движимое:', actualMovableSum, '->', movablePremium, '(итого:', totalPremium + ')');
+    console.log('Добавлено движимое:', actualMovableSum, '->', movablePremium, '(итого:', totalPremium, ', нужно:', neededAdditionalPremium + ')');
 
-    // Если набрали достаточно, возвращаем
+    // Если достаточно, возвращаем
     if (totalPremium >= neededAdditionalPremium) {
-      return {
-        risks: risks,
-        totalPremium: totalPremium
-      };
+      return { risks: risks, totalPremium: totalPremium };
     }
   }
 
-  // Шаг 3: Добавляем ГО, если все еще нужно
+  // ШАГ 3: Добавляем гражданскую ответственность (если нужно)
   if (totalPremium < neededAdditionalPremium && moyaTariff.go && moyaTariff.go.pack && moyaTariff.go.pack.length > 0) {
     const remainingNeeded = neededAdditionalPremium - totalPremium;
-    console.log('Осталось набрать после движимого:', remainingNeeded);
 
-    // Рассчитываем нужную сумму ГО
-    const goRates = moyaTariff.go.pack.sort((a, b) => a.rate - b.rate);
-    const avgRate = goRates[Math.floor(goRates.length / 2)].rate;
+    // Рассчитываем сумму ГО
+    const avgGoRate = 0.002; // Примерная ставка для ГО
+    const targetGoSum = Math.round(remainingNeeded / avgGoRate);
 
-    const targetGoSum = Math.round(remainingNeeded / avgRate);
-    const maxGoRange = moyaTariff.go.pack[moyaTariff.go.pack.length - 1];
-    const actualGoSum = Math.min(maxGoRange.max, Math.max(maxGoRange.min, targetGoSum));
+    // Находим подходящий диапазон
+    const suitableRange = moyaTariff.go.pack.find(r => targetGoSum >= r.min && targetGoSum <= r.max) ||
+                         moyaTariff.go.pack[moyaTariff.go.pack.length - 1]; // Максимальный диапазон
 
-    const suitableRange = moyaTariff.go.pack.find(r =>
-      actualGoSum >= r.min && actualGoSum <= r.max
-    ) || maxGoRange;
-
+    const actualGoSum = Math.min(suitableRange.max, Math.max(suitableRange.min, targetGoSum));
     const goPremium = Math.round(actualGoSum * suitableRange.rate * 100) / 100;
 
     risks.push({
@@ -867,10 +863,12 @@ function increaseMoyaKvartiraSumsForDifference(data, insuranceAmount, currentDif
     });
 
     totalPremium += goPremium;
-    console.log('Добавлено ГО:', actualGoSum, '->', goPremium, '(итого:', totalPremium + ')');
+    console.log('Добавлено ГО:', actualGoSum, '->', goPremium, '(итого:', totalPremium, ', нужно:', neededAdditionalPremium + ')');
   }
 
+
   console.log('Финальный результат: totalPremium =', totalPremium, 'из neededAdditionalPremium =', neededAdditionalPremium);
+  console.log('Возвращаемые риски:', risks.map(r => `${r.name} ${r.objects}: ${r.sum} -> ${r.premium}`).join(', '));
 
   return totalPremium > 0 ? {
     risks: risks,
