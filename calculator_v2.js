@@ -26,17 +26,42 @@ function handleClientRequest(clientText) {
     // Выполняем расчеты
     const result = performCalculations(parsedData);
 
-    // Автоматически копируем результат в буфер обмена, если он содержит варианты расчета
+    // Автоматически копируем только варианты расчета в буфер обмена
     if (result && (result.includes('Вариант 1') || result.includes('Вариант 2'))) {
-      // Преобразуем HTML в обычный текст для копирования
-      const textForClipboard = result
-        .replace(/<br\s*\/?>/gi, '\n')  // Заменяем <br> на переносы строк
-        .replace(/<b>/gi, '')           // Убираем жирный шрифт
-        .replace(/<\/b>/gi, '')         // Убираем закрывающий тег жирного шрифта
-        .replace(/<[^>]*>/g, '')        // Убираем остальные HTML теги
-        .trim();
+      // Извлекаем только части с вариантами расчета
+      let textForClipboard = '';
 
-      copyToClipboard(textForClipboard);
+      // Разбиваем результат на строки
+      const lines = result.split('<br>');
+      let captureVariant = false;
+      let variantCount = 0;
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].replace(/<[^>]*>/g, '').trim(); // Убираем HTML теги
+
+        // Начинаем захватывать с "Вариант 1:" или "Вариант 2:"
+        if (line.includes('Вариант 1:') || line.includes('Вариант 2')) {
+          if (variantCount > 0) {
+            textForClipboard += '\n\n'; // Два переноса строки между вариантами
+          }
+          captureVariant = true;
+          variantCount++;
+          textForClipboard += line + '\n';
+        } else if (captureVariant && line) {
+          // Продолжаем захватывать строки варианта
+          textForClipboard += line + '\n';
+        } else if (captureVariant && !line && variantCount >= 2) {
+          // Прекращаем захват после второго варианта
+          break;
+        }
+      }
+
+      // Убираем лишние переносы в конце
+      textForClipboard = textForClipboard.trim();
+
+      if (textForClipboard) {
+        copyToClipboard(textForClipboard);
+      }
     }
 
     return result;
