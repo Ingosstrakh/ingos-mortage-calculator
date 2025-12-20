@@ -156,24 +156,37 @@ function performCalculations(data) {
   totalWithDiscount = Math.round(totalWithDiscount * 100) / 100;
 
   // === ВАРИАНТ 1: Без скидок вообще ===
-  output += `<b>Вариант 1:</b><br>`;
+  output += `<div class="variant-card">
+    <div class="variant-title">Вариант 1</div>
+    <div class="variant-content">`;
 
   if (data.risks.property && propertyResult) {
-    output += `Имущество ${(propertyResult.totalWithoutDiscount || propertyResult.total).toLocaleString('ru-RU')}<br>`;
+    output += `<div class="variant-row">
+      <span class="variant-label">Имущество</span>
+      <span class="variant-value">${(propertyResult.totalWithoutDiscount || propertyResult.total).toLocaleString('ru-RU')} ₽</span>
+    </div>`;
   }
 
   if (data.risks.life && lifeResult) {
     lifeResult.borrowers.forEach((borrower, index) => {
-      const borrowerLabel = data.borrowers.length > 1 ? `заемщик ${index + 1}` : 'заемщик';
-      output += `жизнь ${borrowerLabel} ${borrower.premium.toLocaleString('ru-RU')}<br>`;
+      const borrowerLabel = data.borrowers.length > 1 ? `Заемщик ${index + 1}` : 'Заемщик';
+      output += `<div class="variant-row">
+        <span class="variant-label">Жизнь ${borrowerLabel.toLowerCase()}</span>
+        <span class="variant-value">${borrower.premium.toLocaleString('ru-RU')} ₽</span>
+      </div>`;
     });
   }
 
   if (data.risks.titul && titleResult) {
-    output += `титул ${titleResult.total.toLocaleString('ru-RU')}<br>`;
+    output += `<div class="variant-row">
+      <span class="variant-label">Титул</span>
+      <span class="variant-value">${titleResult.total.toLocaleString('ru-RU')} ₽</span>
+    </div>`;
   }
 
-  output += `ИТОГО тариф/ взнос ${totalWithoutDiscount.toLocaleString('ru-RU')}<br><br>`;
+  output += `    </div>
+    <div class="variant-total">ИТОГО: ${totalWithoutDiscount.toLocaleString('ru-RU')} ₽</div>
+  </div>`;
 
   // Расчет варианта 2 (повышенные скидки + доп. риски)
   console.log('Начинаем расчет варианта 2...');
@@ -182,8 +195,46 @@ function performCalculations(data) {
     console.log('Результат расчета варианта 2:', variant2Result);
     if (variant2Result && variant2Result.output) {
       console.log('Добавляем вариант 2 в вывод');
-      output += `<b>Вариант 2 (повышенные скидки + доп. риски):</b><br>`;
-      output += variant2Result.output;
+
+      // Парсим вывод варианта 2 для создания красивой карточки
+      const lines = variant2Result.output.split('<br>').filter(line => line.trim());
+
+      output += `<div class="variant-card">
+        <div class="variant-title">Вариант 2 (повышенные скидки + доп. риски)</div>
+        <div class="variant-content">`;
+
+      let totalV2 = 0;
+
+      lines.forEach(line => {
+        const cleanLine = line.trim();
+        if (cleanLine.includes('имущество') || cleanLine.includes('жизнь')) {
+          // Основные риски
+          const parts = cleanLine.split(' ');
+          const label = parts[0] === 'имущество' ? 'Имущество' : `Жизнь ${parts.slice(1, -1).join(' ')}`;
+          const value = parts[parts.length - 1].replace(',', '.');
+          const numericValue = parseFloat(value.replace(/\s/g, ''));
+          if (!isNaN(numericValue)) {
+            totalV2 += numericValue;
+            output += `<div class="variant-row">
+              <span class="variant-label">${label}</span>
+              <span class="variant-value">${numericValue.toLocaleString('ru-RU')} ₽</span>
+            </div>`;
+          }
+        } else if (cleanLine.includes('доп риск')) {
+          // Дополнительные риски
+          output += `<div class="additional-risk">${cleanLine.replace('доп риск - ', '<strong>Доп. риск:</strong> ')}</div>`;
+        } else if (cleanLine.includes('Итого тариф взнос')) {
+          // Итоговая сумма
+          const totalMatch = cleanLine.match(/(\d+(?:[.,]\d+)?)/);
+          if (totalMatch) {
+            totalV2 = parseFloat(totalMatch[1].replace(',', '.'));
+          }
+        }
+      });
+
+      output += `        </div>
+        <div class="variant-total">ИТОГО: ${totalV2.toLocaleString('ru-RU')} ₽</div>
+      </div>`;
     } else {
       console.log('Вариант 2 не будет показан - нет результата или пустой output');
     }
