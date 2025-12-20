@@ -156,37 +156,24 @@ function performCalculations(data) {
   totalWithDiscount = Math.round(totalWithDiscount * 100) / 100;
 
   // === ВАРИАНТ 1: Без скидок вообще ===
-  output += `<div class="variant-card">
-    <div class="variant-title">Вариант 1</div>
-    <div class="variant-content">`;
+  output += `<b>Вариант 1:</b><br>`;
 
   if (data.risks.property && propertyResult) {
-    output += `<div class="variant-row">
-      <span class="variant-label">Имущество</span>
-      <span class="variant-value">${(propertyResult.totalWithoutDiscount || propertyResult.total).toLocaleString('ru-RU')} ₽</span>
-    </div>`;
+    output += `Имущество ${(propertyResult.totalWithoutDiscount || propertyResult.total).toLocaleString('ru-RU')}<br>`;
   }
 
   if (data.risks.life && lifeResult) {
     lifeResult.borrowers.forEach((borrower, index) => {
-      const borrowerLabel = data.borrowers.length > 1 ? `Заемщик ${index + 1}` : 'Заемщик';
-      output += `<div class="variant-row">
-        <span class="variant-label">Жизнь ${borrowerLabel.toLowerCase()}</span>
-        <span class="variant-value">${borrower.premium.toLocaleString('ru-RU')} ₽</span>
-      </div>`;
+      const borrowerLabel = data.borrowers.length > 1 ? `заемщик ${index + 1}` : 'заемщик';
+      output += `жизнь ${borrowerLabel} ${borrower.premium.toLocaleString('ru-RU')}<br>`;
     });
   }
 
   if (data.risks.titul && titleResult) {
-    output += `<div class="variant-row">
-      <span class="variant-label">Титул</span>
-      <span class="variant-value">${titleResult.total.toLocaleString('ru-RU')} ₽</span>
-    </div>`;
+    output += `титул ${titleResult.total.toLocaleString('ru-RU')}<br>`;
   }
 
-  output += `    </div>
-    <div class="variant-total">ИТОГО: ${totalWithoutDiscount.toLocaleString('ru-RU')} ₽</div>
-  </div>`;
+  output += `ИТОГО тариф/ взнос ${totalWithoutDiscount.toLocaleString('ru-RU')}<br><br>`;
 
   // Расчет варианта 2 (повышенные скидки + доп. риски)
   console.log('Начинаем расчет варианта 2...');
@@ -195,95 +182,8 @@ function performCalculations(data) {
     console.log('Результат расчета варианта 2:', variant2Result);
     if (variant2Result && variant2Result.output) {
       console.log('Добавляем вариант 2 в вывод');
-
-      // Парсим вывод варианта 2 для создания красивой карточки
-      const rawOutput = variant2Result.output.replace(/<br\s*\/?>/gi, '\n');
-      const lines = rawOutput.split('\n').filter(line => line.trim());
-
-      output += `<div class="variant-card">
-        <div class="variant-title">Вариант 2 (повышенные скидки + доп. риски)</div>
-        <div class="variant-content">`;
-
-      let totalV2 = variant2Result.total || 0;
-      let propertyPremium = 0;
-      let lifePremium = 0;
-      let additionalPremium = 0;
-
-      lines.forEach((line, index) => {
-        const cleanLine = line.trim();
-        console.log('Парсим строку:', cleanLine);
-
-        // Основные риски (имущество и жизнь)
-        if (cleanLine.startsWith('имущество')) {
-          // Извлекаем сумму из строки вида "имущество 3 929,44"
-          const match = cleanLine.match(/имущество\s+([\d\s,]+)/);
-          if (match) {
-            const valueStr = match[1].replace(/\s/g, '').replace(',', '.');
-            propertyPremium = parseFloat(valueStr);
-            if (!isNaN(propertyPremium)) {
-              output += `<div class="variant-row">
-                <span class="variant-label">Имущество</span>
-                <span class="variant-value">${propertyPremium.toLocaleString('ru-RU')} ₽</span>
-              </div>`;
-            }
-          }
-        } else if (cleanLine.startsWith('жизнь')) {
-          // Извлекаем сумму из строки вида "жизнь заемщик 83 854,35"
-          const match = cleanLine.match(/жизнь\s+(.+?)\s+([\d\s,]+)$/);
-          if (match) {
-            const borrowerLabel = match[1].trim();
-            const valueStr = match[2].replace(/\s/g, '').replace(',', '.');
-            lifePremium = parseFloat(valueStr);
-            if (!isNaN(lifePremium)) {
-              output += `<div class="variant-row">
-                <span class="variant-label">Жизнь ${borrowerLabel}</span>
-                <span class="variant-value">${lifePremium.toLocaleString('ru-RU')} ₽</span>
-              </div>`;
-            }
-          }
-        } else if (cleanLine.includes('доп риск') || cleanLine.includes('Доп. риск')) {
-          // Дополнительные риски - извлекаем премию и добавляем к итогу
-          const premiumMatch = cleanLine.match(/премия ([\d\s,]+)/);
-          if (premiumMatch) {
-            const premiumStr = premiumMatch[1].replace(/\s/g, '').replace(',', '.');
-            const premium = parseFloat(premiumStr);
-            if (!isNaN(premium)) {
-              additionalPremium += premium;
-            }
-          }
-
-          const formattedLine = cleanLine
-            .replace('доп риск - ', '<strong>Доп. риск:</strong> ')
-            .replace('Доп. риск - ', '<strong>Доп. риск:</strong> ')
-            .replace(/(\d{1,3}(?:\s\d{3})*(?:,\d{2})?)/g, (match) => {
-              // Форматируем числа в тексте
-              const num = parseFloat(match.replace(/\s/g, '').replace(',', '.'));
-              return isNaN(num) ? match : num.toLocaleString('ru-RU');
-            })
-            // Исправляем возможные ошибки форматирования
-            .replace(/премия (\d+(?:[.,]\d+)?)/g, (match, num) => {
-              const formattedNum = parseFloat(num.replace(',', '.')).toLocaleString('ru-RU');
-              return `премия ${formattedNum}`;
-            });
-          output += `<div class="additional-risk">${formattedLine}</div>`;
-        }
-      });
-
-      // Если не удалось распарсить итоговую сумму, рассчитываем ее
-      if (totalV2 === 0) {
-        totalV2 = propertyPremium + lifePremium + additionalPremium;
-      } else {
-        // Если есть дополнительные премии, добавляем их к итогу
-        totalV2 += additionalPremium;
-      }
-
-      output += `        </div>
-        <div class="variant-total">ИТОГО: ${totalV2.toLocaleString('ru-RU')} ₽</div>
-      </div>`;
-
-      output += `        </div>
-        <div class="variant-total">ИТОГО: ${totalV2.toLocaleString('ru-RU')} ₽</div>
-      </div>`;
+      output += `<b>Вариант 2 (повышенные скидки + доп. риски):</b><br>`;
+      output += variant2Result.output;
     } else {
       console.log('Вариант 2 не будет показан - нет результата или пустой output');
     }
@@ -668,57 +568,172 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
   // Сортируем остальные по сумме
   otherProducts.sort((a, b) => a.total - b.total);
 
-  // Выбираем лучший продукт - самый дешевый вариант, который дает экономию 200-3000 рублей
+  // Выбираем лучший продукт
   let bestProduct = null;
-  let bestDifference = 0;
+  let bestDifference = null;
+  const targetDifference = 2200; // Целевая разница
 
   console.log('Поиск лучшего продукта среди', productResults.length, 'вариантов:');
   productResults.forEach(p => {
-    const difference = variant1Total - p.total;
-    console.log(`- ${p.product}: total=${p.total}, difference=${difference}`);
+    console.log(`- ${p.product}: total=${p.total}, difference=${variant1Total - p.total}`);
   });
 
-  // Проверяем все продукты и выбираем самый дешевый, который дает экономию 200-3000 рублей
-  const allProducts = [...priorityProducts, ...otherProducts];
-
-  for (const product of allProducts) {
+  // Сначала проверяем приоритетные продукты
+  for (const product of priorityProducts) {
     const difference = variant1Total - product.total;
-    console.log(`Проверяем ${product.product}: total=${product.total}, difference=${difference}`);
-
-    // Вариант 2 должен быть дешевле Варианта 1 и экономия должна быть в разумных пределах
-    if (difference >= 200 && difference <= 3000) {
-      if (!bestProduct || product.total < bestProduct.total) {
-        bestProduct = product;
-        bestDifference = difference;
-        console.log(`Выбран ${product.product} с разницей ${difference}`);
+    if (difference >= 200) {
+      // Если разница в допустимом диапазоне (до 2200), выбираем самый ДОРОГОЙ
+      if (difference <= 2200) {
+        if (!bestProduct || product.total > bestProduct.total) {
+          bestProduct = product;
+          bestDifference = difference;
+        }
+      } else {
+        // Если разница больше 2200, выбираем продукт с разницей ближайшей к 2200
+        if (!bestProduct || Math.abs(difference - targetDifference) < Math.abs(bestDifference - targetDifference)) {
+          bestProduct = product;
+          bestDifference = difference;
+        }
       }
-    } else {
-      console.log(`Продукт ${product.product} пропущен - разница ${difference} вне диапазона 200-3000`);
     }
   }
 
-  // Если не нашли подходящий продукт, не показываем вариант 2
+  // Если не нашли подходящий приоритетный продукт, проверяем остальные
   if (!bestProduct) {
-    console.log('Не найден подходящий продукт для Варианта 2');
+    for (const product of otherProducts) {
+      const difference = variant1Total - product.total;
+      if (difference >= 200) {
+        // Если разница в допустимом диапазоне (до 2200), выбираем самый дешевый среди остальных
+        if (difference <= 2200) {
+          if (!bestProduct || product.total < bestProduct.total) {
+            bestProduct = product;
+            bestDifference = difference;
+          }
+        } else {
+          // Если разница больше 2200, выбираем продукт с разницей ближайшей к 2200
+          if (!bestProduct || Math.abs(difference - targetDifference) < Math.abs(bestDifference - targetDifference)) {
+            bestProduct = product;
+            bestDifference = difference;
+          }
+        }
+      }
+    }
+  }
+
+  // Если не нашли подходящий продукт (разница меньше 200), не показываем вариант 2
+  if (!bestProduct || bestDifference < 200) {
     return null;
   }
 
-  console.log('Выбран лучший продукт:', bestProduct.product, '(total:', bestProduct.total, ', difference:', bestDifference, ')');
+  // Если разница больше 3000, увеличиваем страховые суммы для достижения разницы около 3000
+  console.log('Выбран лучший продукт:', bestProduct ? `${bestProduct.product} (total: ${bestProduct.total})` : 'null');
+  console.log('bestDifference:', bestDifference);
 
-  // Финальный продукт - просто выбранный продукт
-  const finalProduct = bestProduct;
+  let finalProduct = bestProduct;
+  let additionalRisks = [];
+  let currentTotal = bestProduct.total;
+  let currentDifference = variant1Total - currentTotal;
 
-  // Проверяем финальную разницу
-  const finalDifference = variant1Total - finalProduct.total;
-  console.log('Финальный результат: total =', finalProduct.total, ', difference =', finalDifference);
+  console.log('До увеличения сумм:');
+  console.log('- currentTotal (bestProduct.total):', currentTotal);
+  console.log('- currentDifference (variant1Total - currentTotal):', currentDifference);
+
+  // Целевая разница: около 3000 рублей
+  const targetDifferenceLarge = 3000;
+
+  // Если разница больше 3000, увеличиваем суммы подобъектов
+  if (currentDifference > targetDifferenceLarge) {
+    // Добавляем дополнительные риски в зависимости от продукта
+    if (bestProduct.product === 'moyakvartira') {
+      // Для "Моя квартира" увеличиваем суммы отделки, движимого имущества и ГО
+      const moyaTariff = window.T_MOYA;
+      let baseFinishSum = 200000; // По умолчанию минимум
+      if (moyaTariff) {
+        if (insuranceAmount > 5000000) {
+          baseFinishSum = 200000;
+        } else {
+          baseFinishSum = Math.min(500000, Math.max(200000, insuranceAmount * 0.08));
+        }
+      }
+
+      // Увеличиваем суммы для достижения разницы около 3000
+      const additionalRisksResult = increaseMoyaKvartiraSumsForDifference(data, insuranceAmount, currentDifference, targetDifferenceLarge, baseFinishSum, variant1Total, propertyPremiumV2, lifePremiumV2);
+      if (additionalRisksResult && additionalRisksResult.risks.length > 0) {
+        additionalRisks = additionalRisksResult.risks;
+        currentTotal = propertyPremiumV2 + lifePremiumV2 + additionalRisksResult.totalPremium;
+        currentDifference = variant1Total - currentTotal;
+
+        // Обновляем финальный продукт с увеличенными суммами
+        finalProduct = {
+          product: 'moyakvartira',
+          productName: 'Моя квартира',
+          riskName: 'отделка и инженерное оборудование',
+          premium: additionalRisksResult.totalPremium,
+          total: currentTotal,
+          increasedRisks: additionalRisks,
+          useIncreasedRisksOnly: true // Флаг, что показывать только increasedRisks
+        };
+
+        console.log('После увеличения сумм:');
+        console.log('- additionalRisksResult.totalPremium:', additionalRisksResult.totalPremium);
+        console.log('- новый currentTotal:', currentTotal);
+        console.log('- новая currentDifference:', variant1Total - currentTotal);
+      }
+    } else if (bestProduct.product === 'bastion') {
+          // Для Бастиона увеличиваем сумму конструктива
+      const bastionResult = increaseBastionSumsForDifference(data, insuranceAmount, currentDifference, targetDifferenceLarge, propertyPremiumV2, lifePremiumV2, variant1Total);
+      if (bastionResult) {
+        finalProduct = bastionResult.finalProduct;
+        additionalRisks = bastionResult.additionalRisks;
+        currentTotal = bastionResult.currentTotal;
+        currentDifference = bastionResult.currentDifference;
+
+        // Для Бастиона добавляем отделку как дополнительный риск
+        const isFlat = data.objectType === 'flat' || data.objectType === null;
+        const objectType = isFlat ? 'flat' : 'house';
+        const bastionTariff = window.T_BASTION[objectType];
+        if (bastionTariff) {
+          const finishMin = bastionTariff.finish.min;
+          const finishMax = Math.min(bastionTariff.finish.max, insuranceAmount);
+          let finishSum;
+          if (insuranceAmount < finishMin) {
+            finishSum = Math.min(finishMin, finishMax);
+          } else if (insuranceAmount > 5000000) {
+            const maxReasonable = finishMin * 3;
+            finishSum = Math.min(finishMax, Math.min(maxReasonable, Math.max(finishMin, insuranceAmount * 0.05)));
+          } else {
+            const maxReasonable = finishMin * 3;
+            finishSum = Math.min(finishMax, Math.min(maxReasonable, Math.max(finishMin, insuranceAmount * 0.1)));
+          }
+
+          const finishPremium = Math.round(finishSum * bastionTariff.finish.rate * 100) / 100;
+
+          // Добавляем отделку как дополнительный риск
+          additionalRisks.push({
+            name: 'Бастион',
+            objects: `отделка и инженерное оборудование ${isFlat ? 'квартира' : 'дом'}`,
+            sum: finishSum,
+            premium: finishPremium
+          });
+
+          // Обновляем итоговую сумму
+          currentTotal += finishPremium;
+          finalProduct.total = currentTotal;
+        }
+      }
+    } else if (bestProduct.product === 'express') {
+      // Для "Экспресс квартира" выбираем пакет с большей суммой
+      const expressResult = increaseExpressSumsForDifference(currentDifference, targetDifferenceLarge, propertyPremiumV2, lifePremiumV2, variant1Total);
+      if (expressResult) {
+        finalProduct = expressResult.finalProduct;
+        currentTotal = expressResult.currentTotal;
+        currentDifference = expressResult.currentDifference;
+      }
+    }
+  }
 
   // Формируем вывод варианта 2
   let output = '';
-
-  // Формируем вывод варианта 2
-  let output = '';
-  let additionalRisks = []; // Убираем глобальную переменную
-
   if (data.risks.property) {
     // Форматируем с 2 знаками после запятой
     const formattedProperty = propertyPremiumV2.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
@@ -730,40 +745,63 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
     const formattedLife = lifePremiumV2.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
     output += `жизнь ${borrowerLabel} ${formattedLife}<br>`;
   }
-
-  // Стандартная логика с основным продуктом
-  const riskDetails = getAdditionalRiskDetails(finalProduct.product, data, insuranceAmount, finalProduct.premium, additionalRisks, finalProduct.packDetails);
-
-  // Форматируем доп. риск с деталями
-  const formattedRisk = finalProduct.premium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-  if (riskDetails.sum) {
-    output += `доп риск - ${finalProduct.productName} (${riskDetails.objects}) ${riskDetails.sum} ${formattedRisk}`;
+  
+  // Если используем только увеличенные риски (без основного продукта) или Бастион с дополнительными рисками
+  if (finalProduct.useIncreasedRisksOnly && additionalRisks.length > 0) {
+    additionalRisks.forEach(risk => {
+      const formattedRiskPremium = risk.premium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+      output += `доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${formattedRiskPremium}<br>`;
+    });
+  } else if (finalProduct.product === 'bastion' && additionalRisks.length > 0) {
+    // Для Бастиона с дополнительными рисками показываем только дополнительные риски
+    additionalRisks.forEach(risk => {
+      const formattedRiskPremium = risk.premium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+      output += `доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${formattedRiskPremium}<br>`;
+    });
   } else {
-    output += `доп риск - ${finalProduct.productName} (${riskDetails.objects}) ${formattedRisk}`;
-  }
+    // Стандартная логика с основным продуктом
+    const riskDetails = getAdditionalRiskDetails(finalProduct.product, data, insuranceAmount, finalProduct.premium, additionalRisks, finalProduct.packDetails);
 
-  // Перенос строки перед итого
-  output += '<br>';
+    // Форматируем доп. риск с деталями
+    const formattedRisk = finalProduct.premium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    if (riskDetails.sum) {
+      output += `доп риск - ${finalProduct.productName} (${riskDetails.objects}) ${riskDetails.sum} ${formattedRisk}`;
+    } else {
+      output += `доп риск - ${finalProduct.productName} (${riskDetails.objects}) ${formattedRisk}`;
+    }
+
+    // Добавляем дополнительные риски, если есть
+    if (additionalRisks.length > 0) {
+      additionalRisks.forEach(risk => {
+        const formattedRiskPremium = risk.premium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+        output += `<br>доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${formattedRiskPremium}`;
+      });
+    }
+  }
+  
+  // Добавляем перенос строки перед итого, если есть дополнительные риски
+  if (additionalRisks.length === 0) {
+    output += '<br>';
+  }
   
   // Проверяем, что вариант 2 действительно дешевле варианта 1
-  const finalTotal = finalProduct.total;
   console.log('Финальная проверка:');
-  console.log('- finalTotal:', finalTotal);
+  console.log('- currentTotal:', currentTotal);
   console.log('- variant1Total:', variant1Total);
-  console.log('- difference:', variant1Total - finalTotal);
+  console.log('- difference:', variant1Total - currentTotal);
 
-  if (finalTotal >= variant1Total) {
-    console.log('Вариант 2 получился дороже или равен варианту 1, не показываем:', finalTotal, '>=', variant1Total);
+  if (currentTotal >= variant1Total) {
+    console.log('Вариант 2 получился дороже или равен варианту 1, не показываем:', currentTotal, '>=', variant1Total);
     return null;
   }
 
   // Форматируем итого
-  const formattedTotal = finalTotal.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  const formattedTotal = currentTotal.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   output += `<br>Итого тариф взнос ${formattedTotal}`;
 
   return {
     output: output,
-    total: finalTotal
+    total: currentTotal
   };
 }
 
@@ -1420,8 +1458,3 @@ function calculateIFLAdditionalRisk(product, data, insuranceAmount) {
       return null;
   }
 }
-
-// Экспортируем функции в глобальную область
-window.handleClientRequest = handleClientRequest;
-window.calculateLifeInsurance = calculateLifeInsurance;
-window.calculatePropertyInsurance = calculatePropertyInsurance;
