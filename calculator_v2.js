@@ -197,40 +197,89 @@ function performCalculations(data) {
       console.log('Добавляем вариант 2 в вывод');
 
       // Парсим вывод варианта 2 для создания красивой карточки
-      const lines = variant2Result.output.split('<br>').filter(line => line.trim());
+      const rawOutput = variant2Result.output.replace(/<br\s*\/?>/gi, '\n');
+      const lines = rawOutput.split('\n').filter(line => line.trim());
 
       output += `<div class="variant-card">
         <div class="variant-title">Вариант 2 (повышенные скидки + доп. риски)</div>
         <div class="variant-content">`;
 
-      let totalV2 = 0;
+      let totalV2 = variant2Result.total || 0;
+      let propertyPremium = 0;
+      let lifePremium = 0;
+      let additionalPremium = 0;
 
-      lines.forEach(line => {
+      lines.forEach((line, index) => {
         const cleanLine = line.trim();
-        if (cleanLine.includes('имущество') || cleanLine.includes('жизнь')) {
-          // Основные риски
-          const parts = cleanLine.split(' ');
-          const label = parts[0] === 'имущество' ? 'Имущество' : `Жизнь ${parts.slice(1, -1).join(' ')}`;
-          const value = parts[parts.length - 1].replace(',', '.');
-          const numericValue = parseFloat(value.replace(/\s/g, ''));
-          if (!isNaN(numericValue)) {
-            totalV2 += numericValue;
-            output += `<div class="variant-row">
-              <span class="variant-label">${label}</span>
-              <span class="variant-value">${numericValue.toLocaleString('ru-RU')} ₽</span>
-            </div>`;
+        console.log('Парсим строку:', cleanLine);
+
+        // Основные риски (имущество и жизнь)
+        if (cleanLine.startsWith('имущество')) {
+          // Извлекаем сумму из строки вида "имущество 3 929,44"
+          const match = cleanLine.match(/имущество\s+([\d\s,]+)/);
+          if (match) {
+            const valueStr = match[1].replace(/\s/g, '').replace(',', '.');
+            propertyPremium = parseFloat(valueStr);
+            if (!isNaN(propertyPremium)) {
+              output += `<div class="variant-row">
+                <span class="variant-label">Имущество</span>
+                <span class="variant-value">${propertyPremium.toLocaleString('ru-RU')} ₽</span>
+              </div>`;
+            }
           }
-        } else if (cleanLine.includes('доп риск')) {
-          // Дополнительные риски
-          output += `<div class="additional-risk">${cleanLine.replace('доп риск - ', '<strong>Доп. риск:</strong> ')}</div>`;
-        } else if (cleanLine.includes('Итого тариф взнос')) {
-          // Итоговая сумма
-          const totalMatch = cleanLine.match(/(\d+(?:[.,]\d+)?)/);
-          if (totalMatch) {
-            totalV2 = parseFloat(totalMatch[1].replace(',', '.'));
+        } else if (cleanLine.startsWith('жизнь')) {
+          // Извлекаем сумму из строки вида "жизнь заемщик 83 854,35"
+          const match = cleanLine.match(/жизнь\s+(.+?)\s+([\d\s,]+)$/);
+          if (match) {
+            const borrowerLabel = match[1].trim();
+            const valueStr = match[2].replace(/\s/g, '').replace(',', '.');
+            lifePremium = parseFloat(valueStr);
+            if (!isNaN(lifePremium)) {
+              output += `<div class="variant-row">
+                <span class="variant-label">Жизнь ${borrowerLabel}</span>
+                <span class="variant-value">${lifePremium.toLocaleString('ru-RU')} ₽</span>
+              </div>`;
+            }
           }
+        } else if (cleanLine.includes('доп риск') || cleanLine.includes('Доп. риск')) {
+          // Дополнительные риски - извлекаем премию и добавляем к итогу
+          const premiumMatch = cleanLine.match(/премия ([\d\s,]+)/);
+          if (premiumMatch) {
+            const premiumStr = premiumMatch[1].replace(/\s/g, '').replace(',', '.');
+            const premium = parseFloat(premiumStr);
+            if (!isNaN(premium)) {
+              additionalPremium += premium;
+            }
+          }
+
+          const formattedLine = cleanLine
+            .replace('доп риск - ', '<strong>Доп. риск:</strong> ')
+            .replace('Доп. риск - ', '<strong>Доп. риск:</strong> ')
+            .replace(/(\d{1,3}(?:\s\d{3})*(?:,\d{2})?)/g, (match) => {
+              // Форматируем числа в тексте
+              const num = parseFloat(match.replace(/\s/g, '').replace(',', '.'));
+              return isNaN(num) ? match : num.toLocaleString('ru-RU');
+            })
+            // Исправляем возможные ошибки форматирования
+            .replace(/премия (\d+(?:[.,]\d+)?)/g, (match, num) => {
+              const formattedNum = parseFloat(num.replace(',', '.')).toLocaleString('ru-RU');
+              return `премия ${formattedNum}`;
+            });
+          output += `<div class="additional-risk">${formattedLine}</div>`;
         }
       });
+
+      // Если не удалось распарсить итоговую сумму, рассчитываем ее
+      if (totalV2 === 0) {
+        totalV2 = propertyPremium + lifePremium + additionalPremium;
+      } else {
+        // Если есть дополнительные премии, добавляем их к итогу
+        totalV2 += additionalPremium;
+      }
+
+      output += `        </div>
+        <div class="variant-total">ИТОГО: ${totalV2.toLocaleString('ru-RU')} ₽</div>
+      </div>`;
 
       output += `        </div>
         <div class="variant-total">ИТОГО: ${totalV2.toLocaleString('ru-RU')} ₽</div>
