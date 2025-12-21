@@ -83,10 +83,6 @@ function validateParsedData(data) {
     }
   }
 
-  // 7. Проверка даты выдачи кредита (если требуется для расчетов)
-  if (data.risks.titul && !data.creditDate) {
-    errors.push("❌ Для страхования титула желательно указать дату выдачи кредита (КД) для точного расчета");
-  }
 
   // Возвращаем ошибки или null если все OK
   return errors.length > 0 ? errors : null;
@@ -470,14 +466,36 @@ function calculatePropertyInsurance(data, bankConfig, insuranceAmount) {
 }
 
 // Расчет страхования титула
-function calculateTitleInsurance(insuranceAmount) {
+function calculateTitleInsurance(dataOrAmount, bankConfig, insuranceAmount) {
+  // Поддержка старого формата вызова (только insuranceAmount)
+  let amount, config;
+  if (typeof dataOrAmount === 'number') {
+    amount = dataOrAmount;
+    config = null;
+  } else {
+    amount = insuranceAmount;
+    config = bankConfig;
+  }
+
   const tariff = 0.2; // 0.2% для всех банков
-  const premium = Math.round(insuranceAmount * (tariff / 100) * 100) / 100;
+  const premium = Math.round(amount * (tariff / 100) * 100) / 100;
+
+  // Применяем скидку для второго варианта
+  let discountedPremium = premium;
+  let discountApplied = false;
+  if (config && config.allow_discount_title) {
+    let discountMultiplier = 0.7; // стандартная скидка 30%
+    if (config.discount_title_percent) {
+      discountMultiplier = 1 - (config.discount_title_percent / 100);
+    }
+    discountedPremium = Math.round(premium * discountMultiplier * 100) / 100;
+    discountApplied = true;
+  }
 
   return {
-    total: premium,
+    total: discountedPremium,
     totalWithoutDiscount: premium,
-    hasDiscount: false
+    hasDiscount: discountApplied
   };
 }
 
