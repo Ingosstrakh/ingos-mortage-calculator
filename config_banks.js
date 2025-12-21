@@ -3,7 +3,7 @@
 
 window.BANKS = {
   "Абсолют Банк": {
-    aliases: ["абсолют", "абсолют банк"],
+    aliases: ["абсолют", "абсолют банк", "абсолютбанк", "абсолют-банк"],
     add_percent: 0,
     allow_discount_property: true,
     allow_discount_life: true,
@@ -123,7 +123,7 @@ window.BANKS = {
   },
 
   "Т-Банк / Росбанк": {
-    aliases: ["т банк", "т-банк", "t bank", "тинькофф", "тиньков", "тбанк", "т-банк", "росбанк"],
+    aliases: ["т банк", "т-банк", "t bank", "тинькофф", "тиньков", "тбанк", "т-банк", "росбанк", "т банк", "тинкофф", "tinkoff"],
     add_percent: 0,
     allow_discount_property: true,
     allow_discount_life: true,
@@ -155,7 +155,7 @@ window.BANKS = {
   },
 
   "Энергобанк": {
-    aliases: ["энерго", "энергобанк", "энерго банк"],
+    aliases: ["энерго", "энергобанк", "энерго банк", "энергобанк", "энерго-банк"],
     add_percent: 0,
     allow_discount_property: true,
     allow_discount_life: true,
