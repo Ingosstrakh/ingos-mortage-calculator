@@ -1032,12 +1032,12 @@
             </div>
             <div class="tab-actions">
               <button class="btn-check" onclick="checkBuildingWear()">
-                <span class="btn-icon">🏗️</span>
-                <span>Проверить износ</span>
+                <span class="btn-icon">🔍</span>
+                <span>Найти на dom.mingkh.ru</span>
               </button>
               <button class="btn-secondary" onclick="showManualWearInput()" style="background: #6b7280; margin-left: 10px;">
-                <span class="btn-icon">✏️</span>
-                <span>Ввести вручную</span>
+                <span class="btn-icon">🔍</span>
+                <span>Искать на сайте</span>
               </button>
             </div>
             <div id="wear-results" class="check-results"></div>
@@ -2004,12 +2004,22 @@
       container.innerHTML = html;
     }
 
-    // Открыть сайт dom.mingkh.ru в новом окне
+    // Открыть сайт dom.mingkh.ru в новом окне с поиском по адресу
     function openDomMingkhSite(city, street, house) {
-      const searchQuery = `${city} ${street} ${house}`.toLowerCase().trim();
+      // Формируем поисковый запрос
+      const searchQuery = `${city} ${street} ${house}`.trim();
       const encodedQuery = encodeURIComponent(searchQuery);
-      const url = `https://dom.mingkh.ru/search?address=${encodedQuery}`;
-      window.open(url, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+
+      // Правильный URL для поиска с параметром searchtype=house
+      const searchUrl = `https://dom.mingkh.ru/search?address=${encodedQuery}&searchtype=house`;
+
+      console.log('Открываем поиск на dom.mingkh.ru:', searchUrl);
+
+      // Открываем в новом окне
+      window.open(searchUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+
+      // Также показываем ссылку пользователю в интерфейсе
+      return searchUrl;
     }
 
     // Обработать введенные вручную данные об износе
@@ -2071,25 +2081,60 @@
       const street = document.getElementById('wear-street').value.trim();
       const house = document.getElementById('wear-house').value.trim();
 
+      // Автоматически открываем сайт с поиском
+      if (city && street && house) {
+        openDomMingkhSite(city, street, house);
+      }
+
       showResult('wear-results', {
-        icon: '✏️',
-        title: 'Ручной ввод данных об износе',
-        message: 'Введите данные об износе здания',
+        icon: '🔗',
+        title: 'Проверка износа здания',
+        message: city && street && house ? `Открыт поиск на dom.mingkh.ru для адреса: ${city} ${street} ${house}` : 'Введите адрес и нажмите кнопку поиска',
         details: `
           <div style="margin-top: 15px;">
+            ${city && street && house ? `
+              <div style="background: #e3f2fd; padding: 12px; border-radius: 6px; margin-bottom: 15px; border-left: 4px solid #2196f3;">
+                <p style="margin: 0; font-size: 14px; color: #1565c0;">
+                  🔍 <strong>Сайт открыт автоматически!</strong><br>
+                  Найдите нужное здание в списке результатов.
+                </p>
+              </div>
+            ` : ''}
+
             <button onclick="openDomMingkhSite('${city || ''}', '${street || ''}', '${house || ''}')" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; margin-right: 10px;">
-              🔗 Открыть dom.mingkh.ru
+              🔍 Искать на dom.mingkh.ru
             </button>
-            <p style="margin: 10px 0; font-size: 14px; color: #666;">
-              Введите данные, полученные с сайта dom.mingkh.ru:
+
+            <p style="margin: 15px 0 10px 0; font-size: 14px; color: #666;">
+              <strong>Инструкция:</strong><br>
+              1. Нажмите кнопку поиска выше<br>
+              2. В новом окне найдите ваше здание<br>
+              3. Откройте страницу здания<br>
+              4. Скопируйте данные об износе<br>
+              5. Введите данные ниже:
             </p>
-            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px;">
-              <input type="number" id="manual-wear-percent" placeholder="Износ %" style="width: 100px; padding: 5px;" min="0" max="100" step="0.1">
-              <input type="text" id="manual-wear-date" placeholder="Дата оценки" style="width: 140px; padding: 5px;">
-              <input type="number" id="manual-build-year" placeholder="Год постройки" style="width: 120px; padding: 5px;" min="1800" max="2030">
-              <button onclick="processManualWearData()" style="background: #059669; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer;">
-                ✅ Обработать
-              </button>
+
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin: 15px 0;">
+              <h4 style="margin: 0 0 10px 0; color: #333;">📝 Введите данные с сайта:</h4>
+              <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <div style="display: flex; flex-direction: column;">
+                  <label style="font-size: 12px; color: #666; margin-bottom: 3px;">Износ %</label>
+                  <input type="number" id="manual-wear-percent" placeholder="11" style="width: 100px; padding: 5px;" min="0" max="100" step="0.1">
+                </div>
+                <div style="display: flex; flex-direction: column;">
+                  <label style="font-size: 12px; color: #666; margin-bottom: 3px;">Дата оценки</label>
+                  <input type="text" id="manual-wear-date" placeholder="01.01.2009" style="width: 140px; padding: 5px;">
+                </div>
+                <div style="display: flex; flex-direction: column;">
+                  <label style="font-size: 12px; color: #666; margin-bottom: 3px;">Год постройки</label>
+                  <input type="number" id="manual-build-year" placeholder="1992" style="width: 120px; padding: 5px;" min="1800" max="2030">
+                </div>
+                <div style="display: flex; align-items: flex-end;">
+                  <button onclick="processManualWearData()" style="background: #059669; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer;">
+                    ✅ Обработать
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         `,
@@ -2115,273 +2160,68 @@
         return;
       }
 
-      showLoading('wear-results', 'Получаем данные через API HouseScore...');
+      // Автоматически открываем сайт dom.mingkh.ru с поиском по адресу
+      const searchUrl = openDomMingkhSite(city, street, house);
 
-      try {
-        // API ключ HouseScore
-        const API_KEY = document.getElementById('api-key').value.trim() || '4qQr9LmOgd0ZXuoQr7wW71DdJ9bOeIDoSfaLvyi083de24c1';
+      showResult('wear-results', {
+        icon: '🔗',
+        title: 'Проверка износа здания',
+        message: `Открыт поиск на dom.mingkh.ru для адреса: ${city} ${street} ${house}`,
+        details: `
+          <div style="margin-top: 15px;">
+            <div style="background: #e3f2fd; padding: 12px; border-radius: 6px; margin-bottom: 15px; border-left: 4px solid #2196f3;">
+              <p style="margin: 0; font-size: 14px; color: #1565c0;">
+                🔍 <strong>Сайт открыт автоматически!</strong><br>
+                Найдите нужное здание в списке результатов и откройте его страницу.
+              </p>
+            </div>
 
-        if (!API_KEY) {
-          throw new Error('Необходимо указать API ключ HouseScore');
-        }
+            <button onclick="openDomMingkhSite('${city}', '${street}', '${house}')" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; margin-right: 10px;">
+              🔄 Открыть поиск заново
+            </button>
 
-        // Формируем полный адрес
-        const fullAddress = `${city} ${street} ${house}`;
-        console.log('Проверяем адрес:', fullAddress);
+            <p style="margin: 15px 0 10px 0; font-size: 14px; color: #666;">
+              <strong>Инструкция:</strong><br>
+              1. В новом окне найдите ваше здание в результатах поиска<br>
+              2. Откройте страницу здания<br>
+              3. Скопируйте данные об износе<br>
+              4. Введите данные ниже:
+            </p>
 
-        // HouseScore API через CORS proxy - получаем оценку здания по адресу
-        // Используем несколько proxy на случай, если один не работает
-        const corsProxies = [
-          'https://cors-anywhere.herokuapp.com/',
-          'https://api.allorigins.win/raw?url=',
-          'https://thingproxy.freeboard.io/fetch/'
-        ];
-
-        let response;
-        let lastError;
-
-        // Пробуем разные proxy
-        for (const proxy of corsProxies) {
-          try {
-            const apiUrl = 'https://api.housescore.ru/v1/building/score';
-
-            const fullUrl = proxy === 'https://api.allorigins.win/raw?url='
-              ? proxy + encodeURIComponent(apiUrl)
-              : proxy + apiUrl;
-
-            console.log('Пробуем proxy:', proxy);
-
-            response = await fetch(fullUrl, {
-              method: 'POST',
-              headers: proxy === 'https://api.allorigins.win/raw?url=' ? {} : {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${API_KEY}`,
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-              },
-              body: proxy === 'https://api.allorigins.win/raw?url=' ? null : JSON.stringify({
-                address: fullAddress,
-                include_wear: true,
-                include_construction_year: true,
-                include_last_assessment: true
-              })
-            });
-
-            if (response.ok) {
-              console.log('Proxy сработал:', proxy);
-              break; // Выходим из цикла, если запрос успешен
-            }
-          } catch (error) {
-            console.log('Proxy не сработал:', proxy, error.message);
-            lastError = error;
-            continue; // Пробуем следующий proxy
-          }
-        }
-
-        if (!response || !response.ok) {
-          // Если все proxy не сработали, переходим к ручному вводу
-          console.log('Все CORS proxy не сработали, переходим к ручному вводу');
-
-          showResult('wear-results', {
-            icon: '🔄',
-            title: 'Автоматическая проверка недоступна',
-            message: 'API HouseScore не поддерживает браузерные запросы. Введите данные вручную.',
-            details: `
-              <div style="margin-top: 15px;">
-                <button onclick="openDomMingkhSite('${city}', '${street}', '${house}')" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; margin-right: 10px;">
-                  🔗 Открыть dom.mingkh.ru
-                </button>
-                <p style="margin: 10px 0; font-size: 14px; color: #666;">
-                  1. Нажмите кнопку выше, чтобы открыть сайт в новом окне<br>
-                  2. Пройдите проверку (капчу), если появится<br>
-                  3. Найдите здание и скопируйте данные об износе<br>
-                  4. Введите данные ниже:
-                </p>
-                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px;">
-                  <input type="number" id="manual-wear-percent" placeholder="Износ %" style="width: 100px; padding: 5px;" min="0" max="100" step="0.1">
-                  <input type="text" id="manual-wear-date" placeholder="Дата оценки" style="width: 140px; padding: 5px;">
-                  <input type="number" id="manual-build-year" placeholder="Год постройки" style="width: 120px; padding: 5px;" min="1800" max="2030">
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin: 15px 0;">
+              <h4 style="margin: 0 0 10px 0; color: #333;">📝 Введите данные с сайта:</h4>
+              <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <div style="display: flex; flex-direction: column;">
+                  <label style="font-size: 12px; color: #666; margin-bottom: 3px;">Износ %</label>
+                  <input type="number" id="manual-wear-percent" placeholder="11" style="width: 100px; padding: 5px;" min="0" max="100" step="0.1">
+                </div>
+                <div style="display: flex; flex-direction: column;">
+                  <label style="font-size: 12px; color: #666; margin-bottom: 3px;">Дата оценки</label>
+                  <input type="text" id="manual-wear-date" placeholder="01.01.2009" style="width: 140px; padding: 5px;">
+                </div>
+                <div style="display: flex; flex-direction: column;">
+                  <label style="font-size: 12px; color: #666; margin-bottom: 3px;">Год постройки</label>
+                  <input type="number" id="manual-build-year" placeholder="1992" style="width: 120px; padding: 5px;" min="1800" max="2030">
+                </div>
+                <div style="display: flex; align-items: flex-end;">
                   <button onclick="processManualWearData()" style="background: #059669; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer;">
                     ✅ Обработать
                   </button>
                 </div>
-                <p style="margin: 10px 0; font-size: 12px; color: #888;">
-                  Ошибка: ${lastError?.message || 'API не поддерживает браузерные запросы'}
-                </p>
               </div>
-            `,
-            risk: 'manual',
-            riskLevel: 'Требуется ввод вручную'
-          });
-          return;
-        }
+            </div>
 
-        if (!response.ok) {
-          if (response.status === 401) {
-            throw new Error('Неверный API ключ HouseScore. Проверьте ключ.');
-          } else if (response.status === 403) {
-            throw new Error('Доступ запрещен. Проверьте лимиты API ключа.');
-          } else if (response.status === 429) {
-            throw new Error('Превышен лимит запросов API. Попробуйте позже.');
-          } else if (response.status === 404) {
-            throw new Error('Здание не найдено. Проверьте корректность адреса.');
-          } else {
-            throw new Error(`Ошибка API: ${response.status} ${response.statusText}`);
-          }
-        }
-
-        const buildingData = await response.json();
-        console.log('Данные здания от HouseScore:', buildingData);
-
-        // Извлекаем данные из ответа HouseScore
-        // Структура ответа может быть разной, проверяем разные варианты
-        let wearPercent = null;
-        let wearDate = null;
-        let buildYear = null;
-        let riskScore = null;
-
-        // Проверяем различные возможные структуры ответа
-        if (buildingData.wear_percentage !== undefined) {
-          wearPercent = buildingData.wear_percentage;
-        } else if (buildingData.wear !== undefined) {
-          wearPercent = buildingData.wear;
-        } else if (buildingData.iznos !== undefined) {
-          wearPercent = buildingData.iznos;
-        }
-
-        if (buildingData.assessment_date) {
-          wearDate = buildingData.assessment_date;
-        } else if (buildingData.wear_date) {
-          wearDate = buildingData.wear_date;
-        } else if (buildingData.last_assessment) {
-          wearDate = buildingData.last_assessment;
-        }
-
-        if (buildingData.construction_year) {
-          buildYear = buildingData.construction_year;
-        } else if (buildingData.build_year) {
-          buildYear = buildingData.build_year;
-        } else if (buildingData.year_built) {
-          buildYear = buildingData.year_built;
-        }
-
-        if (buildingData.risk_score !== undefined) {
-          riskScore = buildingData.risk_score;
-        }
-
-        // Если основные данные не найдены, пытаемся найти в других полях
-        if (!wearPercent && buildingData.details) {
-          if (buildingData.details.wear_percentage !== undefined) {
-            wearPercent = buildingData.details.wear_percentage;
-          }
-          if (buildingData.details.assessment_date) {
-            wearDate = buildingData.details.assessment_date;
-          }
-          if (buildingData.details.construction_year) {
-            buildYear = buildingData.details.construction_year;
-          }
-        }
-
-        // Если все еще нет данных об износе, но есть оценка риска
-        if (!wearPercent && riskScore !== null) {
-          // Преобразуем оценку риска в процент износа (примерная формула)
-          if (riskScore >= 0 && riskScore <= 10) {
-            // Чем выше оценка, тем лучше состояние (меньше износ)
-            wearPercent = Math.max(0, 100 - (riskScore * 10));
-          }
-        }
-
-        if (wearPercent === null) {
-          throw new Error('Данные об износе здания не найдены в ответе API. Возможно, здание не имеет оценки.');
-        }
-
-        // Рассчитываем возраст здания
-        const currentYear = new Date().getFullYear();
-        const buildingAge = buildYear ? currentYear - buildYear : null;
-
-        // Определяем риск
-        let risk = 'normal';
-        let riskLevel = 'Низкий риск';
-        let message = `Износ здания: ${wearPercent}%`;
-
-        if (wearDate) {
-          message += ` (дата оценки: ${wearDate})`;
-        }
-
-        if (buildYear) {
-          message += `, год постройки: ${buildYear}`;
-          if (buildingAge) {
-            message += ` (возраст: ${buildingAge} лет)`;
-          }
-        }
-
-        if (wearPercent > 60) {
-          risk = 'high';
-          riskLevel = 'Критический риск';
-          message += '. Критический износ - страхование невозможно';
-        } else if (wearPercent > 40) {
-          risk = 'high';
-          riskLevel = 'Высокий риск';
-          message += '. Высокий износ - возможен отказ в страховании';
-        } else if (wearPercent > 25) {
-          risk = 'medium';
-          riskLevel = 'Средний риск';
-          message += '. Повышенный износ - рекомендуется дополнительная проверка';
-        } else {
-          message += '. Износ в допустимых пределах';
-        }
-
-        showResult('wear-results', {
-          icon: '🏢',
-          title: 'Результат проверки износа (API)',
-          message: message,
-          risk: risk,
-          riskLevel: riskLevel
-        });
-
-      } catch (error) {
-        console.error('Ошибка при проверке износа через API:', error);
-
-        // Если API недоступен, показываем инструкцию по использованию
-        showResult('wear-results', {
-          icon: '🔑',
-          title: 'API недоступен',
-          message: 'Не удалось получить данные через API HouseScore',
-          details: `
-            <div style="margin-top: 15px;">
-              <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                <h4 style="margin: 0 0 10px 0; color: #92400e;">ℹ️ API HouseScore не поддерживает браузерные запросы</h4>
-                <p style="margin: 0; font-size: 14px;">
-                  API housescore.ru предназначен только для сервер-сервер взаимодействия.<br>
-                  Для получения данных используйте ручной ввод ниже или проверьте данные на <a href="https://dom.mingkh.ru/" target="_blank">dom.mingkh.ru</a>
-                </p>
-              </div>
-
-              <button onclick="openDomMingkhSite('${city}', '${street}', '${house}')" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; margin-right: 10px;">
-                🔗 Открыть сайт вручную
-              </button>
-
-              <p style="margin: 10px 0; font-size: 14px; color: #666;">
-                Или введите данные вручную с сайта dom.mingkh.ru:
-              </p>
-
-              <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px;">
-                <input type="number" id="manual-wear-percent" placeholder="Износ %" style="width: 100px; padding: 5px;" min="0" max="100" step="0.1">
-                <input type="text" id="manual-wear-date" placeholder="Дата оценки" style="width: 140px; padding: 5px;">
-                <input type="number" id="manual-build-year" placeholder="Год постройки" style="width: 120px; padding: 5px;" min="1800" max="2030">
-                <button onclick="processManualWearData()" style="background: #059669; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer;">
-                  ✅ Обработать
-                </button>
-              </div>
-
-              <p style="margin: 10px 0; font-size: 12px; color: #888;">
-                Ошибка: ${error.message}
+            <div style="background: #fff3cd; padding: 12px; border-radius: 6px; border: 1px solid #ffeaa7;">
+              <p style="margin: 0; font-size: 13px; color: #856404;">
+                💡 <strong>Пример для адреса "${city} ${street} ${house}":</strong><br>
+                Если здание найдено, обычно указывается: Износ ~10-15%, Год постройки 1990-2000.
               </p>
             </div>
-          `,
-          risk: 'error',
-          riskLevel: 'Ошибка API'
-        });
-      }
+          </div>
+        `,
+        risk: 'manual',
+        riskLevel: 'Ожидание ввода'
+      });
     }
 
     // Проверка ЕГРН файла
