@@ -434,6 +434,26 @@ function parseTextToObject(rawText) {
   // 4) borrowers (перенесено вверх для правильного определения рисков)
   result.borrowers = extractBorrowers(text);
 
+  // 4.1) Дополнительная проверка на наличие слов, указывающих на заемщиков
+  // Если есть слова "муж"/"жен"/"мужчина"/"женщина" без даты, создаем заемщика
+  if (result.borrowers.length === 0) {
+    const genderWords = /\b(мужчина|женщина|муж|жен|он|она)\b/i;
+    if (genderWords.test(text)) {
+      // Определяем пол
+      let gender = null;
+      if (/\b(мужчина|муж|он)\b/i.test(text)) gender = 'male';
+      else if (/\b(женщина|жен|она)\b/i.test(text)) gender = 'female';
+
+      // Создаем заемщика без даты рождения (она будет запрошена в валидации)
+      result.borrowers.push({
+        dob: null,
+        gender: gender,
+        age: null,
+        share: 100
+      });
+    }
+  }
+
   // 5) Risks detection - сначала определяем явно указанные риски
   let hasExplicitRiskMention = false;
 
