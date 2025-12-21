@@ -2141,14 +2141,13 @@
         let lastError;
 
         // Пробуем разные proxy
+        let response;
         for (const proxy of corsProxies) {
           try {
-            const apiUrl = proxy === 'https://api.allorigins.win/raw?url='
-              ? 'https://api.housescore.ru/v1/building/score'
-              : 'https://api.housescore.ru/v1/building/score';
+            const apiUrl = 'https://api.housescore.ru/v1/building/score';
 
             const fullUrl = proxy === 'https://api.allorigins.win/raw?url='
-              ? proxy + encodeURIComponent('https://api.housescore.ru/v1/building/score')
+              ? proxy + encodeURIComponent(apiUrl)
               : proxy + apiUrl;
 
             console.log('Пробуем proxy:', proxy);
@@ -2216,22 +2215,6 @@
           });
           return;
         }
-
-        const response = await fetch(corsProxy + apiUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${API_KEY}`,
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-          },
-          body: JSON.stringify({
-            address: fullAddress,
-            // Опциональные параметры для получения детальной информации
-            include_wear: true,
-            include_construction_year: true,
-            include_last_assessment: true
-          })
-        });
 
         if (!response.ok) {
           if (response.status === 401) {
