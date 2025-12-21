@@ -142,6 +142,42 @@
       cursor: pointer;
       margin: 10px;
     }
+
+    /* Стили для списка банков */
+    .banks-section {
+      margin: 40px 0;
+      text-align: center;
+    }
+    .banks-title {
+      font-size: 1.5rem;
+      color: #1e293b;
+      margin-bottom: 20px;
+      font-weight: 600;
+    }
+    .banks-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .bank-item {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 15px;
+      text-align: center;
+      font-weight: 500;
+      color: #475569;
+      transition: all 0.3s ease;
+      font-size: 14px;
+    }
+    .bank-item:hover {
+      background: #3b82f6;
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+    }
   </style>
 
   <!-- Подключаем данные -->
@@ -172,7 +208,7 @@
       </div>
       <div class="hero-stats">
         <div class="stat-item">
-          <div class="stat-number">16</div>
+          <div class="stat-number">19</div>
           <div class="stat-label">Банков</div>
         </div>
         <div class="stat-item">
@@ -202,6 +238,35 @@
           <div class="calculation-header">
             <h2 class="section-title">💎 Расчет стоимости страхования</h2>
             <p class="section-subtitle">Введите данные клиента для мгновенного расчета стоимости страхования</p>
+          </div>
+
+          <!-- Список поддерживаемых банков -->
+          <div class="banks-section">
+            <h3 class="banks-title">🏦 Поддерживаемые банки</h3>
+            <div class="banks-grid" id="banks-list">
+              <!-- Fallback список банков на случай проблем с JavaScript -->
+              <div class="bank-item">Абсолют Банк</div>
+              <div class="bank-item">Ак Барс</div>
+              <div class="bank-item">Альфа Банк</div>
+              <div class="bank-item">Банк СПБ</div>
+              <div class="bank-item">ВТБ</div>
+              <div class="bank-item">Дом.РФ</div>
+              <div class="bank-item">Зенит</div>
+              <div class="bank-item">ИТБ / ТКБ</div>
+              <div class="bank-item">Металлинвест</div>
+              <div class="bank-item">МКБ</div>
+              <div class="bank-item">МТС Банк</div>
+              <div class="bank-item">ПСБ (Промсвязьбанк)</div>
+              <div class="bank-item">Райффайзенбанк</div>
+              <div class="bank-item">РСХБ</div>
+              <div class="bank-item">Сбербанк</div>
+              <div class="bank-item">Т-Банк / Росбанк</div>
+              <div class="bank-item">Тимер Банк</div>
+              <div class="bank-item">УБРИР</div>
+              <div class="bank-item">Уралсиб</div>
+              <div class="bank-item">Энергобанк</div>
+              <div class="bank-item">Юникредит Банк</div>
+            </div>
           </div>
 
           <div class="calculation-card">
@@ -391,6 +456,18 @@
       const resultsSection = document.getElementById('results-section');
       const resultsContent = document.getElementById('results-content');
 
+      // Заполняем список банков после загрузки скриптов
+      populateBanksList();
+
+      // Также пытаемся заполнить список после загрузки config_banks.js
+      const configScript = document.querySelector('script[src*="config_banks.js"]');
+      if (configScript) {
+        configScript.addEventListener('load', () => {
+          console.log('config_banks.js loaded, populating banks list');
+          populateBanksList();
+        });
+      }
+
       // Обработчик кнопки расчета
       calculateBtn.addEventListener('click', async function() {
         const message = clientInput.value.trim();
@@ -448,6 +525,35 @@
         </div>`;
         resultsSection.style.display = 'block';
         resultsSection.scrollIntoView({ behavior: 'smooth' });
+      }
+
+      // Функция заполнения списка банков
+      function populateBanksList(retryCount = 0) {
+        const banksList = document.getElementById('banks-list');
+        if (!banksList) {
+          console.log('banks-list element not found');
+          return;
+        }
+
+        if (!window.BANKS) {
+          if (retryCount < 10) {
+            console.log(`window.BANKS not loaded yet, retrying... (${retryCount + 1}/10)`);
+            setTimeout(() => populateBanksList(retryCount + 1), 200);
+          } else {
+            console.error('Failed to load window.BANKS after 10 retries');
+            banksList.innerHTML = '<div class="bank-item" style="color: red;">Ошибка загрузки списка банков</div>';
+          }
+          return;
+        }
+
+        const bankNames = Object.keys(window.BANKS).sort();
+        console.log('Loading banks:', bankNames.length, 'banks:', bankNames);
+
+        banksList.innerHTML = bankNames.map(bankName => {
+          return `<div class="bank-item">${bankName}</div>`;
+        }).join('');
+
+        console.log('Banks list populated successfully');
       }
 
       // Фокус на поле ввода при загрузке
