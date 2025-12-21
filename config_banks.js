@@ -6,14 +6,16 @@ window.BANKS = {
     aliases: ["абсолют", "абсолют банк"],
     add_percent: 0,
     allow_discount_property: true,
-    allow_discount_life: true
+    allow_discount_life: true,
+    allow_discount_title: true
   },
 
   "Ак Барс": {
     aliases: ["ак барс", "ак-барс", "акбарс"],
     add_percent: 0,
     allow_discount_property: true,
-    allow_discount_life: true
+    allow_discount_life: true,
+    allow_discount_title: true
   },
 
   "Альфа Банк": {
@@ -23,11 +25,19 @@ window.BANKS = {
     allow_discount_life: false      // запрещена
   },
 
+  "Банк СПБ": {
+    aliases: ["банк спб", "спб", "спб банк", "банк санкт-петербург"],
+    add_percent: 10,
+    allow_discount_property: false, // запрещена
+    allow_discount_life: false      // запрещена
+  },
+
   "ВТБ": {
     aliases: ["втб", "втб банк", "открытие", "банк открытие"],
     add_percent: 10,
     allow_discount_property: true,
-    allow_discount_life: true
+    allow_discount_life: true,
+    allow_discount_title: true
   },
 
   "Дом.РФ": {
@@ -41,98 +51,24 @@ window.BANKS = {
     aliases: ["зенит"],
     add_percent: 10,
     allow_discount_property: true,
-    allow_discount_life: true
+    allow_discount_life: true,
+    allow_discount_title: true
   },
 
   "ИТБ / ТКБ": {
     aliases: ["итб", "ткб", "ткб/итб", "итб/ткб"],
     add_percent: 10,
     allow_discount_property: true,
-    allow_discount_life: true
+    allow_discount_life: true,
+    allow_discount_title: true
   },
 
   "Металлинвест": {
     aliases: ["металлинвест", "металлинвестбанк"],
     add_percent: 10,
     allow_discount_property: true,
-    allow_discount_life: true
-  },
-
-  "МТС Банк": {
-    aliases: ["мтс", "мтс банк"],
-    add_percent: 10,
-    allow_discount_property: true,
-    allow_discount_life: true
-  },
-
-  "ПСБ (Промсвязьбанк)": {
-    aliases: ["псб", "промсвязьбанк", "псб банк"],
-    add_percent: 0,
-    allow_discount_property: true,
-    allow_discount_life: true
-  },
-
-  "Райффайзенбанк": {
-    aliases: ["райфайзен", "райффайзен", "raiffaisen"],
-    add_percent: 10,
-    allow_discount_property: true,
-    allow_discount_life: true
-  },
-
-  "Росбанк / Т-Банк": {
-    aliases: ["росбанк", "т банк", "т-банк", "t bank"],
-    add_percent: 0,
-    allow_discount_property: true,
-    allow_discount_life: true
-  },
-
-  "РСХБ": {
-    aliases: ["рсхб", "россельхоз", "россельхозбанк"],
-    add_percent: 10,
-    allow_discount_property: true,
-    allow_discount_life: true
-  },
-
-  "Сбербанк": {
-    aliases: ["сбер", "сбербанк", "sber"],
-    add_percent: 0,
-    allow_discount_property: true,
-    allow_discount_life: true
-  },
-
-  "Тимер Банк": {
-    aliases: ["тимер", "тимер банк"],
-    add_percent: 0,
-    allow_discount_property: true,
-    allow_discount_life: true
-  },
-
-  "УБРИР": {
-    aliases: ["убрир", "у б р и р", "ubr"],
-    add_percent: null, // клиент вводит сам
-    allow_discount_property: true,
-    allow_discount_life: true
-  },
-
-  "Уралсиб": {
-    aliases: ["уралсиб"],
-    add_percent: 0,
-    allow_discount_property: true,
-    allow_discount_life: true
-  },
-
-  "Юникредит Банк": {
-    aliases: ["юникредит", "unicredit", "uni credit"],
-    add_percent: 0,
-    allow_discount_property: true,
-    allow_discount_life: true
-  },
-
-  "Банк СПБ": {
-    aliases: ["банк спб", "спб", "спб банк", "банк санкт-петербург"],
-    add_percent: 10,
-    allow_discount_property: false, // запрещена
-    allow_discount_life: false      // запрещена
+    allow_discount_life: true,
+    allow_discount_title: true
   },
 
   "МКБ": {
@@ -140,7 +76,97 @@ window.BANKS = {
     add_percent: 0,
     allow_discount_property: true,
     allow_discount_life: true,
+    allow_discount_title: true,
     discount_property_percent: 15,  // скидка 15%
-    discount_life_percent: 15        // скидка 15%
+    discount_life_percent: 15,       // скидка 15%
+    discount_title_percent: 30       // скидка 30% на титул
+  },
+
+  "МТС Банк": {
+    aliases: ["мтс", "мтс банк"],
+    add_percent: 10,
+    allow_discount_property: true,
+    allow_discount_life: true,
+    allow_discount_title: true
+  },
+
+  "ПСБ (Промсвязьбанк)": {
+    aliases: ["псб", "промсвязьбанк", "псб банк"],
+    add_percent: 0,
+    allow_discount_property: true,
+    allow_discount_life: true,
+    allow_discount_title: true
+  },
+
+  "Райффайзенбанк": {
+    aliases: ["райфайзен", "райффайзен", "raiffaisen"],
+    add_percent: 10,
+    allow_discount_property: true,
+    allow_discount_life: true,
+    allow_discount_title: true
+  },
+
+  "РСХБ": {
+    aliases: ["рсхб", "россельхоз", "россельхозбанк"],
+    add_percent: 10,
+    allow_discount_property: true,
+    allow_discount_life: true,
+    allow_discount_title: true
+  },
+
+  "Сбербанк": {
+    aliases: ["сбер", "сбербанк", "sber"],
+    add_percent: 0,
+    allow_discount_property: true,
+    allow_discount_life: true,
+    allow_discount_title: true
+  },
+
+  "Т-Банк / Росбанк": {
+    aliases: ["т банк", "т-банк", "t bank", "тинькофф", "тиньков", "тбанк", "т-банк", "росбанк"],
+    add_percent: 0,
+    allow_discount_property: true,
+    allow_discount_life: true,
+    allow_discount_title: true
+  },
+
+  "Тимер Банк": {
+    aliases: ["тимер", "тимер банк"],
+    add_percent: 0,
+    allow_discount_property: true,
+    allow_discount_life: true,
+    allow_discount_title: true
+  },
+
+  "УБРИР": {
+    aliases: ["убрир", "у б р и р", "ubr"],
+    add_percent: null, // клиент вводит сам
+    allow_discount_property: true,
+    allow_discount_life: true,
+    allow_discount_title: true
+  },
+
+  "Уралсиб": {
+    aliases: ["уралсиб"],
+    add_percent: 0,
+    allow_discount_property: true,
+    allow_discount_life: true,
+    allow_discount_title: true
+  },
+
+  "Энергобанк": {
+    aliases: ["энерго", "энергобанк", "энерго банк"],
+    add_percent: 0,
+    allow_discount_property: true,
+    allow_discount_life: true,
+    allow_discount_title: true
+  },
+
+  "Юникредит Банк": {
+    aliases: ["юникредит", "unicredit", "uni credit"],
+    add_percent: 0,
+    allow_discount_property: true,
+    allow_discount_life: true,
+    allow_discount_title: true
   }
 };
