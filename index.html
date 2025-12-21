@@ -1947,41 +1947,6 @@
       }
     });
 
-    // Функции андеррайтинга (в глобальной области)
-    function openUnderwritingModal() {
-      document.getElementById('underwriting-modal').style.display = 'flex';
-      document.body.style.overflow = 'hidden';
-    }
-
-    function closeUnderwritingModal() {
-      document.getElementById('underwriting-modal').style.display = 'none';
-      document.body.style.overflow = 'auto';
-      // Очистить все результаты
-      clearAllResults();
-    }
-
-    // Переключение вкладок
-    function switchTab(tabId) {
-      // Скрыть все контенты
-      document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.remove('active');
-      });
-
-      // Убрать активный класс со всех кнопок
-      document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-      });
-
-      // Показать выбранный контент
-      document.getElementById(tabId + '-content').classList.add('active');
-
-      // Активировать кнопку
-      document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
-
-      // Очистить результаты предыдущей проверки
-      clearAllResults();
-    }
-
     // Очистка всех результатов
     function clearAllResults() {
       document.getElementById('wear-results').innerHTML = '';
@@ -2652,6 +2617,72 @@
           riskLevel: 'Ошибка'
         });
       }
+    }
+  </script>
+
+  <!-- Глобальные функции андеррайтинга -->
+  <script>
+    // Глобальные функции для модального окна андеррайтинга
+    function openUnderwritingModal() {
+      const modal = document.getElementById('underwriting-modal');
+      if (modal) {
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        // Активируем первую вкладку по умолчанию
+        if (typeof switchTab === 'function') {
+          switchTab('wear');
+        }
+      } else {
+        console.error('Modal element not found');
+      }
+    }
+
+    function closeUnderwritingModal() {
+      const modal = document.getElementById('underwriting-modal');
+      if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+        if (typeof clearAllResults === 'function') {
+          clearAllResults();
+        }
+      }
+    }
+
+    // Функция переключения вкладок
+    function switchTab(tabId) {
+      // Скрыть все вкладки
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+
+      // Убрать активный класс со всех кнопок
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+
+      // Показать выбранный контент
+      const tabContent = document.getElementById(tabId + '-content');
+      if (tabContent) {
+        tabContent.classList.add('active');
+      }
+
+      // Активировать кнопку
+      const tabBtn = document.querySelector(`[data-tab="${tabId}"]`);
+      if (tabBtn) {
+        tabBtn.classList.add('active');
+      }
+
+      // Очистить результаты предыдущей проверки
+      if (typeof clearAllResults === 'function') {
+        clearAllResults();
+      }
+    }
+
+    // Функция для проверки существования функций
+    function checkFunctions() {
+      console.log('openUnderwritingModal:', typeof openUnderwritingModal);
+      console.log('closeUnderwritingModal:', typeof closeUnderwritingModal);
+      console.log('switchTab:', typeof switchTab);
     }
   </script>
 </body>
