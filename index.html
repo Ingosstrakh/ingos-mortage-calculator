@@ -1035,6 +1035,10 @@
                 <span class="btn-icon">🏗️</span>
                 <span>Проверить износ</span>
               </button>
+              <button class="btn-secondary" onclick="showManualWearInput()" style="background: #6b7280; margin-left: 10px;">
+                <span class="btn-icon">✏️</span>
+                <span>Ввести вручную</span>
+              </button>
             </div>
             <div id="wear-results" class="check-results"></div>
           </div>
@@ -2096,6 +2100,39 @@
       });
     }
 
+    // Показать форму для ручного ввода данных об износе
+    function showManualWearInput() {
+      const city = document.getElementById('wear-city').value.trim();
+      const street = document.getElementById('wear-street').value.trim();
+      const house = document.getElementById('wear-house').value.trim();
+
+      showResult('wear-results', {
+        icon: '✏️',
+        title: 'Ручной ввод данных об износе',
+        message: 'Введите данные об износе здания',
+        details: `
+          <div style="margin-top: 15px;">
+            <button onclick="openDomMingkhSite('${city || ''}', '${street || ''}', '${house || ''}')" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; margin-right: 10px;">
+              🔗 Открыть dom.mingkh.ru
+            </button>
+            <p style="margin: 10px 0; font-size: 14px; color: #666;">
+              Введите данные, полученные с сайта dom.mingkh.ru:
+            </p>
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px;">
+              <input type="number" id="manual-wear-percent" placeholder="Износ %" style="width: 100px; padding: 5px;" min="0" max="100" step="0.1">
+              <input type="text" id="manual-wear-date" placeholder="Дата оценки" style="width: 140px; padding: 5px;">
+              <input type="number" id="manual-build-year" placeholder="Год постройки" style="width: 120px; padding: 5px;" min="1800" max="2030">
+              <button onclick="processManualWearData()" style="background: #059669; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer;">
+                ✅ Обработать
+              </button>
+            </div>
+          </div>
+        `,
+        risk: 'manual',
+        riskLevel: 'Ожидание ввода'
+      });
+    }
+
     // Проверка износа здания через API
     async function checkBuildingWear() {
       const city = document.getElementById('wear-city').value.trim();
@@ -2127,8 +2164,95 @@
         const fullAddress = `${city} ${street} ${house}`;
         console.log('Проверяем адрес:', fullAddress);
 
-        // HouseScore API - получаем оценку здания по адресу
-        const response = await fetch('https://api.housescore.ru/v1/building/score', {
+        // HouseScore API через CORS proxy - получаем оценку здания по адресу
+        // Используем несколько proxy на случай, если один не работает
+        const corsProxies = [
+          'https://cors-anywhere.herokuapp.com/',
+          'https://api.allorigins.win/raw?url=',
+          'https://thingproxy.freeboard.io/fetch/'
+        ];
+
+        let response;
+        let lastError;
+
+        // Пробуем разные proxy
+        for (const proxy of corsProxies) {
+          try {
+            const apiUrl = proxy === 'https://api.allorigins.win/raw?url='
+              ? 'https://api.housescore.ru/v1/building/score'
+              : 'https://api.housescore.ru/v1/building/score';
+
+            const fullUrl = proxy === 'https://api.allorigins.win/raw?url='
+              ? proxy + encodeURIComponent('https://api.housescore.ru/v1/building/score')
+              : proxy + apiUrl;
+
+            console.log('Пробуем proxy:', proxy);
+
+            response = await fetch(fullUrl, {
+              method: 'POST',
+              headers: proxy === 'https://api.allorigins.win/raw?url=' ? {} : {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${API_KEY}`,
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+              },
+              body: proxy === 'https://api.allorigins.win/raw?url=' ? null : JSON.stringify({
+                address: fullAddress,
+                include_wear: true,
+                include_construction_year: true,
+                include_last_assessment: true
+              })
+            });
+
+            if (response.ok) {
+              console.log('Proxy сработал:', proxy);
+              break; // Выходим из цикла, если запрос успешен
+            }
+          } catch (error) {
+            console.log('Proxy не сработал:', proxy, error.message);
+            lastError = error;
+            continue; // Пробуем следующий proxy
+          }
+        }
+
+        if (!response || !response.ok) {
+          // Если все proxy не сработали, переходим к ручному вводу
+          console.log('Все CORS proxy не сработали, переходим к ручному вводу');
+
+          showResult('wear-results', {
+            icon: '🔄',
+            title: 'Автоматическая проверка недоступна',
+            message: 'API HouseScore не поддерживает браузерные запросы. Введите данные вручную.',
+            details: `
+              <div style="margin-top: 15px;">
+                <button onclick="openDomMingkhSite('${city}', '${street}', '${house}')" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; margin-right: 10px;">
+                  🔗 Открыть dom.mingkh.ru
+                </button>
+                <p style="margin: 10px 0; font-size: 14px; color: #666;">
+                  1. Нажмите кнопку выше, чтобы открыть сайт в новом окне<br>
+                  2. Пройдите проверку (капчу), если появится<br>
+                  3. Найдите здание и скопируйте данные об износе<br>
+                  4. Введите данные ниже:
+                </p>
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px;">
+                  <input type="number" id="manual-wear-percent" placeholder="Износ %" style="width: 100px; padding: 5px;" min="0" max="100" step="0.1">
+                  <input type="text" id="manual-wear-date" placeholder="Дата оценки" style="width: 140px; padding: 5px;">
+                  <input type="number" id="manual-build-year" placeholder="Год постройки" style="width: 120px; padding: 5px;" min="1800" max="2030">
+                  <button onclick="processManualWearData()" style="background: #059669; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer;">
+                    ✅ Обработать
+                  </button>
+                </div>
+                <p style="margin: 10px 0; font-size: 12px; color: #888;">
+                  Ошибка: ${lastError?.message || 'API не поддерживает браузерные запросы'}
+                </p>
+              </div>
+            `,
+            risk: 'manual',
+            riskLevel: 'Требуется ввод вручную'
+          });
+          return;
+        }
+
+        const response = await fetch(corsProxy + apiUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -2278,10 +2402,10 @@
           details: `
             <div style="margin-top: 15px;">
               <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                <h4 style="margin: 0 0 10px 0; color: #92400e;">🔑 Настройка API ключа HouseScore</h4>
+                <h4 style="margin: 0 0 10px 0; color: #92400e;">ℹ️ API HouseScore не поддерживает браузерные запросы</h4>
                 <p style="margin: 0; font-size: 14px;">
-                  API ключ: <code>4qQr9LmOgd0ZXuoQr7wW71DdJ9bOeIDoSfaLvyi083de24c1</code><br>
-                  Если ключ не работает, проверьте документацию: <a href="https://housescore.ru/documentation" target="_blank">housescore.ru/documentation</a>
+                  API housescore.ru предназначен только для сервер-сервер взаимодействия.<br>
+                  Для получения данных используйте ручной ввод ниже или проверьте данные на <a href="https://dom.mingkh.ru/" target="_blank">dom.mingkh.ru</a>
                 </p>
               </div>
 
