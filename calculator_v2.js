@@ -839,6 +839,12 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
     }
   }
 
+  // Расчет титула для сложного пути
+  let titleResult = null;
+  if (data.risks.titul) {
+    titleResult = calculateTitleInsurance(data, bankConfig, insuranceAmount);
+  }
+
   // Формируем вывод варианта 2
   let output = '';
   if (data.risks.property) {
@@ -949,14 +955,6 @@ function calculateVariant3(data, bankConfig, insuranceAmount, discountPercent) {
     }
   }
 
-  // Расчет титула без скидки (если есть)
-  let titleResult = null;
-  if (data.risks.titul) {
-    titleResult = calculateTitleInsurance(data, bankConfig, insuranceAmount);
-    if (titleResult) {
-      output += `титул ${titleResult.total.toLocaleString('ru-RU')}<br>`;
-    }
-  }
 
   // Итоговый расчет
   let totalV3 = 0;
