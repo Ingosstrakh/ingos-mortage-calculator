@@ -9,7 +9,11 @@ async function processClientRequest(message) {
     console.log('processClientRequest result type:', typeof result);
     console.log('processClientRequest result:', result);
 
-    if (result && typeof result === 'string' && result.includes('Банк:')) {
+    // Проверяем, является ли результат детальной ошибкой валидации
+    if (result && typeof result === 'string' && (result.includes('🚫') || result.includes('❌ Найдены ошибки'))) {
+      // Это детальная ошибка валидации - возвращаем как есть
+      return result;
+    } else if (result && typeof result === 'string' && result.includes('Банк:')) {
       // Это успешный расчет
       return result;
     } else {
