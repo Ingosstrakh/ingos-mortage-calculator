@@ -155,6 +155,11 @@ function handleClientRequest(clientText) {
   }
 }
 
+// Экспортируем функции в глобальную область
+window.validateParsedData = validateParsedData;
+window.handleClientRequest = handleClientRequest;
+window.performCalculations = performCalculations;
+
 // Функция выполнения всех расчетов
 function performCalculations(data) {
   const bankConfig = window.BANKS[data.bank];
