@@ -365,7 +365,16 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
     // Для ГПБ выбираем тарифы в зависимости от даты КД
     if (data.contractDate) {
       const cutoffDate = new Date('2024-05-02');
-      const contractDateObj = new Date(data.contractDate);
+      // Конвертируем DD.MM.YYYY в YYYY-MM-DD
+      const parts = data.contractDate.split('.');
+      let contractDateObj;
+      if (parts.length === 3) {
+        const isoDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+        contractDateObj = new Date(isoDate);
+      } else {
+        contractDateObj = new Date(data.contractDate);
+      }
+
       if (contractDateObj < cutoffDate) {
         tariffTable = window.LIFE_TARIFF_GPB_OLD || LIFE_TARIFF_GPB_OLD;
       } else {
