@@ -34,10 +34,11 @@ window.BANKS = {
 
   "ВТБ": {
     aliases: ["втб", "втб банк", "открытие", "банк открытие"],
-    add_percent: 10,
-    allow_discount_property: true,
-    allow_discount_life: true,
-    allow_discount_title: true
+    add_percent: 10, // для старых дат; для новых дат (после 01.02.2025) = 0
+    cutoff_date: "2025-02-01", // дата перехода на новые тарифы
+    allow_discount_property: true, // для старых дат; для новых = false
+    allow_discount_life: true,     // для старых дат; для новых = false
+    allow_discount_title: true     // для старых дат; для новых = false
   },
 
   "Газпромбанк": {
