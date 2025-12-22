@@ -379,7 +379,7 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
     tariffTable = window.LIFE_TARIFF_SPB || LIFE_TARIFF_SPB;
   } else if (data.bank === "МКБ") {
     tariffTable = window.LIFE_TARIFF_MKB || LIFE_TARIFF_MKB;
-  } else if (data.bank === "Газпромбанк") {
+  } else if (data.bank && data.bank.toLowerCase() === "газпромбанк") {
     // Для ГПБ выбираем тарифы в зависимости от даты КД
     if (data.contractDate) {
       const cutoffDate = new Date('2024-05-02');
@@ -522,7 +522,7 @@ function calculateTitleInsurance(dataOrAmount, bankConfig, insuranceAmount, with
 
   // Специальная логика для ГПБ
   let tariff = 0.2; // базовый тариф 0.2%
-  if (config && config.bankName === "Газпромбанк" && contractDate) {
+  if (config && config.bankName && config.bankName.toLowerCase() === "газпромбанк" && contractDate) {
     const cutoffDate = new Date('2024-05-02');
     // Конвертируем DD.MM.YYYY в YYYY-MM-DD
     let contractDateObj;
