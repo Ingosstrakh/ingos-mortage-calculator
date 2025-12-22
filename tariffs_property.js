@@ -51,6 +51,13 @@ const PROPERTY_TARIFFS = {
       house_wood_with_life: 0.857,    // дом дерево + жизнь: 0,857%
       house_wood_alone: 1.028        // дом дерево отдельно: 1,028%
     }
+  },
+
+  // ВТБ — новые тарифы (после 01.02.2025)
+  "ВТБ": {
+    flat: 0.24,        // квартира: 0,24%
+    house_brick: 0.24, // дом кирпич: 0,24%
+    house_wood: 0.43   // дом дерево: 0,43%
   }
 };
 
@@ -98,6 +105,24 @@ function getPropertyTariff(bank, type, contractDate = null, withLifeInsurance = 
       return PROPERTY_TARIFFS.base[type] || 0.10;
     }
     return getGPBPropertyTariff(contractDate, withLifeInsurance, type);
+  }
+
+  // Специальная обработка для ВТБ (новые тарифы после 01.02.2025)
+  if (bank === "ВТБ" && contractDate) {
+    const cutoffDate = new Date('2025-02-01');
+    const parts = contractDate.split('.');
+    let contractDateObj;
+    if (parts.length === 3) {
+      const isoDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      contractDateObj = new Date(isoDate);
+    } else {
+      contractDateObj = new Date(contractDate);
+    }
+
+    if (contractDateObj >= cutoffDate) {
+      // Новые тарифы ВТБ (после 01.02.2025)
+      return PROPERTY_TARIFFS["ВТБ"][type] || PROPERTY_TARIFFS.base[type];
+    }
   }
 
   // Для остальных банков обычная логика
