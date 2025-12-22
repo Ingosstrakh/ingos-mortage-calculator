@@ -91,8 +91,8 @@ function getGPBPropertyTariff(contractDate, withLifeInsurance, objectType) {
 
 // Если банк не указан в отдельном блоке → применяется base
 function getPropertyTariff(bank, type, contractDate = null, withLifeInsurance = false) {
-  // Специальная обработка для ГПБ
-  if (bank === "Газпромбанк") {
+  // Специальная обработка для ГПБ (регистронезависимо)
+  if (bank && bank.toLowerCase() === "газпромбанк") {
     if (!contractDate) {
       // Если дата не указана, используем базовый тариф
       return PROPERTY_TARIFFS.base[type] || 0.10;
