@@ -158,8 +158,8 @@ window.performCalculations = performCalculations;
 
 // Функция выполнения всех расчетов
 function performCalculations(data) {
-  const bankConfig = window.BANKS[data.bank];
-  if (!bankConfig) {
+  const bankConfig = { ...window.BANKS[data.bank], bankName: data.bank };
+  if (!bankConfig.bankName) {
     return `Банк "${data.bank}" не найден в конфигурации.`;
   }
 
@@ -213,7 +213,8 @@ function performCalculations(data) {
 
   // Расчет титула
   if (data.risks.titul) {
-    const titleResult = calculateTitleInsurance(insuranceAmount);
+    const withLifeInsurance = data.risks.life || false;
+    const titleResult = calculateTitleInsurance(data, bankConfig, insuranceAmount, withLifeInsurance, data.contractDate);
     titleResult.type = 'title';
     calculations.push(titleResult);
     totalPremium += titleResult.total;
@@ -360,6 +361,20 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
     tariffTable = window.LIFE_TARIFF_SPB || LIFE_TARIFF_SPB;
   } else if (data.bank === "МКБ") {
     tariffTable = window.LIFE_TARIFF_MKB || LIFE_TARIFF_MKB;
+  } else if (data.bank === "Газпромбанк") {
+    // Для ГПБ выбираем тарифы в зависимости от даты КД
+    if (data.contractDate) {
+      const cutoffDate = new Date('2024-05-02');
+      const contractDateObj = new Date(data.contractDate);
+      if (contractDateObj < cutoffDate) {
+        tariffTable = window.LIFE_TARIFF_GPB_OLD || LIFE_TARIFF_GPB_OLD;
+      } else {
+        tariffTable = window.LIFE_TARIFF_GPB_NEW || LIFE_TARIFF_GPB_NEW;
+      }
+    } else {
+      // Если дата не указана, используем старые тарифы по умолчанию
+      tariffTable = window.LIFE_TARIFF_GPB_OLD || LIFE_TARIFF_GPB_OLD;
+    }
   } else {
     tariffTable = window.LIFE_TARIFF_BASE || LIFE_TARIFF_BASE;
   }
@@ -435,8 +450,9 @@ function calculatePropertyInsurance(data, bankConfig, insuranceAmount) {
     }
   }
 
-  // Получаем тариф
-  const tariff = (window.getPropertyTariff || getPropertyTariff)(data.bank, objectType);
+  // Получаем тариф (для ГПБ учитываем дату КД и комбинацию с жизнью)
+  const withLifeInsurance = data.risks && data.risks.life || false;
+  const tariff = (window.getPropertyTariff || getPropertyTariff)(data.bank, objectType, data.contractDate, withLifeInsurance);
   if (!tariff) {
     return {
       output: `<b>Страхование имущества:</b> тариф для типа объекта не найден<br><br>`,
@@ -466,7 +482,7 @@ function calculatePropertyInsurance(data, bankConfig, insuranceAmount) {
 }
 
 // Расчет страхования титула
-function calculateTitleInsurance(dataOrAmount, bankConfig, insuranceAmount) {
+function calculateTitleInsurance(dataOrAmount, bankConfig, insuranceAmount, withLifeInsurance = false, contractDate = null) {
   // Поддержка старого формата вызова (только insuranceAmount)
   let amount, config;
   if (typeof dataOrAmount === 'number') {
@@ -477,7 +493,22 @@ function calculateTitleInsurance(dataOrAmount, bankConfig, insuranceAmount) {
     config = bankConfig;
   }
 
-  const tariff = 0.2; // 0.2% для всех банков
+  // Специальная логика для ГПБ
+  let tariff = 0.2; // базовый тариф 0.2%
+  if (config && config.bankName === "Газпромбанк" && contractDate) {
+    const cutoffDate = new Date('2024-05-02');
+    const contractDateObj = new Date(contractDate);
+    const useOldTariffs = contractDateObj < cutoffDate;
+
+    if (useOldTariffs) {
+      // Старые тарифы ГПБ (до 02.05.2024)
+      tariff = withLifeInsurance ? 0.28 : 0.336; // 0.28% с жизнью, 0.336% отдельно
+    } else {
+      // Новые тарифы ГПБ (после 02.05.2024)
+      tariff = withLifeInsurance ? 0.38 : 0.457; // 0.38% с жизнью, 0.457% отдельно
+    }
+  }
+
   const premium = Math.round(amount * (tariff / 100) * 100) / 100;
 
   // Применяем скидку для второго варианта
@@ -842,7 +873,8 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
   // Расчет титула для сложного пути
   let titleResult = null;
   if (data.risks.titul) {
-    titleResult = calculateTitleInsurance(data, bankConfig, insuranceAmount);
+    const withLifeInsurance = data.risks.life || false;
+    titleResult = calculateTitleInsurance(data, bankConfig, insuranceAmount, withLifeInsurance, data.contractDate);
   }
 
   // Формируем вывод варианта 2
