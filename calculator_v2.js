@@ -178,8 +178,11 @@ function performCalculations(data) {
     return `Банк "${data.bank}" не найден в конфигурации.`;
   }
 
+  // Создаем локальную копию конфигурации банка (чтобы не менять глобальную)
+  const effectiveBankConfig = { ...bankConfig };
+
   // Специальная логика для ВТБ: после 01.02.2025 меняем правила
-  if (bankConfig.bankName === "ВТБ" && data.contractDate) {
+  if (effectiveBankConfig.bankName === "ВТБ" && data.contractDate) {
     const cutoffDate = new Date('2025-02-01');
     const parts = data.contractDate.split('.');
     let contractDateObj;
@@ -192,10 +195,10 @@ function performCalculations(data) {
 
     if (contractDateObj >= cutoffDate) {
       // Новые правила для ВТБ после 01.02.2025
-      bankConfig.add_percent = 0; // Надбавка 0%
-      bankConfig.allow_discount_property = false; // Скидки запрещены
-      bankConfig.allow_discount_life = false;
-      bankConfig.allow_discount_title = false;
+      effectiveBankConfig.add_percent = 0; // Надбавка 0%
+      effectiveBankConfig.allow_discount_property = false; // Скидки запрещены
+      effectiveBankConfig.allow_discount_life = false;
+      effectiveBankConfig.allow_discount_title = false;
     }
   }
 
@@ -207,19 +210,19 @@ function performCalculations(data) {
 
   // Расчет страховой суммы с надбавкой
   let insuranceAmount = data.osz;
-  if (bankConfig.add_percent && bankConfig.add_percent > 0) {
+  if (effectiveBankConfig.add_percent && effectiveBankConfig.add_percent > 0) {
     // Фиксированная надбавка из конфигурации банка
-    const markup = data.osz * (bankConfig.add_percent / 100);
+    const markup = data.osz * (effectiveBankConfig.add_percent / 100);
     insuranceAmount = data.osz + markup;
-    output += `<b>Надбавка ${bankConfig.add_percent}%:</b> ${markup.toLocaleString('ru-RU')} ₽<br>`;
+    output += `<b>Надбавка ${effectiveBankConfig.add_percent}%:</b> ${markup.toLocaleString('ru-RU')} ₽<br>`;
     output += `<b>Страховая сумма:</b> ${insuranceAmount.toLocaleString('ru-RU')} ₽<br><br>`;
-  } else if (bankConfig.add_percent === null && data.markupPercent) {
+  } else if (effectiveBankConfig.add_percent === null && data.markupPercent) {
     // Клиент сам указывает надбавку (для Альфа Банка и УБРИР)
     const markup = data.osz * (data.markupPercent / 100);
     insuranceAmount = data.osz + markup;
     output += `<b>Надбавка ${data.markupPercent}% (клиент):</b> ${markup.toLocaleString('ru-RU')} ₽<br>`;
     output += `<b>Страховая сумма:</b> ${insuranceAmount.toLocaleString('ru-RU')} ₽<br><br>`;
-  } else if (bankConfig.add_percent === null) {
+  } else if (effectiveBankConfig.add_percent === null) {
     // Надбавка не указана клиентом
     output += `<b>Внимание:</b> Для этого банка укажите надбавку в процентах (например: "15% надбавка")<br><br>`;
   } else {
@@ -232,7 +235,7 @@ function performCalculations(data) {
 
   // Расчет страхования жизни
   if (data.risks.life) {
-    const lifeResult = calculateLifeInsurance(data, bankConfig, insuranceAmount);
+    const lifeResult = calculateLifeInsurance(data, effectiveBankConfig, insuranceAmount);
     if (lifeResult) {
       lifeResult.type = 'life';
       calculations.push(lifeResult);
@@ -242,7 +245,7 @@ function performCalculations(data) {
 
   // Расчет страхования имущества
   if (data.risks.property) {
-    const propertyResult = calculatePropertyInsurance(data, bankConfig, insuranceAmount);
+    const propertyResult = calculatePropertyInsurance(data, effectiveBankConfig, insuranceAmount);
     if (propertyResult) {
       propertyResult.type = 'property';
       calculations.push(propertyResult);
@@ -253,7 +256,7 @@ function performCalculations(data) {
   // Расчет титула
   if (data.risks.titul) {
     const withLifeInsurance = data.risks.life || false;
-    const titleResult = calculateTitleInsurance(data, bankConfig, insuranceAmount, withLifeInsurance, data.contractDate);
+    const titleResult = calculateTitleInsurance(data, effectiveBankConfig, insuranceAmount, withLifeInsurance, data.contractDate);
     titleResult.type = 'title';
     calculations.push(titleResult);
     totalPremium += titleResult.total;
@@ -380,27 +383,27 @@ function copyToClipboard(text) {
 }
 
 // Расчет страхования жизни
-function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
+function calculateLifeInsurance(data, config, insuranceAmount) {
   if (!data.borrowers || data.borrowers.length === 0) {
     return null;
   }
 
   let totalPremium = 0;
   let totalPremiumWithDiscount = 0;
-  let hasDiscount = bankConfig.allow_discount_life;
+  let hasDiscount = config.allow_discount_life;
   const borrowerPremiums = [];
 
   // Определяем тарифы в зависимости от банка
   let tariffTable;
-  if (bankConfig && bankConfig.bankName === "Дом.РФ") {
+  if (config && config.bankName === "Дом.РФ") {
     tariffTable = window.LIFE_TARIFF_DOMRF || LIFE_TARIFF_DOMRF;
-  } else if (bankConfig && bankConfig.bankName === "РСХБ") {
+  } else if (config && config.bankName === "РСХБ") {
     tariffTable = window.LIFE_TARIFF_RSHB_LOSS || LIFE_TARIFF_RSHB_LOSS;
-  } else if (bankConfig && bankConfig.bankName === "Банк СПБ") {
+  } else if (config && config.bankName === "Банк СПБ") {
     tariffTable = window.LIFE_TARIFF_SPB || LIFE_TARIFF_SPB;
-  } else if (bankConfig && bankConfig.bankName === "МКБ") {
+  } else if (config && config.bankName === "МКБ") {
     tariffTable = window.LIFE_TARIFF_MKB || LIFE_TARIFF_MKB;
-  } else if (bankConfig && bankConfig.bankName === "Газпромбанк") {
+  } else if (config && config.bankName === "Газпромбанк") {
     // Для ГПБ выбираем тарифы в зависимости от даты КД
     if (data.contractDate) {
       const cutoffDate = new Date('2024-05-02');
@@ -423,9 +426,21 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
       // Если дата не указана, используем старые тарифы по умолчанию
       tariffTable = window.LIFE_TARIFF_GPB_OLD || LIFE_TARIFF_GPB_OLD;
     }
-  } else if (bankConfig && bankConfig.bankName === "ВТБ") {
-    // Для ВТБ выбираем тарифы в зависимости от даты КД
-    if (data.contractDate) {
+  } else if (config && config.bankName === "ВТБ") {
+    // Для ВТБ базовые тарифы по умолчанию (старые)
+    tariffTable = window.LIFE_TARIFF_BASE || LIFE_TARIFF_BASE;
+  } else {
+    tariffTable = window.LIFE_TARIFF_BASE || LIFE_TARIFF_BASE;
+  }
+
+  data.borrowers.forEach((borrower, index) => {
+    if (!borrower.age || !borrower.gender) {
+      return null;
+    }
+
+    // Специальная логика выбора tariffTable для ВТБ
+    let currentTariffTable = tariffTable;
+    if (config && config.bankName === "ВТБ" && data.contractDate) {
       const cutoffDate = new Date('2025-02-01');
       const parts = data.contractDate.split('.');
       let contractDateObj;
@@ -436,39 +451,29 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
         contractDateObj = new Date(data.contractDate);
       }
 
-      if (contractDateObj < cutoffDate) {
-        // Старые тарифы ВТБ (до 01.02.2025) - базовые тарифы
-        tariffTable = window.LIFE_TARIFF_BASE || LIFE_TARIFF_BASE;
-      } else {
+      if (contractDateObj >= cutoffDate) {
         // Новые тарифы ВТБ (после 01.02.2025)
         if (borrower.age <= 50) {
-          tariffTable = window.LIFE_TARIFF_VTB_NEW || LIFE_TARIFF_VTB_NEW;
+          currentTariffTable = window.LIFE_TARIFF_VTB_NEW || LIFE_TARIFF_VTB_NEW;
         } else {
-          // Для 51+ используем старые тарифы
-          tariffTable = window.LIFE_TARIFF_BASE || LIFE_TARIFF_BASE;
+          // Для 51+ используем базовые тарифы
+          currentTariffTable = window.LIFE_TARIFF_BASE || LIFE_TARIFF_BASE;
         }
       }
-    } else {
-      // Если дата не указана, используем базовые тарифы
-      tariffTable = window.LIFE_TARIFF_BASE || LIFE_TARIFF_BASE;
-    }
-  } else {
-    tariffTable = window.LIFE_TARIFF_BASE || LIFE_TARIFF_BASE;
-  }
-
-  data.borrowers.forEach((borrower, index) => {
-    if (!borrower.age || !borrower.gender) {
-      return null;
+      // Для старых дат (до 01.02.2025) используем базовые тарифы (уже установлено)
     }
 
     let tariff;
     if (data.bank === "РСХБ") {
       // Для РСХБ тарифы по индексу возраста (18-64 лет)
-      const ageIndex = Math.max(0, Math.min(borrower.age - 18, tariffTable[borrower.gender].length - 1));
-      tariff = tariffTable[borrower.gender][ageIndex];
+      const ageIndex = Math.max(0, Math.min(borrower.age - 18, currentTariffTable[borrower.gender].length - 1));
+      tariff = currentTariffTable[borrower.gender][ageIndex];
+    } else if (config && config.bankName === "ВТБ" && currentTariffTable === (window.LIFE_TARIFF_VTB_NEW || LIFE_TARIFF_VTB_NEW)) {
+      // Для ВТБ с новыми тарифами - тарифы по возрасту (не по индексу)
+      tariff = currentTariffTable[borrower.gender][borrower.age];
     } else {
       // Для остальных банков тарифы по возрасту
-      tariff = tariffTable[borrower.gender][borrower.age];
+      tariff = currentTariffTable[borrower.gender][borrower.age];
     }
 
     if (!tariff) {
@@ -480,8 +485,8 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
     
     // Применяем скидку: стандартная 20% (0.8) или кастомная из конфигурации банка
     let discountMultiplier = 0.8; // стандартная скидка 20%
-    if (hasDiscount && bankConfig.discount_life_percent) {
-      discountMultiplier = 1 - (bankConfig.discount_life_percent / 100);
+    if (hasDiscount && effectiveBankConfig.discount_life_percent) {
+      discountMultiplier = 1 - (effectiveBankConfig.discount_life_percent / 100);
     }
     const premiumWithDiscount = hasDiscount ? Math.round(premium * discountMultiplier * 100) / 100 : premium;
 
@@ -508,7 +513,7 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
 }
 
 // Расчет страхования имущества
-function calculatePropertyInsurance(data, bankConfig, insuranceAmount) {
+function calculatePropertyInsurance(data, config, insuranceAmount) {
   // Определяем тип объекта
   let objectType = 'flat'; // по умолчанию квартира
 
@@ -529,7 +534,7 @@ function calculatePropertyInsurance(data, bankConfig, insuranceAmount) {
 
   // Получаем тариф (для ГПБ учитываем дату КД и комбинацию с жизнью)
   const withLifeInsurance = data.risks && data.risks.life || false;
-  const tariff = (window.getPropertyTariff || getPropertyTariff)(bankConfig.bankName, objectType, data.contractDate, withLifeInsurance);
+  const tariff = (window.getPropertyTariff || getPropertyTariff)(config.bankName, objectType, data.contractDate, withLifeInsurance);
   if (!tariff) {
     return {
       output: `<b>Страхование имущества:</b> тариф для типа объекта не найден<br><br>`,
@@ -542,10 +547,10 @@ function calculatePropertyInsurance(data, bankConfig, insuranceAmount) {
   // Применяем скидку: стандартная 10% (0.9) или кастомная из конфигурации банка
   let discountedPremium = premium;
   let discountApplied = false;
-  if (bankConfig.allow_discount_property) {
+  if (effectiveBankConfig.allow_discount_property) {
     let discountMultiplier = 0.9; // стандартная скидка 10%
-    if (bankConfig.discount_property_percent) {
-      discountMultiplier = 1 - (bankConfig.discount_property_percent / 100);
+    if (effectiveBankConfig.discount_property_percent) {
+      discountMultiplier = 1 - (effectiveBankConfig.discount_property_percent / 100);
     }
     discountedPremium = Math.round(premium * discountMultiplier * 100) / 100;
     discountApplied = true;
@@ -559,15 +564,15 @@ function calculatePropertyInsurance(data, bankConfig, insuranceAmount) {
 }
 
 // Расчет страхования титула
-function calculateTitleInsurance(dataOrAmount, bankConfig, insuranceAmount, withLifeInsurance = false, contractDate = null) {
+function calculateTitleInsurance(dataOrAmount, config, insuranceAmount, withLifeInsurance = false, contractDate = null) {
   // Поддержка старого формата вызова (только insuranceAmount)
-  let amount, config;
+  let amount, bankConfig;
   if (typeof dataOrAmount === 'number') {
     amount = dataOrAmount;
-    config = null;
+    bankConfig = null;
   } else {
     amount = insuranceAmount;
-    config = bankConfig;
+    bankConfig = config;
   }
 
   // Специальная логика для ГПБ и ВТБ
@@ -673,8 +678,8 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
 
     // Расчет имущества с скидкой 30%
     if (data.risks.property) {
-      const propertyResult = calculatePropertyInsurance(data, bankConfig, insuranceAmount);
-      if (propertyResult && bankConfig.allow_discount_property) {
+      const propertyResult = calculatePropertyInsurance(data, effectiveBankConfig, insuranceAmount);
+      if (propertyResult && effectiveBankConfig.allow_discount_property) {
         const basePremium = propertyResult.totalWithoutDiscount;
         propertyPremiumV2 = Math.round(basePremium * 0.7 * 100) / 100;
       }
@@ -682,8 +687,8 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
 
     // Расчет жизни с скидкой 30%
     if (data.risks.life) {
-      const lifeResult = calculateLifeInsurance(data, bankConfig, insuranceAmount);
-      if (lifeResult && bankConfig.allow_discount_life) {
+      const lifeResult = calculateLifeInsurance(data, effectiveBankConfig, insuranceAmount);
+      if (lifeResult && effectiveBankConfig.allow_discount_life) {
         const basePremium = lifeResult.totalWithoutDiscount;
         lifePremiumV2 = Math.round(basePremium * 0.7 * 100) / 100;
       }
@@ -750,9 +755,9 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
 
   // Расчет имущества с скидкой 30% (где разрешено)
   if (data.risks.property) {
-    const propertyResult = calculatePropertyInsurance(data, bankConfig, insuranceAmount);
+    const propertyResult = calculatePropertyInsurance(data, effectiveBankConfig, insuranceAmount);
     if (propertyResult) {
-      if (bankConfig.allow_discount_property) {
+      if (effectiveBankConfig.allow_discount_property) {
         // Применяем скидку 30% вместо стандартной (10% или другой)
         const basePremium = propertyResult.totalWithoutDiscount;
         propertyPremiumV2 = Math.round(basePremium * 0.7 * 100) / 100; // 30% скидка
@@ -765,9 +770,9 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
 
   // Расчет жизни с скидкой 30% (где разрешено)
   if (data.risks.life) {
-    const lifeResult = calculateLifeInsurance(data, bankConfig, insuranceAmount);
+    const lifeResult = calculateLifeInsurance(data, effectiveBankConfig, insuranceAmount);
     if (lifeResult) {
-      if (bankConfig.allow_discount_life) {
+      if (effectiveBankConfig.allow_discount_life) {
         // Применяем скидку 30% вместо стандартной (25% или другой)
         const basePremium = lifeResult.totalWithoutDiscount;
         lifePremiumV2 = Math.round(basePremium * 0.7 * 100) / 100; // 30% скидка
@@ -981,7 +986,7 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
   let titleResult = null;
   if (data.risks.titul) {
     const withLifeInsurance = data.risks.life || false;
-    titleResult = calculateTitleInsurance(data, bankConfig, insuranceAmount, withLifeInsurance, data.contractDate);
+    titleResult = calculateTitleInsurance(data, effectiveBankConfig, insuranceAmount, withLifeInsurance, data.contractDate);
   }
 
   // Формируем вывод варианта 2
