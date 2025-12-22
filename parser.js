@@ -173,12 +173,21 @@ function extractOszByKey(text) {
 
 // извлечение "кд" (даты сделки / кредитной даты)
 function extractCreditDate(text) {
-  // ищем "кд" или "кд от" или "кд:" "кд с" "кредитный договор от"
-  const re = /\b(?:кд|кд от|кредитный договор|кредит от|к.д.)\b[^\d]{0,10}(\d{1,2}\.\d{1,2}\.\d{4})/ig;
-  const m = re.exec(text);
-  if (m) return m[1];
-  // fallback: look for 'кд' token possibly adjacent
-  // also search for "кд от DD.MM.YYYY" with multiple variants
+  // Простой и надежный поиск "кд от DD.MM.YYYY"
+  const re1 = /кд\s+от\s+(\d{1,2}\.\d{1,2}\.\d{4})/ig;
+  const m1 = re1.exec(text);
+  if (m1) return m1[1];
+
+  // Поиск "кд DD.MM.YYYY" (без "от")
+  const re2 = /кд[^\d]{1,10}(\d{1,2}\.\d{1,2}\.\d{4})/ig;
+  const m2 = re2.exec(text);
+  if (m2) return m2[1];
+
+  // Поиск "кредитный договор от DD.MM.YYYY"
+  const re3 = /кредитный\s+договор\s+от\s+(\d{1,2}\.\d{1,2}\.\d{4})/ig;
+  const m3 = re3.exec(text);
+  if (m3) return m3[1];
+
   return null;
 }
 
