@@ -506,7 +506,15 @@ function calculateTitleInsurance(dataOrAmount, bankConfig, insuranceAmount, with
   let tariff = 0.2; // базовый тариф 0.2%
   if (config && config.bankName === "Газпромбанк" && contractDate) {
     const cutoffDate = new Date('2024-05-02');
-    const contractDateObj = new Date(contractDate);
+    // Конвертируем DD.MM.YYYY в YYYY-MM-DD
+    let contractDateObj;
+    const parts = contractDate.split('.');
+    if (parts.length === 3) {
+      const isoDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      contractDateObj = new Date(isoDate);
+    } else {
+      contractDateObj = new Date(contractDate);
+    }
     const useOldTariffs = contractDateObj < cutoffDate;
 
     if (useOldTariffs) {
