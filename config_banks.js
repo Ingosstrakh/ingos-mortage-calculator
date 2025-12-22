@@ -40,6 +40,14 @@ window.BANKS = {
     allow_discount_title: true
   },
 
+  "Газпромбанк": {
+    aliases: ["гпб", "газпромбанк", "газпром банк", "газпром-банк", "гпб банк"],
+    add_percent: null, // клиент вводит сам (как Альфа, УБРИР)
+    allow_discount_property: false, // запрещена (как Дом.РФ)
+    allow_discount_life: false,     // запрещена
+    allow_discount_title: false     // запрещена
+  },
+
   "Дом.РФ": {
     aliases: ["дом.рф", "дом рф", "дом. рф"],
     add_percent: 0,
