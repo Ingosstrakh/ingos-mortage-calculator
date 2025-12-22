@@ -158,10 +158,28 @@ window.performCalculations = performCalculations;
 
 // Функция выполнения всех расчетов
 function performCalculations(data) {
-  const bankConfig = { ...window.BANKS[data.bank], bankName: data.bank };
+  // Нормализуем название банка
+  let normalizedBank = data.bank;
+  if (window.BANKS[data.bank]) {
+    // Уже нормализован
+  } else {
+    // Пробуем найти по алиасам
+    for (const [bankName, bankData] of Object.entries(window.BANKS)) {
+      if (bankData.aliases && bankData.aliases.some(alias =>
+        alias.toLowerCase() === data.bank.toLowerCase())) {
+        normalizedBank = bankName;
+        break;
+      }
+    }
+  }
+
+  const bankConfig = { ...window.BANKS[normalizedBank], bankName: normalizedBank };
   if (!bankConfig.bankName) {
     return `Банк "${data.bank}" не найден в конфигурации.`;
   }
+
+  // Обновляем data.bank для использования в других функциях
+  data.bank = normalizedBank;
 
   let output = `<b>Банк:</b> ${data.bank}<br>`;
   output += `<b>Остаток долга:</b> ${data.osz.toLocaleString('ru-RU')} ₽<br><br>`;
