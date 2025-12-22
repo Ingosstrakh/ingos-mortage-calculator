@@ -173,22 +173,33 @@ function extractOszByKey(text) {
 
 // извлечение "кд" (даты сделки / кредитной даты)
 function extractCreditDate(text) {
-  // Простой и надежный поиск "кд от DD.MM.YYYY"
-  const re1 = /кд\s+от\s+(\d{1,2}\.\d{1,2}\.\d{4})/ig;
-  const m1 = re1.exec(text);
-  if (m1) return m1[1];
+  // Поиск даты после ключевых слов (кд, выдача, договор, кредит)
+  // Ищем все возможные комбинации и берем последнюю найденную дату
+  const patterns = [
+    /кд\s+от\s+(\d{1,2}\.\d{1,2}\.\d{4})/ig,
+    /кд[^\d]{1,10}(\d{1,2}\.\d{1,2}\.\d{4})/ig,
+    /кредитный\s+договор\s+от\s+(\d{1,2}\.\d{1,2}\.\d{4})/ig,
+    /кредит\s+от\s+(\d{1,2}\.\d{1,2}\.\d{4})/ig,
+    /выдача\s+(\d{1,2}\.\d{1,2}\.\d{4})/ig,
+    /договор\s+от\s+(\d{1,2}\.\d{1,2}\.\d{4})/ig
+  ];
 
-  // Поиск "кд DD.MM.YYYY" (без "от")
-  const re2 = /кд[^\d]{1,10}(\d{1,2}\.\d{1,2}\.\d{4})/ig;
-  const m2 = re2.exec(text);
-  if (m2) return m2[1];
+  let latestDate = null;
+  let latestPosition = -1;
 
-  // Поиск "кредитный договор от DD.MM.YYYY"
-  const re3 = /кредитный\s+договор\s+от\s+(\d{1,2}\.\d{1,2}\.\d{4})/ig;
-  const m3 = re3.exec(text);
-  if (m3) return m3[1];
+  for (const pattern of patterns) {
+    const matches = [...text.matchAll(pattern)];
+    for (const match of matches) {
+      const date = match[1];
+      const position = match.index;
+      if (position > latestPosition) {
+        latestDate = date;
+        latestPosition = position;
+      }
+    }
+  }
 
-  return null;
+  return latestDate;
 }
 
 // -----------------------------
