@@ -393,7 +393,7 @@ function parseTextToObject(rawText) {
     bankConfidence: 0,
     osz: null,
     oszCandidates: [],
-    creditDate: null,
+    contractDate: null,
     risks: { life:false, property:false, titul:false },
     objectType: null,
     material: null,
@@ -417,14 +417,14 @@ function parseTextToObject(rawText) {
 
   // credit date
   const credit = extractCreditDate ? extractCreditDate(text) : null;
-  if (credit) result.creditDate = credit;
+  if (credit) result.contractDate = credit;
   else {
     // heuristic: if there's a date that mentions "кд" near it not found, else fallback: choose dates that appear after "кд" or "от"
     const tokens = text.split(/\n/);
     for (const t of tokens) {
       if (/\bкд\b|\bкредит\b|\bдоговор\b/i.test(t)) {
         const d = extractDates(t);
-        if (d && d.length) { result.creditDate = d[0]; break; }
+        if (d && d.length) { result.contractDate = d[0]; break; }
       }
     }
   }
