@@ -371,15 +371,15 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
 
   // Определяем тарифы в зависимости от банка
   let tariffTable;
-  if (data.bank === "Дом.РФ") {
+  if (bankConfig && bankConfig.bankName === "Дом.РФ") {
     tariffTable = window.LIFE_TARIFF_DOMRF || LIFE_TARIFF_DOMRF;
-  } else if (data.bank === "РСХБ") {
+  } else if (bankConfig && bankConfig.bankName === "РСХБ") {
     tariffTable = window.LIFE_TARIFF_RSHB_LOSS || LIFE_TARIFF_RSHB_LOSS;
-  } else if (data.bank === "Банк СПБ") {
+  } else if (bankConfig && bankConfig.bankName === "Банк СПБ") {
     tariffTable = window.LIFE_TARIFF_SPB || LIFE_TARIFF_SPB;
-  } else if (data.bank === "МКБ") {
+  } else if (bankConfig && bankConfig.bankName === "МКБ") {
     tariffTable = window.LIFE_TARIFF_MKB || LIFE_TARIFF_MKB;
-  } else if (data.bank && data.bank.toLowerCase() === "газпромбанк") {
+  } else if (bankConfig && bankConfig.bankName === "Газпромбанк") {
     // Для ГПБ выбираем тарифы в зависимости от даты КД
     if (data.contractDate) {
       const cutoffDate = new Date('2024-05-02');
@@ -479,7 +479,7 @@ function calculatePropertyInsurance(data, bankConfig, insuranceAmount) {
 
   // Получаем тариф (для ГПБ учитываем дату КД и комбинацию с жизнью)
   const withLifeInsurance = data.risks && data.risks.life || false;
-  const tariff = (window.getPropertyTariff || getPropertyTariff)(data.bank, objectType, data.contractDate, withLifeInsurance);
+  const tariff = (window.getPropertyTariff || getPropertyTariff)(bankConfig.bankName, objectType, data.contractDate, withLifeInsurance);
   if (!tariff) {
     return {
       output: `<b>Страхование имущества:</b> тариф для типа объекта не найден<br><br>`,
@@ -522,7 +522,7 @@ function calculateTitleInsurance(dataOrAmount, bankConfig, insuranceAmount, with
 
   // Специальная логика для ГПБ
   let tariff = 0.2; // базовый тариф 0.2%
-  if (config && config.bankName && config.bankName.toLowerCase() === "газпромбанк" && contractDate) {
+  if (config && config.bankName === "Газпромбанк" && contractDate) {
     const cutoffDate = new Date('2024-05-02');
     // Конвертируем DD.MM.YYYY в YYYY-MM-DD
     let contractDateObj;
