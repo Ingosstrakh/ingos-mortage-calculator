@@ -58,7 +58,17 @@ const PROPERTY_TARIFFS = {
 function getGPBPropertyTariff(contractDate, withLifeInsurance, objectType) {
   // Определяем период тарифов
   const cutoffDate = new Date('2024-05-02');
-  const contractDateObj = new Date(contractDate);
+  // Конвертируем DD.MM.YYYY в YYYY-MM-DD
+  let contractDateObj;
+  if (contractDate) {
+    const parts = contractDate.split('.');
+    if (parts.length === 3) {
+      const isoDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      contractDateObj = new Date(isoDate);
+    } else {
+      contractDateObj = new Date(contractDate);
+    }
+  }
   const useOldTariffs = contractDateObj < cutoffDate;
 
   const tariffPeriod = useOldTariffs ? 'old' : 'new';
