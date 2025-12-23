@@ -425,8 +425,21 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
       tariffTable = window.LIFE_TARIFF_GPB_OLD || LIFE_TARIFF_GPB_OLD;
     }
   } else if (bankConfig && bankConfig.bankName === "ВТБ") {
-    // Для ВТБ выбираем тарифы в зависимости от даты КД
-    if (data.contractDate) {
+    // Для ВТБ tariffTable будет выбираться индивидуально для каждого borrower
+    // в зависимости от возраста и даты КД
+  }
+  } else {
+    tariffTable = window.LIFE_TARIFF_BASE || LIFE_TARIFF_BASE;
+  }
+
+  data.borrowers.forEach((borrower, index) => {
+    if (!borrower.age || !borrower.gender) {
+      return null;
+    }
+
+    // Выбор tariffTable для каждого borrower индивидуально
+    let currentTariffTable = tariffTable; // По умолчанию базовая таблица
+    if (bankConfig && bankConfig.bankName === "ВТБ" && data.contractDate) {
       const cutoffDate = new Date('2025-02-01');
       const parts = data.contractDate.split('.');
       let contractDateObj;
@@ -439,37 +452,26 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
 
       if (contractDateObj < cutoffDate) {
         // Старые тарифы ВТБ (до 01.02.2025) - базовые тарифы
-        tariffTable = window.LIFE_TARIFF_BASE || LIFE_TARIFF_BASE;
+        currentTariffTable = window.LIFE_TARIFF_BASE || LIFE_TARIFF_BASE;
       } else {
         // Новые тарифы ВТБ (после 01.02.2025)
         if (borrower.age <= 50) {
-          tariffTable = window.LIFE_TARIFF_VTB_NEW || LIFE_TARIFF_VTB_NEW;
+          currentTariffTable = window.LIFE_TARIFF_VTB_NEW || LIFE_TARIFF_VTB_NEW;
         } else {
           // Для 51+ используем старые тарифы
-          tariffTable = window.LIFE_TARIFF_BASE || LIFE_TARIFF_BASE;
+          currentTariffTable = window.LIFE_TARIFF_BASE || LIFE_TARIFF_BASE;
         }
       }
-    } else {
-      // Если дата не указана, используем базовые тарифы
-      tariffTable = window.LIFE_TARIFF_BASE || LIFE_TARIFF_BASE;
-    }
-  } else {
-    tariffTable = window.LIFE_TARIFF_BASE || LIFE_TARIFF_BASE;
-  }
-
-  data.borrowers.forEach((borrower, index) => {
-    if (!borrower.age || !borrower.gender) {
-      return null;
     }
 
     let tariff;
     if (data.bank === "РСХБ") {
       // Для РСХБ тарифы по индексу возраста (18-64 лет)
-      const ageIndex = Math.max(0, Math.min(borrower.age - 18, tariffTable[borrower.gender].length - 1));
-      tariff = tariffTable[borrower.gender][ageIndex];
+      const ageIndex = Math.max(0, Math.min(borrower.age - 18, currentTariffTable[borrower.gender].length - 1));
+      tariff = currentTariffTable[borrower.gender][ageIndex];
     } else {
       // Для остальных банков тарифы по возрасту
-      tariff = tariffTable[borrower.gender][borrower.age];
+      tariff = currentTariffTable[borrower.gender][borrower.age];
     }
 
     if (!tariff) {
