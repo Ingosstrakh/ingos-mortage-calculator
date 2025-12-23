@@ -298,7 +298,7 @@ function performCalculations(data) {
   }
 
   if (data.risks.titul && titleResult) {
-    output += `титул ${titleResult.total.toLocaleString('ru-RU')}<br>`;
+    output += `титул ${(titleResult.totalWithoutDiscount || titleResult.total).toLocaleString('ru-RU')}<br>`;
   }
 
   output += `ИТОГО тариф/ взнос ${totalWithoutDiscount.toLocaleString('ru-RU')}<br><br>`;
@@ -534,7 +534,9 @@ function calculatePropertyInsurance(data, config, insuranceAmount) {
 
   // Получаем тариф (для ГПБ учитываем дату КД и комбинацию с жизнью)
   const withLifeInsurance = data.risks && data.risks.life || false;
+  console.log(`[DEBUG] calculatePropertyInsurance: bank=${config.bankName}, objectType=${objectType}, contractDate=${data.contractDate}, withLife=${withLifeInsurance}`);
   const tariff = (window.getPropertyTariff || getPropertyTariff)(config.bankName, objectType, data.contractDate, withLifeInsurance);
+  console.log(`[DEBUG] Tariff result: ${tariff}`);
   if (!tariff) {
     return {
       output: `<b>Страхование имущества:</b> тариф для типа объекта не найден<br><br>`,
