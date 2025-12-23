@@ -425,8 +425,19 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
       tariffTable = window.LIFE_TARIFF_GPB_OLD || LIFE_TARIFF_GPB_OLD;
     }
   } else if (bankConfig && bankConfig.bankName === "ВТБ") {
-    // Для ВТБ выбираем тарифы в зависимости от даты КД
-    if (data.contractDate) {
+    // Для ВТБ tariffTable будет выбираться внутри цикла по borrower
+    tariffTable = window.LIFE_TARIFF_BASE || LIFE_TARIFF_BASE; // значение по умолчанию
+  } else {
+    tariffTable = window.LIFE_TARIFF_BASE || LIFE_TARIFF_BASE;
+  }
+
+  data.borrowers.forEach((borrower, index) => {
+    if (!borrower.age || !borrower.gender) {
+      return null;
+    }
+
+    // Для ВТБ выбираем тарифы в зависимости от возраста и даты КД
+    if (bankConfig && bankConfig.bankName === "ВТБ" && data.contractDate) {
       const cutoffDate = new Date('2025-02-01');
       const parts = data.contractDate.split('.');
       let contractDateObj;
@@ -437,29 +448,16 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
         contractDateObj = new Date(data.contractDate);
       }
 
-      if (contractDateObj < cutoffDate) {
-        // Старые тарифы ВТБ (до 01.02.2025) - базовые тарифы
-        tariffTable = window.LIFE_TARIFF_BASE || LIFE_TARIFF_BASE;
-      } else {
+      if (contractDateObj >= cutoffDate) {
         // Новые тарифы ВТБ (после 01.02.2025)
         if (borrower.age <= 50) {
           tariffTable = window.LIFE_TARIFF_VTB_NEW || LIFE_TARIFF_VTB_NEW;
         } else {
-          // Для 51+ используем старые тарифы
+          // Для 51+ используем базовые тарифы
           tariffTable = window.LIFE_TARIFF_BASE || LIFE_TARIFF_BASE;
         }
       }
-    } else {
-      // Если дата не указана, используем базовые тарифы
-      tariffTable = window.LIFE_TARIFF_BASE || LIFE_TARIFF_BASE;
-    }
-  } else {
-    tariffTable = window.LIFE_TARIFF_BASE || LIFE_TARIFF_BASE;
-  }
-
-  data.borrowers.forEach((borrower, index) => {
-    if (!borrower.age || !borrower.gender) {
-      return null;
+      // Для старых дат (до 01.02.2025) используем базовые тарифы (уже установлено по умолчанию)
     }
 
     let tariff;
