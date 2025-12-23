@@ -298,7 +298,7 @@ function performCalculations(data) {
   }
 
   if (data.risks.titul && titleResult) {
-    output += `титул ${(titleResult.totalWithoutDiscount || titleResult.total).toLocaleString('ru-RU')}<br>`;
+    output += `титул ${titleResult.total.toLocaleString('ru-RU')}<br>`;
   }
 
   output += `ИТОГО тариф/ взнос ${totalWithoutDiscount.toLocaleString('ru-RU')}<br><br>`;
@@ -485,8 +485,8 @@ function calculateLifeInsurance(data, config, insuranceAmount) {
     
     // Применяем скидку: стандартная 20% (0.8) или кастомная из конфигурации банка
     let discountMultiplier = 0.8; // стандартная скидка 20%
-    if (hasDiscount && config.discount_life_percent) {
-      discountMultiplier = 1 - (config.discount_life_percent / 100);
+    if (hasDiscount && effectiveBankConfig.discount_life_percent) {
+      discountMultiplier = 1 - (effectiveBankConfig.discount_life_percent / 100);
     }
     const premiumWithDiscount = hasDiscount ? Math.round(premium * discountMultiplier * 100) / 100 : premium;
 
@@ -534,9 +534,7 @@ function calculatePropertyInsurance(data, config, insuranceAmount) {
 
   // Получаем тариф (для ГПБ учитываем дату КД и комбинацию с жизнью)
   const withLifeInsurance = data.risks && data.risks.life || false;
-  console.log(`[DEBUG] calculatePropertyInsurance: bank=${config.bankName}, objectType=${objectType}, contractDate=${data.contractDate}, withLife=${withLifeInsurance}`);
   const tariff = (window.getPropertyTariff || getPropertyTariff)(config.bankName, objectType, data.contractDate, withLifeInsurance);
-  console.log(`[DEBUG] Tariff result: ${tariff}`);
   if (!tariff) {
     return {
       output: `<b>Страхование имущества:</b> тариф для типа объекта не найден<br><br>`,
@@ -549,10 +547,10 @@ function calculatePropertyInsurance(data, config, insuranceAmount) {
   // Применяем скидку: стандартная 10% (0.9) или кастомная из конфигурации банка
   let discountedPremium = premium;
   let discountApplied = false;
-  if (config.allow_discount_property) {
+  if (effectiveBankConfig.allow_discount_property) {
     let discountMultiplier = 0.9; // стандартная скидка 10%
-    if (config.discount_property_percent) {
-      discountMultiplier = 1 - (config.discount_property_percent / 100);
+    if (effectiveBankConfig.discount_property_percent) {
+      discountMultiplier = 1 - (effectiveBankConfig.discount_property_percent / 100);
     }
     discountedPremium = Math.round(premium * discountMultiplier * 100) / 100;
     discountApplied = true;
@@ -656,7 +654,7 @@ function getObjectTypeName(type) {
 }
 
 // Расчет варианта 2 с доп. рисками IFL
-function calculateVariant2(data, config, insuranceAmount, variant1Total) {
+function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
   // Исключение: если только жизнь - не показываем вариант 2
   if (data.risks.life && !data.risks.property) {
     return null;
@@ -680,8 +678,8 @@ function calculateVariant2(data, config, insuranceAmount, variant1Total) {
 
     // Расчет имущества с скидкой 30%
     if (data.risks.property) {
-      const propertyResult = calculatePropertyInsurance(data, config, insuranceAmount);
-      if (propertyResult && config.allow_discount_property) {
+      const propertyResult = calculatePropertyInsurance(data, effectiveBankConfig, insuranceAmount);
+      if (propertyResult && effectiveBankConfig.allow_discount_property) {
         const basePremium = propertyResult.totalWithoutDiscount;
         propertyPremiumV2 = Math.round(basePremium * 0.7 * 100) / 100;
       }
@@ -689,8 +687,8 @@ function calculateVariant2(data, config, insuranceAmount, variant1Total) {
 
     // Расчет жизни с скидкой 30%
     if (data.risks.life) {
-      const lifeResult = calculateLifeInsurance(data, config, insuranceAmount);
-      if (lifeResult && config.allow_discount_life) {
+      const lifeResult = calculateLifeInsurance(data, effectiveBankConfig, insuranceAmount);
+      if (lifeResult && effectiveBankConfig.allow_discount_life) {
         const basePremium = lifeResult.totalWithoutDiscount;
         lifePremiumV2 = Math.round(basePremium * 0.7 * 100) / 100;
       }
@@ -757,9 +755,9 @@ function calculateVariant2(data, config, insuranceAmount, variant1Total) {
 
   // Расчет имущества с скидкой 30% (где разрешено)
   if (data.risks.property) {
-    const propertyResult = calculatePropertyInsurance(data, config, insuranceAmount);
+    const propertyResult = calculatePropertyInsurance(data, effectiveBankConfig, insuranceAmount);
     if (propertyResult) {
-      if (config.allow_discount_property) {
+      if (effectiveBankConfig.allow_discount_property) {
         // Применяем скидку 30% вместо стандартной (10% или другой)
         const basePremium = propertyResult.totalWithoutDiscount;
         propertyPremiumV2 = Math.round(basePremium * 0.7 * 100) / 100; // 30% скидка
@@ -772,9 +770,9 @@ function calculateVariant2(data, config, insuranceAmount, variant1Total) {
 
   // Расчет жизни с скидкой 30% (где разрешено)
   if (data.risks.life) {
-    const lifeResult = calculateLifeInsurance(data, config, insuranceAmount);
+    const lifeResult = calculateLifeInsurance(data, effectiveBankConfig, insuranceAmount);
     if (lifeResult) {
-      if (config.allow_discount_life) {
+      if (effectiveBankConfig.allow_discount_life) {
         // Применяем скидку 30% вместо стандартной (25% или другой)
         const basePremium = lifeResult.totalWithoutDiscount;
         lifePremiumV2 = Math.round(basePremium * 0.7 * 100) / 100; // 30% скидка
@@ -1071,7 +1069,7 @@ function calculateVariant2(data, config, insuranceAmount, variant1Total) {
 }
 
 // Функция для расчета варианта 3 с указанной скидкой
-function calculateVariant3(data, config, insuranceAmount, discountPercent) {
+function calculateVariant3(data, bankConfig, insuranceAmount, discountPercent) {
   console.log('calculateVariant3: скидка =', discountPercent + '%');
 
   const discountRate = discountPercent / 100;
