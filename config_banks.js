@@ -19,6 +19,12 @@
 function validateParsedData(data) {
   const errors = [];
 
+  // Проверяем загрузку конфигурации банков
+  if (!window.BANKS) {
+    errors.push("❌ Конфигурация банков не загружена. Попробуйте перезагрузить страницу.");
+    return errors;
+  }
+
   // 1. Проверка банка
   if (!data.bank) {
     errors.push("❌ Название банка не найдено. Укажите название банка в запросе (например: 'Сбербанк', 'ВТБ', 'Альфа Банк' и т.д.)");
@@ -91,6 +97,11 @@ function validateParsedData(data) {
 // Основная функция для обработки запроса клиента
 function handleClientRequest(clientText) {
   try {
+    // Проверяем загрузку конфигурации банков
+    if (!window.BANKS) {
+      return "❌ Конфигурация банков не загружена. Попробуйте перезагрузить страницу.";
+    }
+
     // Парсим текст с помощью parseTextToObject
     const parsedData = parseTextToObject(clientText);
 
@@ -158,6 +169,11 @@ window.performCalculations = performCalculations;
 
 // Функция выполнения всех расчетов
 function performCalculations(data) {
+  // Проверяем загрузку конфигурации банков
+  if (!window.BANKS) {
+    return "❌ Конфигурация банков не загружена. Попробуйте перезагрузить страницу.";
+  }
+
   // Нормализуем название банка
   let normalizedBank = data.bank;
   if (window.BANKS[data.bank]) {
