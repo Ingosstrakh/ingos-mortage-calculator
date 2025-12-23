@@ -295,7 +295,8 @@ function performCalculations(data) {
   }
 
   if (data.risks.titul && titleResult) {
-    output += `титул ${titleResult.total.toLocaleString('ru-RU')}<br>`;
+    // Используем totalWithoutDiscount, чтобы в 1 варианте всегда была полная цена
+    output += `титул ${(titleResult.totalWithoutDiscount || titleResult.total).toLocaleString('ru-RU')}<br>`;
   }
 
   output += `ИТОГО тариф/ взнос ${totalWithoutDiscount.toLocaleString('ru-RU')}<br><br>`;
