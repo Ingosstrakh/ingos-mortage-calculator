@@ -122,9 +122,6 @@ function getPropertyTariff(bank, type, contractDate = null, withLifeInsurance = 
     if (contractDateObj >= cutoffDate) {
       // Новые тарифы ВТБ (после 01.02.2025)
       return PROPERTY_TARIFFS["ВТБ"][type] || PROPERTY_TARIFFS.base[type];
-    } else {
-      // Старые тарифы ВТБ (до 01.02.2025) - используем базовые
-      return PROPERTY_TARIFFS.base[type] || 0.10;
     }
   }
 
