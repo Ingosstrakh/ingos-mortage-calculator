@@ -107,21 +107,29 @@ function getPropertyTariff(bank, type, contractDate = null, withLifeInsurance = 
     return getGPBPropertyTariff(contractDate, withLifeInsurance, type);
   }
 
-  // Специальная обработка для ВТБ (новые тарифы после 01.02.2025)
-  if (bank === "ВТБ" && contractDate) {
-    const cutoffDate = new Date('2025-02-01');
-    const parts = contractDate.split('.');
-    let contractDateObj;
-    if (parts.length === 3) {
-      const isoDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-      contractDateObj = new Date(isoDate);
-    } else {
-      contractDateObj = new Date(contractDate);
-    }
+  // Специальная обработка для ВТБ
+  if (bank === "ВТБ") {
+    if (contractDate) {
+      const cutoffDate = new Date('2025-02-01');
+      const parts = contractDate.split('.');
+      let contractDateObj;
+      if (parts.length === 3) {
+        const isoDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+        contractDateObj = new Date(isoDate);
+      } else {
+        contractDateObj = new Date(contractDate);
+      }
 
-    if (contractDateObj >= cutoffDate) {
-      // Новые тарифы ВТБ (после 01.02.2025)
-      return PROPERTY_TARIFFS["ВТБ"][type] || PROPERTY_TARIFFS.base[type];
+      if (contractDateObj >= cutoffDate) {
+        // Новые тарифы ВТБ (после 01.02.2025)
+        return PROPERTY_TARIFFS["ВТБ"][type] || PROPERTY_TARIFFS.base[type];
+      } else {
+        // Старые тарифы ВТБ (до 01.02.2025) - базовые тарифы
+        return PROPERTY_TARIFFS.base[type] || 0.10;
+      }
+    } else {
+      // Если дата не указана, используем базовые тарифы
+      return PROPERTY_TARIFFS.base[type] || 0.10;
     }
   }
 
