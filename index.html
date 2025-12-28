@@ -1023,7 +1023,7 @@
               </div>
             </div>
             <div class="tab-actions">
-              <button class="btn-check" onclick="calculateHealthUnderwriting()">
+              <button class="btn-check" id="health-calculate-btn">
                 <span class="btn-icon">📊</span>
                 <span>Рассчитать андеррайтинг</span>
               </button>
@@ -1345,6 +1345,14 @@
       }
 
       // Закрытие при нажатии Escape
+      // Обработчик для кнопки медицинского андеррайтинга
+      const healthCalculateBtn = document.getElementById('health-calculate-btn');
+      if (healthCalculateBtn) {
+        healthCalculateBtn.addEventListener('click', function() {
+          calculateHealthUnderwriting();
+        });
+      }
+
       document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape' && modal && modal.style.display === 'flex') {
           closeUnderwritingModal();
