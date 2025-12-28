@@ -1059,7 +1059,7 @@
               </div>
             </div>
             <div class="tab-actions">
-              <button class="btn-check" onclick="calculateBuildingRisk()">
+              <button class="btn-check" id="wear-calculate-btn">
                 <span class="btn-icon">📊</span>
                 <span>Рассчитать риск</span>
               </button>
@@ -1350,6 +1350,14 @@
       if (healthCalculateBtn) {
         healthCalculateBtn.addEventListener('click', function() {
           calculateHealthUnderwriting();
+        });
+      }
+
+      // Обработчик для кнопки расчета износа здания
+      const wearCalculateBtn = document.getElementById('wear-calculate-btn');
+      if (wearCalculateBtn) {
+        wearCalculateBtn.addEventListener('click', function() {
+          calculateBuildingRisk();
         });
       }
 
