@@ -1855,19 +1855,17 @@
 
     class HouseScoreAPI {
       constructor(apiKey = '4qQr9LmOgd0ZXuoQr7wW71DdJ9bOeIDoSfaLvyi083de24c1') {
-        // API ключ предоставлен пользователем
         this.apiKey = apiKey;
         this.baseUrl = 'https://api.housescore.ru';
-        this.apiVersion = 'v1';
+        // Используем CORS прокси для обхода CORS ограничений
+        this.corsProxy = 'https://api.allorigins.win/raw?url=';
       }
 
       /**
        * Поиск дома по адресу (город, улица, номер)
-       * Возвращает данные о доме включая год постройки и износ
        */
       async searchHouse(city, street, buildingNumber) {
         try {
-          // Шаг 1: Получить FIAS GUID улицы через поиск
           const streetSearch = await this.searchStreet(city, street);
 
           if (!streetSearch || streetSearch.length === 0) {
@@ -1878,8 +1876,6 @@
           }
 
           const streetFiasGuid = streetSearch[0].fias_guid;
-
-          // Шаг 2: Получить дома на этой улице
           const houses = await this.getHousesByStreet(streetFiasGuid);
 
           if (!houses || houses.length === 0) {
@@ -1889,7 +1885,6 @@
             };
           }
 
-          // Шаг 3: Найти точное совпадение по номеру дома
           const exactHouse = houses.find(h =>
             h.building_num === buildingNumber ||
             h.building_num === buildingNumber.toString()
@@ -1902,7 +1897,6 @@
             };
           }
 
-          // Шаг 4: Получить детальную информацию о доме
           const houseDetails = await this.getHouseDetails(exactHouse.fias_guid);
 
           return {
@@ -1919,36 +1913,32 @@
             }
           };
         } catch (error) {
+          console.error('Search error:', error);
           return {
             success: false,
-            error: `API ошибка: ${error.message}`
+            error: `Ошибка: ${error.message}`
           };
         }
       }
 
       /**
-       * Поиск улицы по названию и городу
+       * Поиск улицы с использованием CORS прокси
        */
       async searchStreet(city, streetName) {
         try {
-          const params = new URLSearchParams({
-            city: city,
-            street: streetName,
-            api_key: this.apiKey
+          const apiUrl = `${this.baseUrl}/v1/streets?city=${encodeURIComponent(city)}&street=${encodeURIComponent(streetName)}&api_key=${this.apiKey}`;
+          const proxyUrl = this.corsProxy + encodeURIComponent(apiUrl);
+
+          const response = await fetch(proxyUrl, {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json'
+            }
           });
 
-          const response = await fetch(
-            `${this.baseUrl}/v1/streets?${params}`,
-            {
-              method: 'GET',
-              headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-              }
-            }
-          );
-
-          if (!response.ok) throw new Error('Street search failed');
+          if (!response.ok) {
+            throw new Error(`Street search failed: ${response.status}`);
+          }
 
           const data = await response.json();
           return data.data || [];
@@ -1959,29 +1949,23 @@
       }
 
       /**
-       * Получить дома на улице по FIAS GUID
+       * Получить дома на улице
        */
       async getHousesByStreet(streetFiasGuid) {
         try {
-          const params = new URLSearchParams({
-            street_fias_guid: streetFiasGuid,
-            page_size: 100,
-            page: 1,
-            api_key: this.apiKey
+          const apiUrl = `${this.baseUrl}/v1/houses?street_fias_guid=${streetFiasGuid}&page_size=100&page=1&api_key=${this.apiKey}`;
+          const proxyUrl = this.corsProxy + encodeURIComponent(apiUrl);
+
+          const response = await fetch(proxyUrl, {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json'
+            }
           });
 
-          const response = await fetch(
-            `${this.baseUrl}/v1/houses?${params}`,
-            {
-              method: 'GET',
-              headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-              }
-            }
-          );
-
-          if (!response.ok) throw new Error('Houses search failed');
+          if (!response.ok) {
+            throw new Error(`Houses search failed: ${response.status}`);
+          }
 
           const data = await response.json();
           return data.data || [];
@@ -1996,18 +1980,19 @@
        */
       async getHouseDetails(fiasGuid) {
         try {
-          const response = await fetch(
-            `${this.baseUrl}/v1/houses/${fiasGuid}?api_key=${this.apiKey}`,
-            {
-              method: 'GET',
-              headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-              }
-            }
-          );
+          const apiUrl = `${this.baseUrl}/v1/houses/${fiasGuid}?api_key=${this.apiKey}`;
+          const proxyUrl = this.corsProxy + encodeURIComponent(apiUrl);
 
-          if (!response.ok) throw new Error('House details failed');
+          const response = await fetch(proxyUrl, {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json'
+            }
+          });
+
+          if (!response.ok) {
+            throw new Error(`House details failed: ${response.status}`);
+          }
 
           const data = await response.json();
           return data.data || null;
