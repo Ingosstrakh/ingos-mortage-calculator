@@ -796,9 +796,10 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
   for (const product of availableProducts) {
     const additionalRisk = calculateIFLAdditionalRisk(product, data, insuranceAmount);
     if (additionalRisk) {
-      // ВАЖНО: учитываем титул в итоговой сумме при расчете доп. рисков
-      const totalV2 = propertyPremiumV2 + lifePremiumV2 + titlePremiumV2 + additionalRisk.premium;
-      console.log('Продукт', product, '- дополнительная премия:', additionalRisk.premium, '- итого (с титулом):', totalV2);
+      // ВАЖНО: НЕ включаем титул в total продукта, титул добавим в конце
+      // Это нужно для правильного расчета разницы и доп. рисков
+      const totalV2 = propertyPremiumV2 + lifePremiumV2 + additionalRisk.premium;
+      console.log('Продукт', product, '- дополнительная премия:', additionalRisk.premium, '- итого (без титула):', totalV2);
       productResults.push({
         product: product,
         productName: additionalRisk.productName,
@@ -835,12 +836,14 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
   });
 
   // Сначала проверяем приоритетные продукты
+  // ВАЖНО: при расчете разницы учитываем титул (product.total не включает титул)
   for (const product of priorityProducts) {
-    const difference = variant1Total - product.total;
+    const productTotalWithTitle = product.total + titlePremiumV2;
+    const difference = variant1Total - productTotalWithTitle;
     if (difference >= 200) {
       // Если разница в допустимом диапазоне (до 2200), выбираем самый ДОРОГОЙ
       if (difference <= 2200) {
-        if (!bestProduct || product.total > bestProduct.total) {
+        if (!bestProduct || productTotalWithTitle > (bestProduct.total + titlePremiumV2)) {
           bestProduct = product;
           bestDifference = difference;
         }
@@ -857,11 +860,12 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
   // Если не нашли подходящий приоритетный продукт, проверяем остальные
   if (!bestProduct) {
     for (const product of otherProducts) {
-      const difference = variant1Total - product.total;
+      const productTotalWithTitle = product.total + titlePremiumV2;
+      const difference = variant1Total - productTotalWithTitle;
       if (difference >= 200) {
         // Если разница в допустимом диапазоне (до 2200), выбираем самый дешевый среди остальных
         if (difference <= 2200) {
-          if (!bestProduct || product.total < bestProduct.total) {
+          if (!bestProduct || productTotalWithTitle < (bestProduct.total + titlePremiumV2)) {
             bestProduct = product;
             bestDifference = difference;
           }
@@ -887,8 +891,8 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
 
   let finalProduct = bestProduct;
   let additionalRisks = [];
-  // bestProduct.total уже включает титул (мы добавили его в цикле выше)
-  let currentTotal = bestProduct.total;
+  // bestProduct.total НЕ включает титул, титул добавим в конце
+  let currentTotal = bestProduct.total + titlePremiumV2;
   let currentDifference = variant1Total - currentTotal;
 
   console.log('До увеличения сумм:');
@@ -1045,7 +1049,7 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
   }
   
   // Добавляем титул в output, если он есть
-  // ВАЖНО: currentTotal уже включает титул (он был добавлен в bestProduct.total выше)
+  // ВАЖНО: currentTotal уже включает титул (добавлен в строке 891)
   if (titleResult) {
     const formattedTitle = titleResult.total.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
     output += `<br>титул ${formattedTitle}`;
@@ -1053,8 +1057,8 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
 
   // Проверяем, что вариант 2 действительно дешевле варианта 1
   console.log('Финальная проверка:');
-  console.log('- currentTotal (с титулом):', currentTotal);
-  console.log('- variant1Total:', variant1Total);
+  console.log('- currentTotal (property + life + доп.риски + титул):', currentTotal);
+  console.log('- variant1Total (property + life + титул без скидки):', variant1Total);
   console.log('- difference:', variant1Total - currentTotal);
 
   if (currentTotal >= variant1Total) {
