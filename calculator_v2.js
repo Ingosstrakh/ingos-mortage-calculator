@@ -976,12 +976,19 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
     }
   }
 
-  // Расчет титула для сложного пути
+  // Расчет титула для варианта 2 (со скидкой, если разрешено)
   let titleResult = null;
+  let titlePremiumV2 = 0;
   if (data.risks.titul) {
     const withLifeInsurance = data.risks.life || false;
     titleResult = calculateTitleInsurance(data, bankConfig, insuranceAmount, withLifeInsurance, data.contractDate);
+    // В варианте 2 титул уже со скидкой (если разрешено), так как calculateTitleInsurance применяет скидку автоматически
+    titlePremiumV2 = titleResult.total; // total уже содержит скидку, если allow_discount_title = true
   }
+
+  // Добавляем титул к currentTotal ДО проверки условия
+  currentTotal = Math.round((currentTotal + titlePremiumV2) * 100) / 100;
+  currentDifference = variant1Total - currentTotal;
 
   // Формируем вывод варианта 2
   let output = '';
@@ -1035,18 +1042,16 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
     output += '<br>';
   }
   
-  // Добавляем титул в output и к итоговой сумме, если он есть
+  // Добавляем титул в output, если он есть
   if (titleResult) {
     const formattedTitle = titleResult.total.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
     output += `<br>титул ${formattedTitle}`;
-    // ВАЖНО: добавляем титул к итоговой сумме варианта 2
-    currentTotal = Math.round((currentTotal + titleResult.total) * 100) / 100;
   }
 
   // Проверяем, что вариант 2 действительно дешевле варианта 1
   console.log('Финальная проверка:');
-  console.log('- currentTotal (с титулом):', currentTotal);
-  console.log('- variant1Total:', variant1Total);
+  console.log('- currentTotal (property + life + доп.риски + титул со скидкой):', currentTotal);
+  console.log('- variant1Total (property + life + титул без скидки):', variant1Total);
   console.log('- difference:', variant1Total - currentTotal);
 
   if (currentTotal >= variant1Total) {
