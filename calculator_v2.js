@@ -777,16 +777,28 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
     }
   }
 
+  // Расчет титула для варианта 2 (со скидкой, если разрешено)
+  let titleResult = null;
+  let titlePremiumV2 = 0;
+  if (data.risks.titul) {
+    const withLifeInsurance = data.risks.life || false;
+    titleResult = calculateTitleInsurance(data, bankConfig, insuranceAmount, withLifeInsurance, data.contractDate);
+    // В варианте 2 титул уже со скидкой (если разрешено), так как calculateTitleInsurance применяет скидку автоматически
+    titlePremiumV2 = titleResult.total; // total уже содержит скидку, если allow_discount_title = true
+  }
+
   // Рассчитываем доп. риски для каждого доступного продукта
+  // ВАЖНО: учитываем титул в базовой сумме для правильного расчета разницы
   const productResults = [];
-  const baseVariant2Total = propertyPremiumV2 + lifePremiumV2;
-  console.log('Базовый вариант 2 (property + life):', baseVariant2Total);
+  const baseVariant2Total = propertyPremiumV2 + lifePremiumV2 + titlePremiumV2;
+  console.log('Базовый вариант 2 (property + life + title):', baseVariant2Total);
 
   for (const product of availableProducts) {
     const additionalRisk = calculateIFLAdditionalRisk(product, data, insuranceAmount);
     if (additionalRisk) {
-      const totalV2 = propertyPremiumV2 + lifePremiumV2 + additionalRisk.premium;
-      console.log('Продукт', product, '- дополнительная премия:', additionalRisk.premium, '- итого:', totalV2);
+      // ВАЖНО: учитываем титул в итоговой сумме при расчете доп. рисков
+      const totalV2 = propertyPremiumV2 + lifePremiumV2 + titlePremiumV2 + additionalRisk.premium;
+      console.log('Продукт', product, '- дополнительная премия:', additionalRisk.premium, '- итого (с титулом):', totalV2);
       productResults.push({
         product: product,
         productName: additionalRisk.productName,
@@ -875,6 +887,7 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
 
   let finalProduct = bestProduct;
   let additionalRisks = [];
+  // bestProduct.total уже включает титул (мы добавили его в цикле выше)
   let currentTotal = bestProduct.total;
   let currentDifference = variant1Total - currentTotal;
 
@@ -901,10 +914,11 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
       }
 
       // Увеличиваем суммы для достижения разницы около 3000
-      const additionalRisksResult = increaseMoyaKvartiraSumsForDifference(data, insuranceAmount, currentDifference, targetDifferenceLarge, baseFinishSum, variant1Total, propertyPremiumV2, lifePremiumV2);
+      const additionalRisksResult = increaseMoyaKvartiraSumsForDifference(data, insuranceAmount, currentDifference, targetDifferenceLarge, baseFinishSum, variant1Total, propertyPremiumV2, lifePremiumV2, titlePremiumV2);
       if (additionalRisksResult && additionalRisksResult.risks.length > 0) {
         additionalRisks = additionalRisksResult.risks;
-        currentTotal = propertyPremiumV2 + lifePremiumV2 + additionalRisksResult.totalPremium;
+        // ВАЖНО: учитываем титул в currentTotal
+        currentTotal = propertyPremiumV2 + lifePremiumV2 + titlePremiumV2 + additionalRisksResult.totalPremium;
         currentDifference = variant1Total - currentTotal;
 
         // Обновляем финальный продукт с увеличенными суммами
@@ -925,7 +939,7 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
       }
     } else if (bestProduct.product === 'bastion') {
           // Для Бастиона увеличиваем сумму конструктива
-      const bastionResult = increaseBastionSumsForDifference(data, insuranceAmount, currentDifference, targetDifferenceLarge, propertyPremiumV2, lifePremiumV2, variant1Total);
+      const bastionResult = increaseBastionSumsForDifference(data, insuranceAmount, currentDifference, targetDifferenceLarge, propertyPremiumV2, lifePremiumV2, titlePremiumV2, variant1Total);
       if (bastionResult) {
         finalProduct = bastionResult.finalProduct;
         additionalRisks = bastionResult.additionalRisks;
@@ -967,7 +981,7 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
       }
     } else if (bestProduct.product === 'express') {
       // Для "Экспресс квартира" выбираем пакет с большей суммой
-      const expressResult = increaseExpressSumsForDifference(currentDifference, targetDifferenceLarge, propertyPremiumV2, lifePremiumV2, variant1Total);
+      const expressResult = increaseExpressSumsForDifference(currentDifference, targetDifferenceLarge, propertyPremiumV2, lifePremiumV2, titlePremiumV2, variant1Total);
       if (expressResult) {
         finalProduct = expressResult.finalProduct;
         currentTotal = expressResult.currentTotal;
@@ -976,19 +990,7 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
     }
   }
 
-  // Расчет титула для варианта 2 (со скидкой, если разрешено)
-  let titleResult = null;
-  let titlePremiumV2 = 0;
-  if (data.risks.titul) {
-    const withLifeInsurance = data.risks.life || false;
-    titleResult = calculateTitleInsurance(data, bankConfig, insuranceAmount, withLifeInsurance, data.contractDate);
-    // В варианте 2 титул уже со скидкой (если разрешено), так как calculateTitleInsurance применяет скидку автоматически
-    titlePremiumV2 = titleResult.total; // total уже содержит скидку, если allow_discount_title = true
-  }
-
-  // Добавляем титул к currentTotal ДО проверки условия
-  currentTotal = Math.round((currentTotal + titlePremiumV2) * 100) / 100;
-  currentDifference = variant1Total - currentTotal;
+  // Расчет титула уже выполнен выше, используем titleResult и titlePremiumV2
 
   // Формируем вывод варианта 2
   let output = '';
@@ -1043,6 +1045,7 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
   }
   
   // Добавляем титул в output, если он есть
+  // ВАЖНО: currentTotal уже включает титул (он был добавлен в bestProduct.total выше)
   if (titleResult) {
     const formattedTitle = titleResult.total.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
     output += `<br>титул ${formattedTitle}`;
@@ -1050,8 +1053,8 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
 
   // Проверяем, что вариант 2 действительно дешевле варианта 1
   console.log('Финальная проверка:');
-  console.log('- currentTotal (property + life + доп.риски + титул со скидкой):', currentTotal);
-  console.log('- variant1Total (property + life + титул без скидки):', variant1Total);
+  console.log('- currentTotal (с титулом):', currentTotal);
+  console.log('- variant1Total:', variant1Total);
   console.log('- difference:', variant1Total - currentTotal);
 
   if (currentTotal >= variant1Total) {
@@ -1130,19 +1133,20 @@ function calculateVariant3(data, bankConfig, insuranceAmount, discountPercent) {
 }
 
 // Функция для увеличения сумм "Моя квартира" для достижения разницы около 3000
-function increaseMoyaKvartiraSumsForDifference(data, insuranceAmount, currentDifference, targetDifference, baseFinishSum, variant1Total, propertyPremiumV2, lifePremiumV2) {
+function increaseMoyaKvartiraSumsForDifference(data, insuranceAmount, currentDifference, targetDifference, baseFinishSum, variant1Total, propertyPremiumV2, lifePremiumV2, titlePremiumV2) {
   const moyaTariff = window.T_MOYA;
   if (!moyaTariff) return null;
 
   // Текущая разница между вариантом 1 и базовым вариантом 2 с выбранным продуктом
   // Нам нужно добавить дополнительные риски, чтобы итоговая премия стала variant1Total - targetDifference
+  // ВАЖНО: учитываем титул в базовой сумме варианта 2
 
-  const targetTotalPremium = variant1Total - targetDifference - (propertyPremiumV2 + lifePremiumV2);
+  const targetTotalPremium = variant1Total - targetDifference - (propertyPremiumV2 + lifePremiumV2 + titlePremiumV2);
   const neededAdditionalPremium = Math.max(0, targetTotalPremium);
 
   console.log('increaseMoyaKvartiraSumsForDifference:');
   console.log('- variant1Total:', variant1Total);
-  console.log('- базовый вариант 2 (property + life):', propertyPremiumV2 + lifePremiumV2);
+  console.log('- базовый вариант 2 (property + life + title):', propertyPremiumV2 + lifePremiumV2 + titlePremiumV2);
   console.log('- targetDifference:', targetDifference);
   console.log('- targetTotalPremium (variant1Total - targetDifference - baseV2):', targetTotalPremium);
   console.log('- neededAdditionalPremium:', neededAdditionalPremium);
@@ -1250,7 +1254,7 @@ function increaseMoyaKvartiraSumsForDifference(data, insuranceAmount, currentDif
 }
 
 // Функция для увеличения сумм Бастиона для достижения разницы около 3000
-function increaseBastionSumsForDifference(data, insuranceAmount, currentDifference, targetDifference, propertyPremiumV2, lifePremiumV2, variant1Total) {
+function increaseBastionSumsForDifference(data, insuranceAmount, currentDifference, targetDifference, propertyPremiumV2, lifePremiumV2, titlePremiumV2, variant1Total) {
   const bastionTariff = window.T_BASTION;
   if (!bastionTariff) return null;
 
@@ -1276,7 +1280,8 @@ function increaseBastionSumsForDifference(data, insuranceAmount, currentDifferen
   }
 
   const constructPremium = Math.round(constructSum * constructRate * 100) / 100;
-  const totalV2 = propertyPremiumV2 + lifePremiumV2 + constructPremium;
+  // ВАЖНО: учитываем титул в итоговой сумме
+  const totalV2 = propertyPremiumV2 + lifePremiumV2 + titlePremiumV2 + constructPremium;
   const newDifference = variant1Total - totalV2;
 
   return {
@@ -1299,13 +1304,14 @@ function increaseBastionSumsForDifference(data, insuranceAmount, currentDifferen
 }
 
 // Функция для увеличения сумм "Экспресс квартира" для достижения разницы около 3000
-function increaseExpressSumsForDifference(currentDifference, targetDifference, propertyPremiumV2, lifePremiumV2, variant1Total) {
+function increaseExpressSumsForDifference(currentDifference, targetDifference, propertyPremiumV2, lifePremiumV2, titlePremiumV2, variant1Total) {
   const packs = window.EXPRESS_PACKS;
   if (!packs) return null;
 
   const neededPremium = currentDifference - targetDifference;
   const targetTotalV2 = variant1Total - targetDifference;
-  const targetPremium = targetTotalV2 - propertyPremiumV2 - lifePremiumV2;
+  // ВАЖНО: учитываем титул в расчете целевой премии
+  const targetPremium = targetTotalV2 - propertyPremiumV2 - lifePremiumV2 - titlePremiumV2;
 
   // Находим пакет с максимальной премией, но не превышающий нужную
   let bestPack = null;
@@ -1326,7 +1332,8 @@ function increaseExpressSumsForDifference(currentDifference, targetDifference, p
     bestPack = packs.reduce((max, p) => p.noGo > max.noGo ? p : max, packs[0]);
   }
 
-  const totalV2 = propertyPremiumV2 + lifePremiumV2 + bestPack.noGo;
+  // ВАЖНО: учитываем титул в итоговой сумме
+  const totalV2 = propertyPremiumV2 + lifePremiumV2 + titlePremiumV2 + bestPack.noGo;
   const newDifference = variant1Total - totalV2;
 
   return {
