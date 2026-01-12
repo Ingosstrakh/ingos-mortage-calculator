@@ -148,6 +148,33 @@ function findLargeNumbers(text) {
   return arr;
 }
 
+// Разбор даты формата DD.MM.YYYY или любого поддерживаемого Date
+function parseDateDMY(dateStr) {
+  if (!dateStr) return null;
+  if (typeof dateStr !== 'string') return null;
+  const parts = dateStr.split('.');
+  if (parts.length === 3) {
+    const iso = `${parts[2]}-${String(parts[1]).padStart(2, '0')}-${String(parts[0]).padStart(2, '0')}`;
+    const d = new Date(iso);
+    if (!isNaN(d)) return d;
+  }
+  const d = new Date(dateStr);
+  return isNaN(d) ? null : d;
+}
+
+// Корректный расчет возраста с учетом дня рождения и даты договора
+function calculateAge(dobStr, asOfDateStr = null) {
+  const dob = parseDateDMY(dobStr);
+  if (!dob) return null;
+  const ref = parseDateDMY(asOfDateStr) || new Date();
+  let age = ref.getFullYear() - dob.getFullYear();
+  const m = ref.getMonth() - dob.getMonth();
+  if (m < 0 || (m === 0 && ref.getDate() < dob.getDate())) {
+    age -= 1;
+  }
+  return age;
+}
+
 // попытка извлечь сумму после ключа (осз / ост / остаток)
 function extractOszByKey(text) {
   // ключи с возможной опечаткой (включая заглавные буквы)
@@ -236,7 +263,7 @@ function detectBank(text) {
 // Форматы, которые мы поддерживаем:
 // "муж, 07.01.1985", "она 25.11.1992", "он - 23.09.1975", "он - 50% - 13.04.1968"
 // также "муж 60% - 13.04.1980", "она - 50% - 02.05.1968"
-function extractBorrowers(text) {
+function extractBorrowers(text, contractDate = null) {
   const found = [];
   const lines = text.split(/[\n\r]/g).map(l => l.trim()).filter(Boolean);
 
@@ -367,11 +394,7 @@ function extractBorrowers(text) {
   // 4) Добавляем возраст
   found.forEach(borrower => {
     if (borrower.dob) {
-      const parts = borrower.dob.split('.');
-      if (parts.length === 3) {
-        const yyyy = Number(parts[2]);
-        borrower.age = CURRENT_YEAR - yyyy;
-      }
+      borrower.age = calculateAge(borrower.dob, contractDate);
     }
   });
 
@@ -462,7 +485,7 @@ function parseTextToObject(rawText) {
   }
 
   // 4) borrowers (перенесено вверх для правильного определения рисков)
-  result.borrowers = extractBorrowers(text);
+  result.borrowers = extractBorrowers(text, result.contractDate);
 
   // 4.1) Дополнительная проверка на наличие слов, указывающих на заемщиков
   // Если есть слова "муж"/"жен"/"мужчина"/"женщина" без даты, создаем заемщика
@@ -567,8 +590,7 @@ function parseTextToObject(rawText) {
       for (const d of allDates) {
         const parts = d.split('.');
         if (parts.length===3) {
-          const y = Number(parts[2]);
-          const age = CURRENT_YEAR - y;
+          const age = calculateAge(d, result.contractDate);
           if (age >= 18 && age <= 100) {
             result.borrowers.push({ dob: d, gender: null, age, share:100 });
             break;
