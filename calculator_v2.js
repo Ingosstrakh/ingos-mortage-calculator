@@ -1035,15 +1035,17 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
     output += '<br>';
   }
   
-  // Добавляем титул в output, если он есть
+  // Добавляем титул в output и к итоговой сумме, если он есть
   if (titleResult) {
     const formattedTitle = titleResult.total.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
     output += `<br>титул ${formattedTitle}`;
+    // ВАЖНО: добавляем титул к итоговой сумме варианта 2
+    currentTotal = Math.round((currentTotal + titleResult.total) * 100) / 100;
   }
 
   // Проверяем, что вариант 2 действительно дешевле варианта 1
   console.log('Финальная проверка:');
-  console.log('- currentTotal:', currentTotal);
+  console.log('- currentTotal (с титулом):', currentTotal);
   console.log('- variant1Total:', variant1Total);
   console.log('- difference:', variant1Total - currentTotal);
 
