@@ -180,18 +180,22 @@ function performCalculations(data) {
 
   // Специальная логика для ВТБ: после 01.02.2025 меняем правила
   if (bankConfig.bankName === "ВТБ" && data.contractDate) {
-    const cutoffDate = new Date('2025-02-01');
+    const cutoffDate = new Date('2025-02-01T00:00:00');
     const parts = data.contractDate.split('.');
     let contractDateObj;
     if (parts.length === 3) {
-      const isoDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      const isoDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}T00:00:00`;
       contractDateObj = new Date(isoDate);
     } else {
       contractDateObj = new Date(data.contractDate);
     }
 
-    if (contractDateObj >= cutoffDate) {
-      // Новые правила для ВТБ после 01.02.2025
+    // Сравниваем даты без учета времени
+    const contractDateOnly = new Date(contractDateObj.getFullYear(), contractDateObj.getMonth(), contractDateObj.getDate());
+    const cutoffDateOnly = new Date(cutoffDate.getFullYear(), cutoffDate.getMonth(), cutoffDate.getDate());
+
+    if (contractDateOnly >= cutoffDateOnly) {
+      // Новые правила для ВТБ после 01.02.2025 включительно
       bankConfig.add_percent = 0; // Надбавка 0%
       bankConfig.allow_discount_property = false; // Скидки запрещены
       bankConfig.allow_discount_life = false;
@@ -288,8 +292,11 @@ function performCalculations(data) {
   }
 
   if (data.risks.life && lifeResult) {
+    // ВАЖНО: используем data.borrowers.length, а не lifeResult.borrowers.length
+    // чтобы правильно определить, один заемщик или несколько
+    const isMultipleBorrowers = data.borrowers && data.borrowers.length > 1;
     lifeResult.borrowers.forEach((borrower, index) => {
-      const borrowerLabel = data.borrowers.length > 1 ? `заемщик ${index + 1}` : 'заемщик';
+      const borrowerLabel = isMultipleBorrowers ? `заемщик ${index + 1}` : 'заемщик';
       output += `жизнь ${borrowerLabel} ${borrower.premium.toLocaleString('ru-RU')}<br>`;
     });
   }
@@ -438,24 +445,37 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
 
     // Для ВТБ выбираем тарифы в зависимости от возраста и даты КД
     if (bankConfig && bankConfig.bankName === "ВТБ" && data.contractDate) {
-      const cutoffDate = new Date('2025-02-01');
+      const cutoffDate = new Date('2025-02-01T00:00:00');
       const parts = data.contractDate.split('.');
       let contractDateObj;
       if (parts.length === 3) {
-        const isoDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+        const isoDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}T00:00:00`;
         contractDateObj = new Date(isoDate);
       } else {
         contractDateObj = new Date(data.contractDate);
       }
 
-      if (contractDateObj >= cutoffDate) {
-        // Новые тарифы ВТБ (после 01.02.2025)
+      // Сравниваем даты без учета времени
+      const contractDateOnly = new Date(contractDateObj.getFullYear(), contractDateObj.getMonth(), contractDateObj.getDate());
+      const cutoffDateOnly = new Date(cutoffDate.getFullYear(), cutoffDate.getMonth(), cutoffDate.getDate());
+
+      console.log('ВТБ: Проверка тарифов по дате КД');
+      console.log('- contractDate:', data.contractDate);
+      console.log('- contractDateObj:', contractDateOnly);
+      console.log('- cutoffDate:', cutoffDateOnly);
+      console.log('- сравнение:', contractDateOnly >= cutoffDateOnly);
+
+      if (contractDateOnly >= cutoffDateOnly) {
+        // Новые тарифы ВТБ (после 01.02.2025 включительно)
+        console.log('- Используем новые тарифы ВТБ для возраста:', borrower.age);
         if (borrower.age <= 50) {
           tariffTable = window.LIFE_TARIFF_VTB_NEW || LIFE_TARIFF_VTB_NEW;
         } else {
           // Для 51+ используем базовые тарифы
           tariffTable = window.LIFE_TARIFF_BASE || LIFE_TARIFF_BASE;
         }
+      } else {
+        console.log('- Используем базовые тарифы ВТБ (дата до 01.02.2025)');
       }
       // Для старых дат (до 01.02.2025) используем базовые тарифы (уже установлено по умолчанию)
     }
@@ -597,19 +617,23 @@ function calculateTitleInsurance(dataOrAmount, bankConfig, insuranceAmount, with
 
   // Логика для ВТБ (после 01.02.2025)
   else if (config && config.bankName === "ВТБ" && contractDate) {
-    const cutoffDate = new Date('2025-02-01');
+    const cutoffDate = new Date('2025-02-01T00:00:00');
     let contractDateObj;
     const parts = contractDate.split('.');
     if (parts.length === 3) {
-      const isoDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      const isoDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}T00:00:00`;
       contractDateObj = new Date(isoDate);
     } else {
       contractDateObj = new Date(contractDate);
     }
-    const useNewTariffs = contractDateObj >= cutoffDate;
+    
+    // Сравниваем даты без учета времени
+    const contractDateOnly = new Date(contractDateObj.getFullYear(), contractDateObj.getMonth(), contractDateObj.getDate());
+    const cutoffDateOnly = new Date(cutoffDate.getFullYear(), cutoffDate.getMonth(), cutoffDate.getDate());
+    const useNewTariffs = contractDateOnly >= cutoffDateOnly;
 
     if (useNewTariffs) {
-      // Новые тарифы ВТБ (после 01.02.2025) - всегда 0.2%
+      // Новые тарифы ВТБ (после 01.02.2025 включительно) - всегда 0.2%
       tariff = 0.2;
     }
     // Для старых дат (до 01.02.2025) используется базовый тариф 0.2%
