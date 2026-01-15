@@ -449,6 +449,59 @@
   </footer>
 
   <script>
+    // Функции андеррайтинга - определяем сразу, чтобы были доступны глобально
+    window.openUnderwritingModal = function() {
+      const modal = document.getElementById('underwriting-modal');
+      if (modal) {
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        if (typeof window.switchTab === 'function') {
+          window.switchTab('health');
+        }
+      } else {
+        console.error('Modal element not found');
+      }
+    };
+
+    window.closeUnderwritingModal = function() {
+      const modal = document.getElementById('underwriting-modal');
+      if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+        if (typeof window.clearAllResults === 'function') {
+          window.clearAllResults();
+        }
+      }
+    };
+
+    window.switchTab = function(tabId) {
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      const tabContent = document.getElementById(tabId + '-content');
+      if (tabContent) {
+        tabContent.classList.add('active');
+      }
+      const tabBtn = document.querySelector(`[data-tab="${tabId}"]`);
+      if (tabBtn) {
+        tabBtn.classList.add('active');
+      }
+      if (typeof window.clearAllResults === 'function') {
+        window.clearAllResults();
+      }
+    };
+
+    window.clearAllResults = function() {
+      const resultContainers = ['health-results', 'wear-results', 'egrn-results', 'bankruptcy-results', 'fssp-results'];
+      resultContainers.forEach(id => {
+        const container = document.getElementById(id);
+        if (container) container.innerHTML = '';
+      });
+    };
+
     // Оптимизация для мобильных устройств
     // Ждем загрузки всех скриптов
     function initMobileCalculator() {
@@ -484,39 +537,44 @@
       // Обработчики для кнопки андеррайтинга
       const underwritingBtn = document.getElementById('underwriting-btn');
       if (underwritingBtn) {
+        // Функция для открытия модального окна
+        function openModal() {
+          const modal = document.getElementById('underwriting-modal');
+          if (modal) {
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            if (typeof window.switchTab === 'function') {
+              window.switchTab('health');
+            }
+          }
+        }
+
+        // Touch-обработчики
         underwritingBtn.addEventListener('touchstart', function(e) {
           e.preventDefault();
+          e.stopPropagation();
           this.style.transform = 'scale(0.95)';
-        });
+          this.style.opacity = '0.8';
+        }, { passive: false });
 
         underwritingBtn.addEventListener('touchend', function(e) {
           e.preventDefault();
+          e.stopPropagation();
           this.style.transform = 'scale(1)';
-          if (typeof window.openUnderwritingModal === 'function') {
-            window.openUnderwritingModal();
-          } else {
-            console.error('openUnderwritingModal function not found');
-            // Попробуем открыть модальное окно напрямую
-            const modal = document.getElementById('underwriting-modal');
-            if (modal) {
-              modal.style.display = 'flex';
-              document.body.style.overflow = 'hidden';
-            }
-          }
+          this.style.opacity = '1';
+          openModal();
+        }, { passive: false });
+
+        underwritingBtn.addEventListener('touchcancel', function(e) {
+          this.style.transform = 'scale(1)';
+          this.style.opacity = '1';
         });
 
+        // Click-обработчик для десктопов
         underwritingBtn.addEventListener('click', function(e) {
           e.preventDefault();
-          if (typeof window.openUnderwritingModal === 'function') {
-            window.openUnderwritingModal();
-          } else {
-            // Fallback: открываем модальное окно напрямую
-            const modal = document.getElementById('underwriting-modal');
-            if (modal) {
-              modal.style.display = 'flex';
-              document.body.style.overflow = 'hidden';
-            }
-          }
+          e.stopPropagation();
+          openModal();
         });
       }
 
@@ -623,58 +681,7 @@
 
   <!-- JavaScript для андеррайтинга -->
   <script>
-    // Глобальные функции для модального окна андеррайтинга
-    window.openUnderwritingModal = function() {
-      const modal = document.getElementById('underwriting-modal');
-      if (modal) {
-        modal.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-        if (typeof switchTab === 'function') {
-          switchTab('health');
-        }
-      } else {
-        console.error('Modal element not found');
-      }
-    };
-
-    window.closeUnderwritingModal = function() {
-      const modal = document.getElementById('underwriting-modal');
-      if (modal) {
-        modal.style.display = 'none';
-        document.body.style.overflow = 'auto';
-        if (typeof clearAllResults === 'function') {
-          clearAllResults();
-        }
-      }
-    };
-
-    window.switchTab = function(tabId) {
-      document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.remove('active');
-      });
-      document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-      });
-      const tabContent = document.getElementById(tabId + '-content');
-      if (tabContent) {
-        tabContent.classList.add('active');
-      }
-      const tabBtn = document.querySelector(`[data-tab="${tabId}"]`);
-      if (tabBtn) {
-        tabBtn.classList.add('active');
-      }
-      if (typeof clearAllResults === 'function') {
-        clearAllResults();
-      }
-    };
-
-    function clearAllResults() {
-      const resultContainers = ['health-results', 'wear-results', 'egrn-results', 'bankruptcy-results', 'fssp-results'];
-      resultContainers.forEach(id => {
-        const container = document.getElementById(id);
-        if (container) container.innerHTML = '';
-      });
-    }
+    // Вспомогательные функции для отображения результатов (уже определены выше, но оставляем для совместимости)
 
     function showResult(containerId, result) {
       const container = document.getElementById(containerId);
