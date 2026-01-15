@@ -77,7 +77,7 @@
           </button>
         </div>
         <div class="button-group" style="margin-top: 12px;">
-          <button id="underwriting-btn" class="btn-underwriting" onclick="openUnderwritingModal()">
+          <button id="underwriting-btn" class="btn-underwriting">
             <span class="btn-icon">🔍</span>
             Андеррайтинг
           </button>
@@ -187,7 +187,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3>🔍 Андеррайтинг - Оценка рисков</h3>
-        <button class="modal-close" onclick="closeUnderwritingModal()">×</button>
+        <button class="modal-close" onclick="window.closeUnderwritingModal()">×</button>
       </div>
 
       <div class="modal-body">
@@ -202,11 +202,11 @@
         <!-- Вкладки -->
         <div class="tabs-container">
           <div class="tab-buttons">
-            <button class="tab-btn active" data-tab="health" onclick="switchTab('health')">🏥 Мед.</button>
-            <button class="tab-btn" data-tab="wear" onclick="switchTab('wear')">🏢 Износ</button>
-            <button class="tab-btn" data-tab="egrn" onclick="switchTab('egrn')">🏠 ЕГРН</button>
-            <button class="tab-btn" data-tab="bankruptcy" onclick="switchTab('bankruptcy')">⚖️ Банкр.</button>
-            <button class="tab-btn" data-tab="fssp" onclick="switchTab('fssp')">🚔 ФССП</button>
+            <button class="tab-btn active" data-tab="health" onclick="window.switchTab('health')">🏥 Мед.</button>
+            <button class="tab-btn" data-tab="wear" onclick="window.switchTab('wear')">🏢 Износ</button>
+            <button class="tab-btn" data-tab="egrn" onclick="window.switchTab('egrn')">🏠 ЕГРН</button>
+            <button class="tab-btn" data-tab="bankruptcy" onclick="window.switchTab('bankruptcy')">⚖️ Банкр.</button>
+            <button class="tab-btn" data-tab="fssp" onclick="window.switchTab('fssp')">🚔 ФССП</button>
           </div>
 
           <!-- Содержимое вкладок -->
@@ -290,7 +290,7 @@
               </div>
             </div>
             <div class="tab-actions">
-              <button class="btn-check" onclick="checkEGRN()">
+              <button class="btn-check" onclick="window.checkEGRN()">
                 <span class="btn-icon">📋</span>
                 <span>Анализировать</span>
               </button>
@@ -310,7 +310,7 @@
               </div>
             </div>
             <div class="tab-actions">
-              <button class="btn-check" onclick="checkBankruptcy()">
+              <button class="btn-check" onclick="window.checkBankruptcy()">
                 <span class="btn-icon">⚖️</span>
                 <span>Проверить</span>
               </button>
@@ -425,7 +425,7 @@
               </div>
             </div>
             <div class="tab-actions">
-              <button class="btn-check" onclick="checkFSSP()">
+              <button class="btn-check" onclick="window.checkFSSP()">
                 <span class="btn-icon">🚔</span>
                 <span>Проверить</span>
               </button>
@@ -436,7 +436,7 @@
       </div>
 
       <div class="modal-footer">
-        <button class="btn-secondary" onclick="closeUnderwritingModal()">
+        <button class="btn-secondary" onclick="window.closeUnderwritingModal()">
           <span>Закрыть</span>
         </button>
       </div>
@@ -480,6 +480,45 @@
         this.style.transform = 'scale(1)';
         clearData();
       });
+
+      // Обработчики для кнопки андеррайтинга
+      const underwritingBtn = document.getElementById('underwriting-btn');
+      if (underwritingBtn) {
+        underwritingBtn.addEventListener('touchstart', function(e) {
+          e.preventDefault();
+          this.style.transform = 'scale(0.95)';
+        });
+
+        underwritingBtn.addEventListener('touchend', function(e) {
+          e.preventDefault();
+          this.style.transform = 'scale(1)';
+          if (typeof window.openUnderwritingModal === 'function') {
+            window.openUnderwritingModal();
+          } else {
+            console.error('openUnderwritingModal function not found');
+            // Попробуем открыть модальное окно напрямую
+            const modal = document.getElementById('underwriting-modal');
+            if (modal) {
+              modal.style.display = 'flex';
+              document.body.style.overflow = 'hidden';
+            }
+          }
+        });
+
+        underwritingBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          if (typeof window.openUnderwritingModal === 'function') {
+            window.openUnderwritingModal();
+          } else {
+            // Fallback: открываем модальное окно напрямую
+            const modal = document.getElementById('underwriting-modal');
+            if (modal) {
+              modal.style.display = 'flex';
+              document.body.style.overflow = 'hidden';
+            }
+          }
+        });
+      }
 
       // Клик для десктопов
       calculateBtn.addEventListener('click', calculate);
@@ -585,25 +624,31 @@
   <!-- JavaScript для андеррайтинга -->
   <script>
     // Глобальные функции для модального окна андеррайтинга
-    function openUnderwritingModal() {
+    window.openUnderwritingModal = function() {
       const modal = document.getElementById('underwriting-modal');
       if (modal) {
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
-        switchTab('health');
+        if (typeof switchTab === 'function') {
+          switchTab('health');
+        }
+      } else {
+        console.error('Modal element not found');
       }
-    }
+    };
 
-    function closeUnderwritingModal() {
+    window.closeUnderwritingModal = function() {
       const modal = document.getElementById('underwriting-modal');
       if (modal) {
         modal.style.display = 'none';
         document.body.style.overflow = 'auto';
-        clearAllResults();
+        if (typeof clearAllResults === 'function') {
+          clearAllResults();
+        }
       }
-    }
+    };
 
-    function switchTab(tabId) {
+    window.switchTab = function(tabId) {
       document.querySelectorAll('.tab-content').forEach(content => {
         content.classList.remove('active');
       });
@@ -618,8 +663,10 @@
       if (tabBtn) {
         tabBtn.classList.add('active');
       }
-      clearAllResults();
-    }
+      if (typeof clearAllResults === 'function') {
+        clearAllResults();
+      }
+    };
 
     function clearAllResults() {
       const resultContainers = ['health-results', 'wear-results', 'egrn-results', 'bankruptcy-results', 'fssp-results'];
@@ -868,7 +915,7 @@
     }
 
     // Проверка ЕГРН
-    async function checkEGRN() {
+    window.checkEGRN = async function() {
       const fileInput = document.getElementById('egrn-file');
       const file = fileInput?.files[0];
 
@@ -963,7 +1010,7 @@
     }
 
     // Проверка банкротства
-    async function checkBankruptcy() {
+    window.checkBankruptcy = async function() {
       const fio = document.getElementById('bankruptcy-fio').value.trim();
 
       if (!fio) {
@@ -1014,7 +1061,7 @@
     }
 
     // Проверка ФССП
-    async function checkFSSP() {
+    window.checkFSSP = async function() {
       const fio = document.getElementById('fssp-fio').value.trim();
       const birthDate = document.getElementById('fssp-birth').value;
       const region = document.getElementById('fssp-region').value;
