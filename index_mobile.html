@@ -537,27 +537,51 @@
       // Обработчики для кнопки андеррайтинга
       const underwritingBtn = document.getElementById('underwriting-btn');
       if (underwritingBtn) {
+        console.log('Underwriting button found, setting up handlers');
+        
         // Функция для открытия модального окна
         function openModal() {
+          console.log('openModal called');
           const modal = document.getElementById('underwriting-modal');
+          console.log('Modal element:', modal);
           if (modal) {
             modal.style.display = 'flex';
             document.body.style.overflow = 'hidden';
+            console.log('Modal opened');
+            // Активируем первую вкладку
             if (typeof window.switchTab === 'function') {
               window.switchTab('health');
+            } else {
+              // Fallback: активируем вкладку напрямую
+              const healthTab = document.querySelector('[data-tab="health"]');
+              const healthContent = document.getElementById('health-content');
+              if (healthTab && healthContent) {
+                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                healthTab.classList.add('active');
+                healthContent.classList.add('active');
+              }
             }
+          } else {
+            console.error('Modal not found!');
           }
         }
 
+        // Удаляем все старые обработчики
+        const newBtn = underwritingBtn.cloneNode(true);
+        underwritingBtn.parentNode.replaceChild(newBtn, underwritingBtn);
+
         // Touch-обработчики
-        underwritingBtn.addEventListener('touchstart', function(e) {
+        newBtn.addEventListener('touchstart', function(e) {
+          console.log('Touch start on underwriting button');
           e.preventDefault();
           e.stopPropagation();
           this.style.transform = 'scale(0.95)';
           this.style.opacity = '0.8';
         }, { passive: false });
 
-        underwritingBtn.addEventListener('touchend', function(e) {
+        newBtn.addEventListener('touchend', function(e) {
+          console.log('Touch end on underwriting button');
           e.preventDefault();
           e.stopPropagation();
           this.style.transform = 'scale(1)';
@@ -565,17 +589,25 @@
           openModal();
         }, { passive: false });
 
-        underwritingBtn.addEventListener('touchcancel', function(e) {
+        newBtn.addEventListener('touchcancel', function(e) {
           this.style.transform = 'scale(1)';
           this.style.opacity = '1';
         });
 
         // Click-обработчик для десктопов
-        underwritingBtn.addEventListener('click', function(e) {
+        newBtn.addEventListener('click', function(e) {
+          console.log('Click on underwriting button');
           e.preventDefault();
           e.stopPropagation();
           openModal();
         });
+
+        // Также добавляем обработчик mousedown для надежности
+        newBtn.addEventListener('mousedown', function(e) {
+          e.preventDefault();
+        });
+      } else {
+        console.error('Underwriting button not found!');
       }
 
       // Клик для десктопов
@@ -599,7 +631,11 @@
         }
 
         // Проверяем, загружены ли скрипты
-        if (typeof handleClientRequest === 'undefined') {
+        // Используем processClientRequest как в десктопной версии, если доступна, иначе handleClientRequest
+        const processFunction = typeof processClientRequest !== 'undefined' ? processClientRequest : 
+                                (typeof handleClientRequest !== 'undefined' ? handleClientRequest : null);
+
+        if (!processFunction) {
           showError('Система расчетов загружается. Попробуйте еще раз через секунду.');
           return;
         }
@@ -609,8 +645,26 @@
         calculateBtn.innerHTML = '<span class="loading">⏳</span> Рассчитываем...';
 
         try {
-          const result = handleClientRequest(message);
-          resultsContent.innerHTML = result.replace(/\n/g, '<br>');
+          // Используем async/await если функция асинхронная, иначе синхронный вызов
+          let result;
+          if (typeof processFunction === 'function' && processFunction.constructor.name === 'AsyncFunction') {
+            result = await processFunction(message);
+          } else {
+            result = processFunction(message);
+          }
+
+          // Обрабатываем результат - если это строка с HTML, используем как есть, иначе конвертируем переносы строк
+          if (result && typeof result === 'string') {
+            // Если результат уже содержит HTML теги, используем как есть
+            if (result.includes('<') && result.includes('>')) {
+              resultsContent.innerHTML = result;
+            } else {
+              resultsContent.innerHTML = result.replace(/\n/g, '<br>');
+            }
+          } else {
+            resultsContent.innerHTML = String(result).replace(/\n/g, '<br>');
+          }
+          
           resultsSection.style.display = 'block';
 
           // Прокрутка к результатам
@@ -650,11 +704,21 @@
 
     // Инициализация после загрузки всех скриптов
     function checkScriptsLoaded() {
-      if (typeof handleClientRequest !== 'undefined' &&
-          typeof parseTextToObject !== 'undefined' &&
-          typeof performCalculations !== 'undefined') {
+      // Проверяем наличие основных функций (processClientRequest или handleClientRequest)
+      const hasProcessFunction = typeof processClientRequest !== 'undefined' || typeof handleClientRequest !== 'undefined';
+      const hasParser = typeof parseTextToObject !== 'undefined';
+      const hasCalculator = typeof performCalculations !== 'undefined';
+      
+      if (hasProcessFunction && hasParser && hasCalculator) {
+        console.log('All scripts loaded, initializing calculator');
         initMobileCalculator();
       } else {
+        console.log('Waiting for scripts...', {
+          processClientRequest: typeof processClientRequest,
+          handleClientRequest: typeof handleClientRequest,
+          parseTextToObject: typeof parseTextToObject,
+          performCalculations: typeof performCalculations
+        });
         setTimeout(checkScriptsLoaded, 100);
       }
     }
