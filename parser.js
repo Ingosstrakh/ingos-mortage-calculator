@@ -397,10 +397,29 @@ function extractBorrowers(text, contractDate = null) {
   found.forEach(borrower => {
     if (borrower.dob) {
       borrower.age = calculateAge(borrower.dob, contractDate);
+          // Парсим рост и вес из текста (формат: "рост 170 вес 85" или "170см 85кг")
+    const heightMatch = text.match(/\b(?:рост\s*)?(\d{2,3})\s*(?:см)?\b/i);
+    const weightMatch = text.match(/\b(?:вес\s*)?(\d{2,3})\s*(?:кг)?\b/i);
+    
+    if (heightMatch && heightMatch[1]) {
+      const height = Number(heightMatch[1]);
+      if (height >= 100 && height <= 250) { // разумный диапазон роста
+        borrower.height = height;
+      }
+    }
+    
+    if (weightMatch && weightMatch[1]) {
+      const weight = Number(weightMatch[1]);
+      if (weight >= 30 && weight <= 300) { // разумный диапазон веса
+        borrower.weight = weight;
+      }
+    }
+
     }
   });
 
   return found;
+      
 }
 
 
@@ -656,3 +675,4 @@ if (typeof window !== 'undefined') {
   window.parseTextToObject = parseTextToObject;
 
 }
+
