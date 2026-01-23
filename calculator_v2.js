@@ -489,6 +489,14 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
       // Для остальных банков тарифы по возрасту
       tariff = tariffTable[borrower.gender][borrower.age];
     }
+     // Андеррайтинг по росту и весу
+ const uwFactor = window.getUnderwritingFactor ? window.getUnderwritingFactor(borrower.age, data.height, data.weight) : 1.00;
+ if (uwFactor === 'МЕДО') {
+   // Медицинское обследование требуется — тариф не применяем, вообще его брать не можно
+   return null;
+ } else if (typeof uwFactor === 'number' && uwFactor !== 1.00) {
+   tariff = tariff * uwFactor;
+ }
 
     if (!tariff) {
       return null;
@@ -1749,3 +1757,4 @@ function calculateIFLAdditionalRisk(product, data, insuranceAmount) {
       return null;
   }
 }
+
