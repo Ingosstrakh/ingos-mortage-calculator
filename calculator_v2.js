@@ -390,9 +390,7 @@ function copyToClipboard(text) {
 // Расчет страхования жизни
 function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
   if (!data.borrowers || data.borrowers.length === 0) {
-    492
-      ;
-  }
+    return null;  }
 
   let totalPremium = 0;
   let totalPremiumWithDiscount = 0;
@@ -1755,5 +1753,6 @@ function calculateIFLAdditionalRisk(product, data, insuranceAmount) {
       return null;
   }
 }
+
 
 
