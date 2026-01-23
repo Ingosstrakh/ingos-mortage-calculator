@@ -387,6 +387,45 @@ function copyToClipboard(text) {
   }
 }
 
+
+// Функция медицинского андеррайтинга по ИМТ
+function calculateUnderwriting(age, height, weight) {
+  if (!height || !weight || height <= 0 || weight <= 0) {
+    return { result: 'standard', multiplier: 1.0, message: 'Стандартный риск' };
+  }
+
+  // Расчет ИМТ (Индекс Массы Тела)
+  const heightInMeters = height / 100;
+  const bmi = weight / (heightInMeters * heightInMeters);
+
+  // Логика андеррайтинга:
+  // ИМТ < 18.5: недостаточный вес - медобследование
+  // ИМТ 18.5-24.9: нормальный вес - стандартный риск
+  // ИМТ 25-29.9: избыточный вес - стандартный риск (до 30)
+  // ИМТ 30-34.9: ожирение 1 степени - стандартный риск или +25% (зависит от возраста)
+  // ИМТ 35-39.9: ожирение 2 степени - +25% или медобследование
+  // ИМТ >= 40: ожирение 3 степени - медобследование
+
+  if (bmi < 18.5) {
+    return { result: 'medical_exam', multiplier: 0, message: 'Требуется медицинское обследование (недостаточный вес, ИМТ < 18.5)', bmi: bmi };
+  } else if (bmi >= 18.5 && bmi < 30) {
+    return { result: 'standard', multiplier: 1.0, message: 'Стандартный риск', bmi: bmi };
+  } else if (bmi >= 30 && bmi < 35) {
+    // Ожирение 1 степени - зависит от возраста
+    if (age && age >= 50) {
+      return { result: 'increased_tariff', multiplier: 1.25, message: 'Повышающий тариф +25% (ожирение 1 ст., возраст 50+)', bmi: bmi };
+    } else {
+      return { result: 'standard', multiplier: 1.0, message: 'Стандартный риск', bmi: bmi };
+    }
+  } else if (bmi >= 35 && bmi < 40) {
+    // Ожирение 2 степени
+    return { result: 'increased_tariff', multiplier: 1.25, message: 'Повышающий тариф +25% (ожирение 2 ст.)', bmi: bmi };
+  } else {
+    // ИМТ >= 40 - ожирение 3 степени
+    return { result: 'medical_exam', multiplier: 0, message: 'Требуется медицинское обследование (ожирение 3 ст., ИМТ >= 40)', bmi: bmi };
+  }
+}
+
 // Расчет страхования жизни
 function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
   if (!data.borrowers || data.borrowers.length === 0) {
@@ -495,8 +534,12 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
     }
 
     const shareAmount = insuranceAmount * (borrower.share / 100);
-    const premium = Math.round(shareAmount * (tariff / 100) * 100) / 100;
+        
+    // Применяем андеррайтинг, если есть данные о росте и весе
+    const underwritingResult = calculateUnderwriting(borrower.age, borrower.height, borrower.weight);
+    console.log('Андеррайтинг для заемщика:', borrower, 'Результат:', underwritingResult);
     
+    const premium = Math.round(shareAmount * (tariff / 100) * underwritingResult.multiplier * 100) / 100;    
     // Применяем скидку: стандартная 20% (0.8) или кастомная из конфигурации банка
     let discountMultiplier = 0.8; // стандартная скидка 20%
     if (hasDiscount && bankConfig.discount_life_percent) {
@@ -1749,3 +1792,4 @@ function calculateIFLAdditionalRisk(product, data, insuranceAmount) {
       return null;
   }
 }
+
