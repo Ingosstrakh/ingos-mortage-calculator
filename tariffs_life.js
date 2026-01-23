@@ -298,8 +298,9 @@ if (typeof module !== "undefined") {
         LIFE_TARIFF_MKB,
         LIFE_TARIFF_GPB_OLD,
         LIFE_TARIFF_GPB_NEW,
-        LIFE_TARIFF_VTB_NEW
+        LIFE_TARIFF_VTB_NEW,
     
      getUnderwritingFactor};
 }
+
 
