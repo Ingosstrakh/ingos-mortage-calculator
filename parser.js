@@ -428,6 +428,8 @@ function parseTextToObject(rawText) {
     borrowers: [],
     confidence: 0.0,
     notes: []
+     height: null,
+     weight: null
   };
 
   // 1) Bank
@@ -564,6 +566,11 @@ function parseTextToObject(rawText) {
   }
 
   // Если есть явные упоминания - оставляем только их, без автоматического добавления
+ // 5.5) Height and Weight for underwriting
+ const heightMatch = text.match(/рост\s+(\d{2,3})\b/i);
+ result.height = heightMatch ? parseInt(heightMatch[1]) : null;
+ const weightMatch = text.match(/вес\s+(\d{2,3})\b/i);
+ result.weight = weightMatch ? parseInt(weightMatch[1]) : null;
 
   // 6) material
   if (/\bкирпич|блок|блоки|кирпичное\b/i.test(text)) result.material = 'brick';
@@ -656,3 +663,4 @@ if (typeof window !== 'undefined') {
   window.parseTextToObject = parseTextToObject;
 
 }
+
