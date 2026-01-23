@@ -217,64 +217,6 @@ const LIFE_TARIFF_VTB_NEW = {
     }
 };
 
-// ======================================================
-// Функция расчета коэффициента андеррайтинга по росту/весу
-// ======================================================
-function getUnderwritingFactor(age, height, weight) {
-  // Если нет роста/веса - не применяем андеррайтинг
-  if (height == null || weight == null) return 1.00;
-  
-  // Определяем возрастную группу
-  let ageGroup = null;
-  if (age >= 18 && age <= 30) ageGroup = 'young';
-  else if (age > 30 && age <= 45) ageGroup = 'middle';
-  else if (age > 45 && age <= 60) ageGroup = 'senior';
-  else if (age > 60) ageGroup = 'elderly';
-  else return 1.00; // некорректный возраст
-  
-  // Считаем BMI
-  const bmi = weight / (height * height / 10000);
-  
-  // Определяем категорию по BMI
-  let bmiCategory = null;
-  if (bmi < 18.5) bmiCategory = 'underweight';
-  else if (bmi >= 18.5 && bmi < 25) bmiCategory = 'normal';
-  else if (bmi >= 25 && bmi < 30) bmiCategory = 'overweight';
-  else if (bmi >= 30) bmiCategory = 'obese';
-  
-  // Таблица коэффициентов (возраст x BMI)
-  const underwritingTable = {
-    young: {
-      underweight: 1.25,
-      normal: 1.00,
-      overweight: 1.10,
-      obese: 'MEDО'
-    },
-    middle: {
-      underweight: 1.25,
-      normal: 1.00,
-      overweight: 1.15,
-      obese: 'МЕДО'
-    },
-    senior: {
-      underweight: 'МЕДО',
-      normal: 1.00,
-      overweight: 1.20,
-      obese: 'МЕДО'
-    },
-    elderly: {
-      underweight: 'МЕДО',
-      normal: 'МЕДО',
-      overweight: 'МЕДО',
-      obese: 'МЕДО'
-    }
-  };
-  
-  // Получаем коэффициент из таблицы
-  const factor = underwritingTable[ageGroup][bmiCategory];
-  return factor || 1.00;
-}
-
 // Экспорт
 // --------------------------------------
 if (typeof window !== "undefined") {
@@ -286,8 +228,7 @@ if (typeof window !== "undefined") {
     window.LIFE_TARIFF_GPB_OLD = LIFE_TARIFF_GPB_OLD;
     window.LIFE_TARIFF_GPB_NEW = LIFE_TARIFF_GPB_NEW;
     window.LIFE_TARIFF_VTB_NEW = LIFE_TARIFF_VTB_NEW;
-
- window.getUnderwritingFactor = getUnderwritingFactor;}
+}
 
 if (typeof module !== "undefined") {
     module.exports = {
@@ -298,9 +239,6 @@ if (typeof module !== "undefined") {
         LIFE_TARIFF_MKB,
         LIFE_TARIFF_GPB_OLD,
         LIFE_TARIFF_GPB_NEW,
-        LIFE_TARIFF_VTB_NEW,
-    
-     getUnderwritingFactor};
+        LIFE_TARIFF_VTB_NEW
+    };
 }
-
-
