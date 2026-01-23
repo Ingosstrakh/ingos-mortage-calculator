@@ -390,7 +390,8 @@ function copyToClipboard(text) {
 // Расчет страхования жизни
 function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
   if (!data.borrowers || data.borrowers.length === 0) {
-    return null;  }
+    return null;
+  }
 
   let totalPremium = 0;
   let totalPremiumWithDiscount = 0;
@@ -488,16 +489,6 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
       // Для остальных банков тарифы по возрасту
       tariff = tariffTable[borrower.gender][borrower.age];
     }
-     // Андеррайтинг по росту и весу
- const uwFactor = window.getUnderwritingFactor ? window.getUnderwritingFactor(borrower.age, data.height, data.weight) : 1.00;
-if (typeof uwFactor === 'number' && uwFactor !== 1.00) {
-   tariff = tariff * uwFactor;
-              }
- }
-                                     if (typeof uwFactor === 'string' && uwFactor === 'МЕДО') {
-                    // МЕДО - требуется медицинское обследование
-                    tariff = 0; // Медицинская экспертиза требуется
-                }
 
     if (!tariff) {
       return null;
@@ -1758,9 +1749,3 @@ function calculateIFLAdditionalRisk(product, data, insuranceAmount) {
       return null;
   }
 }
-
-
-
-
-
-
