@@ -490,9 +490,14 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
     }
      // Андеррайтинг по росту и весу
  const uwFactor = window.getUnderwritingFactor ? window.getUnderwritingFactor(borrower.age, data.height, data.weight) : 1.00;
- } else if (typeof uwFactor === 'number' && uwFactor !== 1.00) {
+if (typeof uwFactor === 'number' && uwFactor !== 1.00) {
    tariff = tariff * uwFactor;
+              }
  }
+                                     if (typeof uwFactor === 'string' && uwFactor === 'МЕДО') {
+                    // МЕДО - требуется медицинское обследование
+                    tariff = 0; // Медицинская экспертиза требуется
+                }
 
     if (!tariff) {
       return null;
@@ -1753,6 +1758,7 @@ function calculateIFLAdditionalRisk(product, data, insuranceAmount) {
       return null;
   }
 }
+
 
 
 
