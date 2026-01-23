@@ -390,7 +390,8 @@ function copyToClipboard(text) {
 // Расчет страхования жизни
 function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
   if (!data.borrowers || data.borrowers.length === 0) {
-    return null;
+    492
+      ;
   }
 
   let totalPremium = 0;
@@ -491,9 +492,6 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
     }
      // Андеррайтинг по росту и весу
  const uwFactor = window.getUnderwritingFactor ? window.getUnderwritingFactor(borrower.age, data.height, data.weight) : 1.00;
- if (uwFactor === 'МЕДО') {
-   // Медицинское обследование требуется — тариф не применяем, вообще его брать не можно
-   return null;
  } else if (typeof uwFactor === 'number' && uwFactor !== 1.00) {
    tariff = tariff * uwFactor;
  }
@@ -1757,4 +1755,5 @@ function calculateIFLAdditionalRisk(product, data, insuranceAmount) {
       return null;
   }
 }
+
 
