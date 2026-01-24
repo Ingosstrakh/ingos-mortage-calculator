@@ -654,7 +654,6 @@
           }
 
           // Обрабатываем результат - если это строка с HTML, используем как есть, иначе конвертируем переносы строк
-          
           if (result && typeof result === 'string') {
             // Если результат уже содержит HTML теги, используем как есть
             if (result.includes('<') && result.includes('>')) {
@@ -663,8 +662,7 @@
               resultsContent.innerHTML = result.replace(/\n/g, '<br>');
             }
           } else {
-            resultsContent.ем 662
-              = String(result).replace(/\n/g, '<br>');
+            resultsContent.innerHTML = String(result).replace(/\n/g, '<br>');
           }
           
           resultsSection.style.display = 'block';
@@ -1217,13 +1215,4 @@
     });
   </script>
 </body>
-
-    <!-- Подключение скриптов калькулятора -->
-    <script src="config_banks.js"></script>
-    <script src="parser.js"></script>
-    <script src="tariffs_property.js"></script>
-    <script src="tariffs_life.js"></script>
-    <script src="tariffs_ifl.js"></script>
-    <script src="calculator_v2.js"></script>
 </html>
-
