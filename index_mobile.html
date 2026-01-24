@@ -640,8 +640,8 @@
 
         // Проверяем, загружены ли скрипты
         // Используем processClientRequest как в десктопной версии, если доступна, иначе handleClientRequest
-        const processFunction = typeof handleClientRequest !== 'undefined' ? processClientRequest : 
-                                (typeof processClientRequest 'undefined' ? processClientRequest : null);
+        const processFunction = typeof processClientRequest !== 'undefined' ? processClientRequest : 
+                                (typeof handleClientRequest !== 'undefined' ? handleClientRequest : null);
 
         if (!processFunction) {
           showError('Система расчетов загружается. Попробуйте еще раз через секунду.');
@@ -1224,6 +1224,5 @@
   </script>
 </body>
 </html>
-
 
 
