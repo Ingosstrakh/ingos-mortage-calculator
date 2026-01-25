@@ -158,8 +158,6 @@ function parseDateDMY(dateStr) {
     const d = new Date(iso);
     if (!isNaN(d)) return d;
   }
-  const d = new Date(dateStr);
-  return isNaN(d) ? null : d;
 }
 
 // Корректный расчет возраста с учетом дня рождения и даты договора
@@ -675,4 +673,5 @@ if (typeof window !== 'undefined') {
   window.parseTextToObject = parseTextToObject;
 
 }
+
 
