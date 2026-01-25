@@ -154,10 +154,16 @@ function parseDateDMY(dateStr) {
   if (typeof dateStr !== 'string') return null;
   const parts = dateStr.split('.');
   if (parts.length === 3) {
-    const iso = `${parts[2]}-${String(parts[1]).padStart(2, '0')}-${String(parts[0]).padStart(2, '0')}`;
-    const d = new Date(iso);
-    if (!isNaN(d)) return d;
+    const day = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1; // месяцы 0-11
+    const year = parseInt(parts[2], 10);
+    const d = new Date(year, month, day);
+    if (!isNaN(d.getTime()) && d.getDate() === day && d.getMonth() === month) {
+      return d;
+    }
   }
+  const d = new Date(dateStr);
+  return isNaN(d) ? null : d;
 }
 
 // Корректный расчет возраста с учетом дня рождения и даты договора
@@ -673,5 +679,6 @@ if (typeof window !== 'undefined') {
   window.parseTextToObject = parseTextToObject;
 
 }
+
 
 
