@@ -152,18 +152,35 @@ function findLargeNumbers(text) {
 function parseDateDMY(dateStr) {
   if (!dateStr) return null;
   if (typeof dateStr !== 'string') return null;
+  
+  // Всегда пытаемся парсить как DD.MM.YYYY (русский формат)
   const parts = dateStr.split('.');
   if (parts.length === 3) {
     const day = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10) - 1; // месяцы 0-11
+    const month = parseInt(parts[1], 10);
     const year = parseInt(parts[2], 10);
-    const d = new Date(year, month, day);
-    if (!isNaN(d.getTime()) && d.getDate() === day && d.getMonth() === month) {
-      return d;
+    
+    // Проверяем валидность: день 1-31, месяц 1-12, год разумный
+    if (day >= 1 && day <= 31 && month >= 1 && month <= 12 && year >= 1900 && year <= 2100) {
+      // Создаем дату в формате YYYY-MM-DD (ISO), но используем локальное время
+      // Важно: используем Date(year, month-1, day) для локального времени, а не строку ISO
+      const d = new Date(year, month - 1, day);
+      // Проверяем, что дата валидна (не перескочила на следующий месяц из-за невалидного дня)
+      if (d.getFullYear() === year && d.getMonth() === month - 1 && d.getDate() === day) {
+        return d;
+      }
     }
   }
+  
+  // Если не удалось распарсить как DD.MM.YYYY, пробуем стандартный Date
+  // Но это может быть проблематично, поэтому лучше вернуть null
   const d = new Date(dateStr);
-  return isNaN(d) ? null : d;
+  // Проверяем, что это не невалидная дата
+  if (!isNaN(d.getTime())) {
+    return d;
+  }
+  
+  return null;
 }
 
 // Корректный расчет возраста с учетом дня рождения и даты договора
@@ -208,7 +225,8 @@ function extractCreditDate(text) {
   // Ищем все возможные комбинации и берем последнюю найденную дату
   const patterns = [
     /кд\s+от\s+(\d{1,2}\.\d{1,2}\.\d{4})/ig,
-    /кд\.\s*(\d{1,2}\.\d{1,2}\.\d{4})/ig,  // "кд. 21.02.2025"
+    /кд\.\s*(\d{1,2}\.\d{1,2}\.\d{4})/ig,  // "кд. 21.02.2025" или "кд.02.12.2025"
+    /кд\.(\d{1,2}\.\d{1,2}\.\d{4})/ig,  // "кд.02.12.2025" (без пробела после точки)
     /кд\.\s*(\d{1,2}\.\d{1,2}\.\d{4})\s*г\.?/ig,  // "кд. 21.02.2025г."
     /кд[^\d]{1,10}(\d{1,2}\.\d{1,2}\.\d{4})/ig,
     /кредитный\s+договор\s+от\s+(\d{1,2}\.\d{1,2}\.\d{4})/ig,
@@ -401,29 +419,10 @@ function extractBorrowers(text, contractDate = null) {
   found.forEach(borrower => {
     if (borrower.dob) {
       borrower.age = calculateAge(borrower.dob, contractDate);
-          // Парсим рост и вес из текста (формат: "рост 170 вес 85" или "170см 85кг")
-    const heightMatch = text.match(/\b(?:рост\s*)?(\d{2,3})\s*(?:см)?\b/i);
-    const weightMatch = text.match(/\b(?:вес\s*)?(\d{2,3})\s*(?:кг)?\b/i);
-    
-    if (heightMatch && heightMatch[1]) {
-      const height = Number(heightMatch[1]);
-      if (height >= 100 && height <= 250) { // разумный диапазон роста
-        borrower.height = height;
-      }
-    }
-    
-    if (weightMatch && weightMatch[1]) {
-      const weight = Number(weightMatch[1]);
-      if (weight >= 30 && weight <= 300) { // разумный диапазон веса
-        borrower.weight = weight;
-      }
-    }
-
     }
   });
 
   return found;
-      
 }
 
 
@@ -679,6 +678,3 @@ if (typeof window !== 'undefined') {
   window.parseTextToObject = parseTextToObject;
 
 }
-
-
-
