@@ -154,30 +154,64 @@ function parseDateDMY(dateStr) {
   if (typeof dateStr !== 'string') return null;
   
   // Всегда пытаемся парсить как DD.MM.YYYY (русский формат)
+  // Важно: НЕ используем new Date(dateStr) напрямую, так как он может интерпретировать
+  // дату в американском формате MM/DD/YYYY, что приведет к ошибкам для дней > 12
   const parts = dateStr.split('.');
   if (parts.length === 3) {
-    const day = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10);
-    const year = parseInt(parts[2], 10);
+    const dayStr = parts[0].trim();
+    const monthStr = parts[1].trim();
+    const yearStr = parts[2].trim();
+    
+    const day = parseInt(dayStr, 10);
+    const month = parseInt(monthStr, 10);
+    const year = parseInt(yearStr, 10);
+    
+    // Проверяем, что парсинг прошел успешно (не NaN)
+    if (isNaN(day) || isNaN(month) || isNaN(year)) {
+      console.warn('Failed to parse date parts:', {dayStr, monthStr, yearStr, day, month, year});
+      return null;
+    }
     
     // Проверяем валидность: день 1-31, месяц 1-12, год разумный
     if (day >= 1 && day <= 31 && month >= 1 && month <= 12 && year >= 1900 && year <= 2100) {
-      // Создаем дату в формате YYYY-MM-DD (ISO), но используем локальное время
-      // Важно: используем Date(year, month-1, day) для локального времени, а не строку ISO
+      // Создаем дату используя конструктор Date(year, month-1, day) для локального времени
+      // Это гарантирует правильную интерпретацию DD.MM.YYYY (не MM/DD/YYYY)
+      // Конструктор Date(year, month, day) всегда интерпретирует как локальное время
       const d = new Date(year, month - 1, day);
-      // Проверяем, что дата валидна (не перескочила на следующий месяц из-за невалидного дня)
+      
+      // Проверяем, что дата валидна (не Invalid Date)
+      if (isNaN(d.getTime())) {
+        console.warn('Invalid date created:', {year, month, day, dateStr});
+        return null;
+      }
+      
+      // Проверяем, что дата не перескочила на следующий месяц из-за невалидного дня
+      // Например, 31.02.2000 должно стать 02.03.2000, что невалидно
       if (d.getFullYear() === year && d.getMonth() === month - 1 && d.getDate() === day) {
         return d;
+      } else {
+        console.warn('Date validation failed:', {
+          input: dateStr,
+          parsed: {day, month, year},
+          created: {year: d.getFullYear(), month: d.getMonth() + 1, day: d.getDate()}
+        });
+        return null;
       }
+    } else {
+      console.warn('Date parts out of range:', {day, month, year, dateStr});
+      return null;
     }
   }
   
   // Если не удалось распарсить как DD.MM.YYYY, пробуем стандартный Date
-  // Но это может быть проблематично, поэтому лучше вернуть null
-  const d = new Date(dateStr);
-  // Проверяем, что это не невалидная дата
-  if (!isNaN(d.getTime())) {
-    return d;
+  // Но это может быть проблематично для дат > 12, поэтому лучше вернуть null
+  // Только если строка не содержит точку (не наш формат)
+  if (!dateStr.includes('.')) {
+    const d = new Date(dateStr);
+    // Проверяем, что это не невалидная дата
+    if (!isNaN(d.getTime())) {
+      return d;
+    }
   }
   
   return null;
@@ -185,14 +219,44 @@ function parseDateDMY(dateStr) {
 
 // Корректный расчет возраста с учетом дня рождения и даты договора
 function calculateAge(dobStr, asOfDateStr = null) {
+  if (!dobStr) return null;
+  
   const dob = parseDateDMY(dobStr);
-  if (!dob) return null;
-  const ref = parseDateDMY(asOfDateStr) || new Date();
+  // Проверяем, что дата валидна (не null и не Invalid Date)
+  if (!dob || isNaN(dob.getTime())) {
+    console.warn('Failed to parse date of birth:', dobStr, 'parsed as:', dob);
+    return null;
+  }
+  
+  // Получаем дату для расчета возраста (дата договора или текущая дата)
+  let ref = null;
+  if (asOfDateStr) {
+    ref = parseDateDMY(asOfDateStr);
+    // Если не удалось распарсить дату договора, используем текущую дату
+    if (!ref || isNaN(ref.getTime())) {
+      ref = new Date();
+    }
+  } else {
+    ref = new Date();
+  }
+  
+  // Проверяем, что reference date валидна
+  if (!ref || isNaN(ref.getTime())) {
+    ref = new Date();
+  }
+  
   let age = ref.getFullYear() - dob.getFullYear();
   const m = ref.getMonth() - dob.getMonth();
   if (m < 0 || (m === 0 && ref.getDate() < dob.getDate())) {
     age -= 1;
   }
+  
+  // Проверяем, что возраст получился разумным
+  if (isNaN(age) || age < 0 || age > 150) {
+    console.warn('Invalid age calculated:', age, 'for date:', dobStr);
+    return null;
+  }
+  
   return age;
 }
 
