@@ -645,12 +645,74 @@
         calculateBtn.innerHTML = '<span class="loading">⏳</span> Рассчитываем...';
 
         try {
+          // Диагностика: проверяем парсинг перед расчетом
+          if (typeof parseTextToObject !== 'undefined') {
+            const parsedData = parseTextToObject(message);
+            console.log('Разобранные данные:', parsedData);
+            if (parsedData && parsedData.borrowers && parsedData.borrowers.length > 0) {
+              parsedData.borrowers.forEach((borrower, index) => {
+                console.log(`Заемщик ${index + 1}:`, {
+                  gender: borrower.gender,
+                  dob: borrower.dob,
+                  age: borrower.age,
+                  raw: borrower.raw
+                });
+                if (borrower.age === null || isNaN(borrower.age)) {
+                  console.warn(`⚠️ Возраст заемщика ${index + 1} не рассчитан! DOB: ${borrower.dob}`);
+                  // Пытаемся пересчитать возраст
+                  if (borrower.dob && typeof calculateAge !== 'undefined') {
+                    const recalculatedAge = calculateAge(borrower.dob, parsedData.contractDate);
+                    console.log(`Попытка пересчета возраста: ${recalculatedAge}`);
+                    if (recalculatedAge !== null && !isNaN(recalculatedAge)) {
+                      borrower.age = recalculatedAge;
+                      console.log(`✓ Возраст исправлен: ${borrower.age}`);
+                    }
+                  }
+                }
+              });
+            }
+          }
+
           // Используем async/await если функция асинхронная, иначе синхронный вызов
           let result;
           if (typeof processFunction === 'function' && processFunction.constructor.name === 'AsyncFunction') {
             result = await processFunction(message);
           } else {
             result = processFunction(message);
+          }
+
+          // Проверяем результат на наличие проблемы с тарифом = 0
+          if (result && typeof result === 'string') {
+            // Если в результате есть "тариф/ взнос 0" или "тариф 0", пытаемся пересчитать
+            if (result.includes('тариф') && result.match(/тариф[^0-9]*0[^0-9]/i)) {
+              console.warn('⚠️ Обнаружен тариф = 0, пытаемся пересчитать...');
+              
+              // Парсим данные еще раз и пытаемся пересчитать
+              if (typeof parseTextToObject !== 'undefined' && typeof performCalculations !== 'undefined') {
+                const parsedData = parseTextToObject(message);
+                if (parsedData && parsedData.borrowers && parsedData.borrowers.length > 0) {
+                  // Пересчитываем возраст для всех заемщиков
+                  parsedData.borrowers.forEach(borrower => {
+                    if ((!borrower.age || isNaN(borrower.age)) && borrower.dob && typeof calculateAge !== 'undefined') {
+                      borrower.age = calculateAge(borrower.dob, parsedData.contractDate);
+                      console.log(`Пересчитан возраст для ${borrower.gender === 'm' ? 'мужчины' : 'женщины'}: ${borrower.age}`);
+                    }
+                  });
+                  
+                  // Пытаемся пересчитать с исправленными данными
+                  try {
+                    const recalculatedResult = performCalculations(parsedData);
+                    if (recalculatedResult && typeof recalculatedResult === 'string' && 
+                        !recalculatedResult.match(/тариф[^0-9]*0[^0-9]/i)) {
+                      console.log('✓ Пересчет успешен, используем новый результат');
+                      result = recalculatedResult;
+                    }
+                  } catch (recalcError) {
+                    console.error('Ошибка при пересчете:', recalcError);
+                  }
+                }
+              }
+            }
           }
 
           // Обрабатываем результат - если это строка с HTML, используем как есть, иначе конвертируем переносы строк
@@ -735,13 +797,241 @@
   </script>
 
   <!-- Подключаем данные и логику -->
-  <script src="config_banks.js"></script>
-  <script src="tariffs_life.js"></script>
-  <script src="tariffs_property.js"></script>
-  <script src="tariffs_ifl.js"></script>
-  <script src="parser.js"></script>
-  <script src="calculator_v2.js"></script>
-  <script src="openai.js"></script>
+  <script src="config_banks.js?v=11"></script>
+  <script src="tariffs_life.js?v=11"></script>
+  <script src="tariffs_property.js?v=11"></script>
+  <script src="tariffs_ifl.js?v=11"></script>
+  <script src="parser.js?v=11"></script>
+  <script src="calculator_v2.js?v=11"></script>
+  <script src="openai.js?v=11"></script>
+
+  <!-- Патч для исправления парсинга дат в формате DD.MM.YYYY -->
+  <script>
+    // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: гарантируем, что parseDateDMY всегда парсит в формате DD.MM.YYYY
+    // Проблема: браузер может интерпретировать "14.01.1999" как MM.DD.YYYY через new Date(dateStr)
+    // Решение: переопределяем parseDateDMY ДО загрузки parser.js и НИКОГДА не используем new Date(dateStr)
+    (function() {
+      // Сохраняем оригинальную функцию, если она уже существует
+      let originalParseDateDMY = null;
+      
+      // Переопределяем функцию СРАЗУ, чтобы перехватить ее до использования
+      function createFixedParseDateDMY() {
+        return function(dateStr) {
+          if (!dateStr) return null;
+          if (typeof dateStr !== 'string') return null;
+
+          // Убираем пробелы
+          dateStr = dateStr.trim();
+
+          // ВСЕГДА пытаемся парсить как DD.MM.YYYY (русский формат)
+          // НИКОГДА не используем new Date(dateStr) напрямую!
+          const parts = dateStr.split('.');
+          if (parts.length === 3) {
+            const dayStr = parts[0].trim();
+            const monthStr = parts[1].trim();
+            const yearStr = parts[2].trim();
+
+            const day = parseInt(dayStr, 10);
+            const month = parseInt(monthStr, 10);
+            const year = parseInt(yearStr, 10);
+
+            // Проверяем, что парсинг прошел успешно (не NaN)
+            if (isNaN(day) || isNaN(month) || isNaN(year)) {
+              console.warn('Failed to parse date parts:', {dayStr, monthStr, yearStr, day, month, year, dateStr});
+              // Если не удалось распарсить, пробуем оригинальную функцию
+              if (originalParseDateDMY) {
+                return originalParseDateDMY(dateStr);
+              }
+              return null;
+            }
+
+            // ВАЖНО: Проверяем валидность ДО создания даты
+            // Если день > 12, это точно DD.MM.YYYY (месяц не может быть > 12)
+            // Если день <= 12, но месяц > 12, это тоже DD.MM.YYYY
+            const isDDMMYYYY = day > 12 || month > 12 || (day <= 12 && month <= 12);
+
+            if (day >= 1 && day <= 31 && month >= 1 && month <= 12 && year >= 1900 && year <= 2100) {
+              // ВСЕГДА используем конструктор Date(year, month-1, day) для правильной интерпретации DD.MM.YYYY
+              // НИКОГДА не используем new Date(dateStr) - это может интерпретировать как MM.DD.YYYY!
+              const d = new Date(year, month - 1, day);
+
+              // Проверяем, что дата валидна (не Invalid Date)
+              if (isNaN(d.getTime())) {
+                console.warn('Invalid date created:', {year, month, day, dateStr, isDDMMYYYY});
+                if (originalParseDateDMY) {
+                  return originalParseDateDMY(dateStr);
+                }
+                return null;
+              }
+
+              // Проверяем, что дата не перескочила на следующий месяц из-за невалидного дня
+              if (d.getFullYear() === year && d.getMonth() === month - 1 && d.getDate() === day) {
+                console.log('✓ Дата успешно распарсена как DD.MM.YYYY:', dateStr, '->', d.toLocaleDateString('ru-RU'));
+                return d;
+              } else {
+                console.warn('Date validation failed:', {
+                  input: dateStr,
+                  parsed: {day, month, year},
+                  created: {year: d.getFullYear(), month: d.getMonth() + 1, day: d.getDate()}
+                });
+                if (originalParseDateDMY) {
+                  return originalParseDateDMY(dateStr);
+                }
+                return null;
+              }
+            } else {
+              console.warn('Date parts out of range:', {day, month, year, dateStr});
+              if (originalParseDateDMY) {
+                return originalParseDateDMY(dateStr);
+              }
+              return null;
+            }
+          }
+
+          // Если строка не содержит точки или не в формате DD.MM.YYYY, пробуем оригинальную функцию
+          if (originalParseDateDMY) {
+            return originalParseDateDMY(dateStr);
+          }
+          return null;
+        };
+      }
+
+      // Применяем патч немедленно
+      function applyDateParsingFix() {
+        // Если parseDateDMY уже существует, сохраняем оригинальную версию
+        if (typeof parseDateDMY !== 'undefined') {
+          originalParseDateDMY = parseDateDMY;
+        }
+        
+        // Переопределяем функцию
+        window.parseDateDMY = createFixedParseDateDMY();
+        console.log('✓ Патч парсинга дат применен: parseDateDMY теперь всегда парсит в формате DD.MM.YYYY');
+      }
+
+      // Применяем патч немедленно и повторно после загрузки скриптов
+      applyDateParsingFix();
+      
+      // Также применяем после загрузки DOM и скриптов (на случай, если parser.js загрузится позже)
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+          setTimeout(applyDateParsingFix, 100);
+          setTimeout(applyDateParsingFix, 500);
+        });
+      } else {
+        setTimeout(applyDateParsingFix, 100);
+        setTimeout(applyDateParsingFix, 500);
+      }
+    })();
+
+    // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: parseTextToObject - исправляем извлечение дат из строк вида "жен.14.01.1999"
+    // Проблема: "жен.14.01.1999" может интерпретироваться как MM.DD.YYYY (месяц=14 невалиден)
+    // Решение: добавляем пробел перед датой, если день > 12
+    (function() {
+      let originalParseTextToObject = null;
+      
+      function applyTextParsingFix() {
+        // Если parseTextToObject уже существует, сохраняем оригинальную версию
+        if (typeof parseTextToObject !== 'undefined' && !originalParseTextToObject) {
+          originalParseTextToObject = parseTextToObject;
+        }
+        
+        // Если функция еще не загружена, ждем
+        if (typeof parseTextToObject === 'undefined') {
+          setTimeout(applyTextParsingFix, 100);
+          return;
+        }
+
+        // Переопределяем функцию
+        window.parseTextToObject = function(text) {
+          if (!text || typeof text !== 'string') {
+            if (originalParseTextToObject) {
+              return originalParseTextToObject(text);
+            }
+            return null;
+          }
+
+        // Переопределяем функцию для правильной обработки дат после точки
+        window.parseTextToObject = function(text) {
+          if (!text || typeof text !== 'string') {
+            return originalParseTextToObject(text);
+          }
+
+          // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Исправляем формат дат ДО парсинга
+          // Проблема: браузер может интерпретировать "14.01.1999" как MM.DD.YYYY (месяц=14 невалиден)
+          // Решение: всегда добавляем пробел перед датой, если она идет после точки
+          
+          // Шаг 1: Исправляем "жен.14.01.1999" -> "жен 14.01.1999"
+          // Ищем паттерны вида "жен.DD.MM.YYYY" или "муж.DD.MM.YYYY"
+          let fixedText = text.replace(/\b(жен|муж)\.(\d{1,2}\.\d{1,2}\.\d{4})\b/gi, function(match, gender, date) {
+            console.log('Исправление формата даты после пола:', match, '->', gender + ' ' + date);
+            return gender + ' ' + date;
+          });
+
+          // Шаг 2: Исправляем любые даты после точки: "слово.14.01.1999" -> "слово 14.01.1999"
+          // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Если первое число > 12, это ТОЧНО день в формате DD.MM.YYYY
+          // Примеры: "жен.14.01.1999" -> "жен 14.01.1999" (14 > 12, значит это день)
+          fixedText = fixedText.replace(/([а-яёА-ЯЁa-zA-Z0-9\-]+)\.(\d{1,2}\.\d{1,2}\.\d{4})/g, function(match, word, date) {
+            const dateParts = date.split('.');
+            if (dateParts.length === 3) {
+              const firstNum = parseInt(dateParts[0], 10);
+              const secondNum = parseInt(dateParts[1], 10);
+              const year = parseInt(dateParts[2], 10);
+              
+              // КРИТИЧЕСКАЯ ПРОВЕРКА: Если первое число > 12, это ТОЧНО день в формате DD.MM.YYYY
+              // Месяц не может быть > 12, поэтому это точно DD.MM.YYYY
+              if (firstNum > 12 && 
+                  firstNum >= 1 && firstNum <= 31 && 
+                  secondNum >= 1 && secondNum <= 12 && 
+                  year >= 1900 && year <= 2100) {
+                console.log('✓ Исправление формата даты (день > 12):', match, '->', word + ' ' + date);
+                return word + ' ' + date;
+              }
+              
+              // Если первое число <= 12, но это идет после слова (не начало строки), 
+              // то это скорее всего день в формате DD.MM.YYYY (русский формат)
+              // Пример: "жен.01.14.1999" -> "жен 01.14.1999" (хотя это странный формат)
+              if (firstNum >= 1 && firstNum <= 12 && 
+                  secondNum >= 1 && secondNum <= 12 && 
+                  year >= 1900 && year <= 2100 &&
+                  word.length > 0 && /[а-яёА-ЯЁa-zA-Z]/.test(word)) {
+                // В русском формате обычно используется DD.MM.YYYY, даже если день <= 12
+                // Поэтому если дата идет после слова, это скорее всего DD.MM.YYYY
+                console.log('✓ Исправление формата даты после слова (день <= 12, но после слова):', match, '->', word + ' ' + date);
+                return word + ' ' + date;
+              }
+            }
+            return match;
+          });
+
+          // Если текст был изменен, логируем это
+          if (fixedText !== text) {
+            console.log('Исправлен формат даты:', text, '->', fixedText);
+          }
+
+          // Вызываем оригинальную функцию с исправленным текстом
+          if (originalParseTextToObject) {
+            return originalParseTextToObject(fixedText);
+          }
+          return null;
+        };
+
+        console.log('✓ Патч парсинга текста применен: даты после точки теперь обрабатываются правильно');
+      }
+
+      // Применяем патч немедленно и повторно после загрузки скриптов
+      applyTextParsingFix();
+      
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+          setTimeout(applyTextParsingFix, 100);
+          setTimeout(applyTextParsingFix, 500);
+        });
+      } else {
+        setTimeout(applyTextParsingFix, 100);
+        setTimeout(applyTextParsingFix, 500);
+      }
+    })();
+  </script>
 
   <!-- JavaScript для андеррайтинга -->
   <script>
