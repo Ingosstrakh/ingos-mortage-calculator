@@ -351,6 +351,7 @@ function detectBank(text) {
 // Форматы, которые мы поддерживаем:
 // "муж, 07.01.1985", "она 25.11.1992", "он - 23.09.1975", "он - 50% - 13.04.1968"
 // также "муж 60% - 13.04.1980", "она - 50% - 02.05.1968"
+// Параметр contractDate не используется для расчёта возраста: возраст всегда от текущей даты (для тарифа жизни).
 function extractBorrowers(text, contractDate = null) {
   const found = [];
   const lines = text.split(/[\n\r]/g).map(l => l.trim()).filter(Boolean);
@@ -479,10 +480,10 @@ function extractBorrowers(text, contractDate = null) {
     found[0].share = found[0].share || 100;
   }
 
-  // 4) Добавляем возраст
+  // 4) Добавляем возраст (всегда от текущей даты — для тарифа страхования жизни нужен текущий возраст)
   found.forEach(borrower => {
     if (borrower.dob) {
-      borrower.age = calculateAge(borrower.dob, contractDate);
+      borrower.age = calculateAge(borrower.dob, null);
     }
   });
 
@@ -573,7 +574,8 @@ function parseTextToObject(rawText) {
   }
 
   // 4) borrowers (перенесено вверх для правильного определения рисков)
-  result.borrowers = extractBorrowers(text, result.contractDate);
+  // Возраст заемщика считаем от ТЕКУЩЕЙ даты (не от даты выдачи кредита), иначе тариф жизни неверный
+  result.borrowers = extractBorrowers(text, null);
 
   // 4.1) Дополнительная проверка на наличие слов, указывающих на заемщиков
   // Если есть слова "муж"/"жен"/"мужчина"/"женщина" без даты, создаем заемщика
