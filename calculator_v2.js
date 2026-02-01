@@ -297,7 +297,17 @@ function performCalculations(data) {
     const isMultipleBorrowers = data.borrowers && data.borrowers.length > 1;
     lifeResult.borrowers.forEach((borrower, index) => {
       const borrowerLabel = isMultipleBorrowers ? `заемщик ${index + 1}` : 'заемщик';
-      output += `жизнь ${borrowerLabel} ${borrower.premium.toLocaleString('ru-RU')}<br>`;
+      output += `жизнь ${borrowerLabel} ${borrower.premium.toLocaleString('ru-RU')}`;
+      
+      // Добавляем сообщение о медицинском андеррайтинге сразу после премии жизни (только для первого заемщика)
+      if (index === 0) {
+        if (lifeResult.requiresMedicalExam) {
+          output += ` <span style="color: #dc3545; font-weight: bold;">⚠️ ${lifeResult.medicalUnderwritingMessage}</span>`;
+        } else if (lifeResult.medicalUnderwritingFactor === 1.25) {
+          output += ` <span style="color: #f59e0b; font-weight: bold;">${lifeResult.medicalUnderwritingMessage}</span>`;
+        }
+      }
+      output += `<br>`;
     });
   }
 
@@ -387,15 +397,109 @@ function copyToClipboard(text) {
   }
 }
 
+// Таблица медицинского андеррайтинга (рост -> возраст -> вес)
+// Значения: 1.00 = стандартный риск, 1.25 = +25% к тарифу, "МЕДО" = требуется медобследование
+const UNDERWRITING_TABLE = {
+  140: {
+    "16-29": [1.25, 1.00, 1.00, 1.00, 1.00, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "30-45": [1.25, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "46-59": [1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "59": [1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"]
+  },
+  150: {
+    "16-29": ["МЕДО", 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "30-45": ["МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "46-59": ["МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "59": ["МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"]
+  },
+  160: {
+    "16-29": ["МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "30-45": ["МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "46-59": ["МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "59": ["МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"]
+  },
+  170: {
+    "16-29": ["МЕДО", "МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "30-45": ["МЕДО", "МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "46-59": ["МЕДО", "МЕДО", "МЕДО", "МЕДО", 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "59": ["МЕДО", "МЕДО", "МЕДО", "МЕДО", 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"]
+  },
+  180: {
+    "16-29": ["МЕДО", "МЕДО", "МЕДО", "МЕДО", 1.25, 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "30-45": ["МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "46-59": ["МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "59": ["МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"]
+  },
+  190: {
+    "16-29": ["МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "30-45": ["МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "46-59": ["МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "59": ["МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"]
+  }
+};
+
+// Функция получения коэффициента медицинского андеррайтинга
+function getUnderwritingFactor(age, height, weight) {
+  if (!age || !height || !weight) return 1.00;
+  
+  const ageGroup = age >= 16 && age <= 29 ? "16-29" :
+                  age >= 30 && age <= 45 ? "30-45" :
+                  age >= 46 && age <= 59 ? "46-59" : "59";
+
+  const heightKeys = Object.keys(UNDERWRITING_TABLE).map(Number).sort((a, b) => a - b);
+  const closestHeight = heightKeys.reduce((prev, curr) => 
+    Math.abs(curr - height) < Math.abs(prev - height) ? curr : prev
+  );
+
+  const weightRanges = [39, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 125, 130, 135, 140];
+  let weightIndex = 0;
+  for (let i = 0; i < weightRanges.length; i++) {
+    if (weight < weightRanges[i]) {
+      weightIndex = i;
+      break;
+    }
+    if (i === weightRanges.length - 1) weightIndex = weightRanges.length;
+  }
+
+  if (!UNDERWRITING_TABLE[closestHeight] || !UNDERWRITING_TABLE[closestHeight][ageGroup]) {
+    return 1.00;
+  }
+
+  return UNDERWRITING_TABLE[closestHeight][ageGroup][weightIndex] || 1.00;
+}
+
 // Расчет страхования жизни
 function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
   if (!data.borrowers || data.borrowers.length === 0) {
     return null;
   }
 
+  // Проверяем медицинский андеррайтинг для первого заемщика
+  let medicalUnderwritingFactor = 1.00;
+  let requiresMedicalExam = false;
+  let medicalUnderwritingMessage = '';
+  
+  if (data.height && data.weight && data.borrowers && data.borrowers.length > 0) {
+    const firstBorrower = data.borrowers[0];
+    if (firstBorrower.age) {
+      medicalUnderwritingFactor = getUnderwritingFactor(firstBorrower.age, data.height, data.weight);
+      
+      if (medicalUnderwritingFactor === "МЕДО") {
+        requiresMedicalExam = true;
+        medicalUnderwritingMessage = '⚠️ Необходимо пройти медобследование';
+      } else if (medicalUnderwritingFactor === 1.25) {
+        medicalUnderwritingMessage = '⚠️ Применена надбавка +25% к тарифу жизни (мед. андеррайтинг)';
+      }
+    }
+  }
+
+  // Если требуется медобследование или есть надбавка +25%, отключаем скидки
+  const hasDiscount = bankConfig.allow_discount_life !== false && 
+                      !requiresMedicalExam && 
+                      medicalUnderwritingFactor !== 1.25;
+
   let totalPremium = 0;
   let totalPremiumWithDiscount = 0;
-  let hasDiscount = bankConfig.allow_discount_life;
   const borrowerPremiums = [];
 
   // Определяем тарифы в зависимости от банка
@@ -495,9 +599,15 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
     }
 
     const shareAmount = insuranceAmount * (borrower.share / 100);
-    const premium = Math.round(shareAmount * (tariff / 100) * 100) / 100;
+    let premium = Math.round(shareAmount * (tariff / 100) * 100) / 100;
+    
+    // Применяем коэффициент медицинского андеррайтинга (только для первого заемщика)
+    if (index === 0 && medicalUnderwritingFactor === 1.25) {
+      premium = Math.round(premium * 1.25 * 100) / 100;
+    }
     
     // Применяем скидку: стандартная 20% (0.8) или кастомная из конфигурации банка
+    // Скидки отключены если требуется медобследование или есть надбавка +25%
     let discountMultiplier = 0.8; // стандартная скидка 20%
     if (hasDiscount && bankConfig.discount_life_percent) {
       discountMultiplier = 1 - (bankConfig.discount_life_percent / 100);
@@ -522,7 +632,10 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
     total: hasDiscount ? totalPremiumWithDiscount : totalPremium,
     totalWithoutDiscount: totalPremium,
     hasDiscount: hasDiscount,
-    borrowers: borrowerPremiums
+    borrowers: borrowerPremiums,
+    medicalUnderwritingFactor: medicalUnderwritingFactor,
+    requiresMedicalExam: requiresMedicalExam,
+    medicalUnderwritingMessage: medicalUnderwritingMessage
   };
 }
 
@@ -790,13 +903,16 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
   if (data.risks.life) {
     const lifeResult = calculateLifeInsurance(data, bankConfig, insuranceAmount);
     if (lifeResult) {
-      if (bankConfig.allow_discount_life) {
+      // Медицинский андеррайтинг: если требуется медобследование или есть надбавка +25%, скидки отключены
+      // В calculateLifeInsurance уже применен коэффициент 1.25 и отключены скидки при необходимости
+      if (bankConfig.allow_discount_life && !lifeResult.requiresMedicalExam && lifeResult.medicalUnderwritingFactor !== 1.25) {
         // Применяем скидку 30% вместо стандартной (25% или другой)
         const basePremium = lifeResult.totalWithoutDiscount;
         lifePremiumV2 = Math.round(basePremium * 0.7 * 100) / 100; // 30% скидка
       } else {
-        // Если скидки не разрешены, используем базовую премию без скидки
-        lifePremiumV2 = lifeResult.totalWithoutDiscount || lifeResult.total;
+        // Если скидки не разрешены или есть медицинский андеррайтинг, используем базовую премию без скидки
+        // (уже с учетом надбавки +25% если применимо)
+        lifePremiumV2 = lifeResult.total || lifeResult.totalWithoutDiscount;
       }
     }
   }
@@ -1031,7 +1147,18 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
     const borrowerLabel = data.borrowers.length > 1 ? 'заемщики' : 'заемщик';
     // Форматируем с 2 знаками после запятой
     const formattedLife = lifePremiumV2.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-    output += `жизнь ${borrowerLabel} ${formattedLife}<br>`;
+    output += `жизнь ${borrowerLabel} ${formattedLife}`;
+    
+    // Добавляем сообщение о медицинском андеррайтинге во 2 варианте (только для жизни)
+    const lifeResult = calculateLifeInsurance(data, bankConfig, insuranceAmount);
+    if (lifeResult) {
+      if (lifeResult.requiresMedicalExam) {
+        output += ` <span style="color: #dc3545; font-weight: bold;">⚠️ ${lifeResult.medicalUnderwritingMessage}</span>`;
+      } else if (lifeResult.medicalUnderwritingFactor === 1.25) {
+        output += ` <span style="color: #f59e0b; font-weight: bold;">${lifeResult.medicalUnderwritingMessage}</span>`;
+      }
+    }
+    output += `<br>`;
   }
   
   // Если используем только увеличенные риски (без основного продукта) или Бастион с дополнительными рисками
