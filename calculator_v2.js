@@ -512,7 +512,7 @@ function getAgeLimitForLifeInsurance(age) {
     return {
       maxAmount: 45000000, // 45 млн
       requiresMedicalExam: false,
-      message: ''
+      message: `⚠️ Максимальная страховая сумма для возраста ${age} лет: 45 000 000 ₽`
     };
   }
 }
@@ -540,7 +540,10 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
       } else if (ageLimit.maxAmount && insuranceAmount > ageLimit.maxAmount) {
         // Страховая сумма превышает лимит для данного возраста
         effectiveInsuranceAmount = ageLimit.maxAmount;
-        ageLimitMessage = ageLimit.message;
+        // Показываем сообщение только если оно не пустое (для всех возрастов, включая до 44 лет)
+        if (ageLimit.message) {
+          ageLimitMessage = ageLimit.message;
+        }
       }
     }
   }
