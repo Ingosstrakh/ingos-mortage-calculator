@@ -819,9 +819,10 @@ function parseTextToObject(rawText) {
 // -----------------------------
 // Exports
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { parseTextToObject };
+  module.exports = { parseTextToObject, parseDateDMY, calculateAge };
 }
 if (typeof window !== 'undefined') {
   window.parseTextToObject = parseTextToObject;
-
+  window.parseDateDMY = parseDateDMY;
+  window.calculateAge = calculateAge;
 }
