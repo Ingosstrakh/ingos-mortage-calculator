@@ -769,10 +769,18 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
     };
   }
 
-  // Если требуется медобследование или есть надбавка +25%, отключаем скидки
+  // Проверяем ограничение по возрасту для Сбербанка (55+ лет - скидки запрещены)
+  let hasAgeRestrictionForSberbank = false;
+  if (bankConfig && bankConfig.bankName === "Сбербанк" && data.borrowers && data.borrowers.length > 0) {
+    // Проверяем всех заемщиков - если хотя бы один >= 55 лет, скидки запрещены
+    hasAgeRestrictionForSberbank = data.borrowers.some(borrower => borrower.age >= 55);
+  }
+  
+  // Если требуется медобследование или есть надбавка +25%, или возраст >= 55 для Сбербанка, отключаем скидки
   const hasDiscount = bankConfig.allow_discount_life !== false && 
                       !finalRequiresMedicalExam && 
-                      medicalUnderwritingFactor !== 1.25;
+                      medicalUnderwritingFactor !== 1.25 &&
+                      !hasAgeRestrictionForSberbank;
 
   let totalPremium = 0;
   let totalPremiumWithDiscount = 0;
@@ -1125,7 +1133,14 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
     // Расчет жизни с скидкой 30%
     if (data.risks.life) {
       const lifeResult = calculateLifeInsurance(data, bankConfig, insuranceAmount);
-      if (lifeResult && bankConfig.allow_discount_life && !lifeResult.requiresMedicalExam && lifeResult.medicalUnderwritingFactor !== 1.25) {
+      
+      // Проверяем ограничение по возрасту для Сбербанка (55+ лет - скидки запрещены)
+      let hasAgeRestrictionForSberbank = false;
+      if (bankConfig && bankConfig.bankName === "Сбербанк" && data.borrowers && data.borrowers.length > 0) {
+        hasAgeRestrictionForSberbank = data.borrowers.some(borrower => borrower.age >= 55);
+      }
+      
+      if (lifeResult && bankConfig.allow_discount_life && !lifeResult.requiresMedicalExam && lifeResult.medicalUnderwritingFactor !== 1.25 && !hasAgeRestrictionForSberbank) {
         // Применяем скидку к премиям каждого заемщика отдельно
         const numBorrowers = data.borrowers ? data.borrowers.length : 1;
         let totalWithDiscount = 0;
@@ -1246,9 +1261,16 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
   if (data.risks.life) {
     const lifeResult = calculateLifeInsurance(data, bankConfig, insuranceAmount);
     if (lifeResult) {
+      // Проверяем ограничение по возрасту для Сбербанка (55+ лет - скидки запрещены)
+      let hasAgeRestrictionForSberbank = false;
+      if (bankConfig && bankConfig.bankName === "Сбербанк" && data.borrowers && data.borrowers.length > 0) {
+        hasAgeRestrictionForSberbank = data.borrowers.some(borrower => borrower.age >= 55);
+      }
+      
       // Медицинский андеррайтинг: если требуется медобследование или есть надбавка +25%, скидки отключены
       // В calculateLifeInsurance уже применен коэффициент 1.25 и отключены скидки при необходимости
-      if (bankConfig.allow_discount_life && !lifeResult.requiresMedicalExam && lifeResult.medicalUnderwritingFactor !== 1.25) {
+      // Для Сбербанка: если возраст >= 55 лет, скидки также запрещены
+      if (bankConfig.allow_discount_life && !lifeResult.requiresMedicalExam && lifeResult.medicalUnderwritingFactor !== 1.25 && !hasAgeRestrictionForSberbank) {
         // Применяем скидку 30% к премиям каждого заемщика отдельно
         const numBorrowers = data.borrowers ? data.borrowers.length : 1;
         let totalWithDiscount = 0;
