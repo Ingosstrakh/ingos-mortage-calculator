@@ -13,8 +13,8 @@ async function processClientRequest(message) {
     if (result && typeof result === 'string' && (result.includes('🚫') || result.includes('❌ Найдены ошибки'))) {
       // Это детальная ошибка валидации - возвращаем как есть
       return result;
-    } else if (result && typeof result === 'string' && result.includes('Банк:')) {
-      // Это успешный расчет
+    } else if (result && typeof result === 'string' && (result.includes('Банк:') || result.includes('Расчет рассрочки'))) {
+      // Это успешный расчет (обычный или рассрочка)
       return result;
     } else {
       // Не удалось распарсить - возвращаем сообщение об ошибке
