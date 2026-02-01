@@ -103,18 +103,49 @@ function formatInstallmentResult(calculationResult) {
   output += `<b>Возраст:</b> ${data.age} лет<br>`;
   output += `<b>Пол:</b> ${data.gender}<br>`;
   output += `<b>Сумма в рассрочку:</b> ${data.installmentAmount.toLocaleString('ru-RU')} ₽<br>`;
+  
+  // Показываем эффективную сумму, если она отличается от исходной (из-за лимитов по возрасту)
+  if (data.effectiveInstallmentAmount && data.effectiveInstallmentAmount !== data.installmentAmount) {
+    output += `<b>Эффективная сумма (с учетом лимитов):</b> ${data.effectiveInstallmentAmount.toLocaleString('ru-RU')} ₽<br>`;
+  }
+  
   output += `<b>Срок рассрочки до:</b> ${data.endDate}<br>`;
   output += `<b>Количество месяцев:</b> ${data.monthsUntilEnd}<br>`;
   if (data.monthsUntilEnd < 12) {
     output += `<b>Примечание:</b> Срок менее 12 месяцев, расчет выполнен как за 1 год (12 месяцев)<br>`;
   }
-  output += `<b>Тариф:</b> ${data.tariff}%<br><br>`;
+  output += `<b>Тариф:</b> ${data.tariff}%<br>`;
   
-  output += `<b>Вариант 1 (без скидки):</b><br>`;
-  output += `жизнь заемщик ${data.variant1.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2})}<br><br>`;
+  // Добавляем сообщения о медицинском андеррайтинге и лимитах
+  if (data.medicalUnderwritingMessage) {
+    if (data.requiresMedicalExam) {
+      output += `<br><span style="color: #dc3545; font-weight: bold;">${data.medicalUnderwritingMessage}</span><br>`;
+    } else if (data.medicalUnderwritingFactor === 1.25) {
+      output += `<br><span style="color: #f59e0b; font-weight: bold;">${data.medicalUnderwritingMessage}</span><br>`;
+    } else {
+      output += `<br><span style="color: #f59e0b; font-weight: bold;">${data.medicalUnderwritingMessage}</span><br>`;
+    }
+  }
+  
+  output += `<br><b>Вариант 1 (без скидки):</b><br>`;
+  output += `жизнь заемщик ${data.variant1.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+  
+  // Добавляем сообщение о медицинском андеррайтинге после премии
+  if (data.medicalUnderwritingMessage && !data.requiresMedicalExam) {
+    if (data.medicalUnderwritingFactor === 1.25) {
+      output += ` <span style="color: #f59e0b; font-weight: bold;">${data.medicalUnderwritingMessage}</span>`;
+    } else if (data.medicalUnderwritingMessage.includes('Максимальная страховая сумма')) {
+      output += ` <span style="color: #f59e0b; font-weight: bold;">${data.medicalUnderwritingMessage}</span>`;
+    }
+  }
+  output += `<br><br>`;
   
   output += `<b>Вариант 2 (со скидкой 25%):</b><br>`;
-  output += `жизнь заемщик ${data.variant2.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2})}<br>`;
+  if (data.requiresMedicalExam || data.medicalUnderwritingFactor === 1.25) {
+    output += `жизнь заемщик ${data.variant2.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2})} <span style="color: #dc3545; font-weight: bold;">(скидки недоступны из-за мед. андеррайтинга)</span><br>`;
+  } else {
+    output += `жизнь заемщик ${data.variant2.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2})}<br>`;
+  }
   
   return output;
 }
