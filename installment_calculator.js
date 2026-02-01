@@ -276,6 +276,10 @@ function parseInstallmentData(text) {
     result.errors.push('Не удалось извлечь дату окончания рассрочки');
   }
   
+  // Извлекаем рост и вес для медицинского андеррайтинга (опционально)
+  result.height = extractHeight(text);
+  result.weight = extractWeight(text);
+  
   // Проверяем валидность данных
   result.isValid = result.fullName && 
                    result.age !== null && 
@@ -285,6 +289,162 @@ function parseInstallmentData(text) {
                    result.errors.length === 0;
   
   return result;
+}
+
+// Функция извлечения роста (в см) - используем ту же логику, что и в parser.js
+function extractHeight(text) {
+  if (!text) return null;
+  const patterns = [
+    /рост\s+(\d{2,3})/i,
+    /рост:\s*(\d{2,3})/i,
+    /ростом\s+(\d{2,3})/i,
+    /height\s*:?\s*(\d{2,3})/i
+  ];
+  
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      const height = parseInt(match[1], 10);
+      // Проверяем разумность значения (120-220 см)
+      if (height >= 120 && height <= 220) {
+        return height;
+      }
+    }
+  }
+  return null;
+}
+
+// Функция извлечения веса (в кг) - используем ту же логику, что и в parser.js
+function extractWeight(text) {
+  if (!text) return null;
+  const patterns = [
+    /вес\s+(\d{2,3})/i,
+    /вес:\s*(\d{2,3})/i,
+    /весом\s+(\d{2,3})/i,
+    /weight\s*:?\s*(\d{2,3})/i
+  ];
+  
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      const weight = parseInt(match[1], 10);
+      // Проверяем разумность значения (30-200 кг)
+      if (weight >= 30 && weight <= 200) {
+        return weight;
+      }
+    }
+  }
+  return null;
+}
+
+// Таблица медицинского андеррайтинга (копия из calculator_v2.js)
+const UNDERWRITING_TABLE_INSTALLMENT = {
+  140: {
+    "16-29": [1.25, 1.00, 1.00, 1.00, 1.00, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "30-45": [1.25, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "46-59": [1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "59": [1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"]
+  },
+  150: {
+    "16-29": ["МЕДО", 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "30-45": ["МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "46-59": ["МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "59": ["МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"]
+  },
+  160: {
+    "16-29": ["МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "30-45": ["МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "46-59": ["МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "59": ["МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"]
+  },
+  170: {
+    "16-29": ["МЕДО", "МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "30-45": ["МЕДО", "МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "46-59": ["МЕДО", "МЕДО", "МЕДО", "МЕДО", 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "59": ["МЕДО", "МЕДО", "МЕДО", "МЕДО", 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"]
+  },
+  180: {
+    "16-29": ["МЕДО", "МЕДО", "МЕДО", "МЕДО", 1.25, 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "30-45": ["МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "46-59": ["МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "59": ["МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"]
+  },
+  190: {
+    "16-29": ["МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "30-45": ["МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "46-59": ["МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+    "59": ["МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"]
+  }
+};
+
+// Функция получения коэффициента медицинского андеррайтинга
+function getUnderwritingFactorInstallment(age, height, weight) {
+  if (!age || !height || !weight) return 1.00;
+  
+  const ageGroup = age >= 16 && age <= 29 ? "16-29" :
+                  age >= 30 && age <= 45 ? "30-45" :
+                  age >= 46 && age <= 59 ? "46-59" : "59";
+
+  const heightKeys = Object.keys(UNDERWRITING_TABLE_INSTALLMENT).map(Number).sort((a, b) => a - b);
+  const closestHeight = heightKeys.reduce((prev, curr) => 
+    Math.abs(curr - height) < Math.abs(prev - height) ? curr : prev
+  );
+
+  const weightRanges = [39, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 125, 130, 135, 140];
+  let weightIndex = 0;
+  for (let i = 0; i < weightRanges.length; i++) {
+    if (weight < weightRanges[i]) {
+      weightIndex = i;
+      break;
+    }
+    if (i === weightRanges.length - 1) weightIndex = weightRanges.length;
+  }
+
+  if (!UNDERWRITING_TABLE_INSTALLMENT[closestHeight] || !UNDERWRITING_TABLE_INSTALLMENT[closestHeight][ageGroup]) {
+    return 1.00;
+  }
+
+  return UNDERWRITING_TABLE_INSTALLMENT[closestHeight][ageGroup][weightIndex] || 1.00;
+}
+
+// Функция проверки лимитов страховой суммы по возрасту
+function getAgeLimitForLifeInsuranceInstallment(age) {
+  if (!age) {
+    return { maxAmount: null, requiresMedicalExam: false, message: '' };
+  }
+  
+  if (age >= 65) {
+    return {
+      maxAmount: null,
+      requiresMedicalExam: true,
+      message: '⚠️ Необходимо пройти медобследование (возраст 65+ лет)'
+    };
+  } else if (age >= 56 && age <= 64) {
+    return {
+      maxAmount: 15000000, // 15 млн
+      requiresMedicalExam: false,
+      message: `⚠️ Максимальная страховая сумма для возраста ${age} лет: 15 000 000 ₽`
+    };
+  } else if (age >= 50 && age <= 55) {
+    return {
+      maxAmount: 25000000, // 25 млн
+      requiresMedicalExam: false,
+      message: `⚠️ Максимальная страховая сумма для возраста ${age} лет: 25 000 000 ₽`
+    };
+  } else if (age >= 45 && age <= 49) {
+    return {
+      maxAmount: 35000000, // 35 млн
+      requiresMedicalExam: false,
+      message: `⚠️ Максимальная страховая сумма для возраста ${age} лет: 35 000 000 ₽`
+    };
+  } else {
+    // До 44 лет включительно
+    return {
+      maxAmount: 45000000, // 45 млн
+      requiresMedicalExam: false,
+      message: `⚠️ Максимальная страховая сумма для возраста ${age} лет: 45 000 000 ₽`
+    };
+  }
 }
 
 // Функция расчета премии по рассрочке
@@ -313,6 +473,59 @@ function calculateInstallmentPremium(parsedData) {
     };
   }
   
+  // Проверяем лимиты по возрасту
+  let ageLimitMessage = '';
+  let ageLimitRequiresMedicalExam = false;
+  let effectiveInstallmentAmount = parsedData.installmentAmount;
+  
+  const ageLimit = getAgeLimitForLifeInsuranceInstallment(parsedData.age);
+  
+  if (ageLimit.requiresMedicalExam) {
+    // Возраст 65+ - требуется медобследование
+    return {
+      success: false,
+      error: ageLimit.message
+    };
+  } else if (ageLimit.maxAmount && parsedData.installmentAmount > ageLimit.maxAmount) {
+    // Страховая сумма превышает лимит для данного возраста
+    effectiveInstallmentAmount = ageLimit.maxAmount;
+    if (ageLimit.message) {
+      ageLimitMessage = ageLimit.message;
+    }
+  }
+  
+  // Проверяем медицинский андеррайтинг (рост/вес)
+  let medicalUnderwritingFactor = 1.00;
+  let requiresMedicalExam = false;
+  let medicalUnderwritingMessage = '';
+  
+  if (parsedData.height && parsedData.weight) {
+    medicalUnderwritingFactor = getUnderwritingFactorInstallment(parsedData.age, parsedData.height, parsedData.weight);
+    
+    if (medicalUnderwritingFactor === "МЕДО") {
+      requiresMedicalExam = true;
+      medicalUnderwritingMessage = '⚠️ Необходимо пройти медобследование';
+    } else if (medicalUnderwritingFactor === 1.25) {
+      medicalUnderwritingMessage = '⚠️ Применена надбавка +25% к тарифу жизни (мед. андеррайтинг)';
+    }
+  }
+  
+  // Объединяем требования медобследования
+  const finalRequiresMedicalExam = requiresMedicalExam || ageLimitRequiresMedicalExam;
+  
+  // Объединяем сообщения
+  let combinedMessage = '';
+  if (ageLimitMessage) {
+    combinedMessage = ageLimitMessage;
+  }
+  if (medicalUnderwritingMessage) {
+    if (combinedMessage) {
+      combinedMessage += '; ' + medicalUnderwritingMessage;
+    } else {
+      combinedMessage = medicalUnderwritingMessage;
+    }
+  }
+  
   // Получаем тариф для данного возраста и пола
   const tariff = tariffTable[parsedData.gender] && tariffTable[parsedData.gender][parsedData.age];
   if (!tariff) {
@@ -326,8 +539,13 @@ function calculateInstallmentPremium(parsedData) {
   // Если меньше 12 месяцев, считаем как 1 год
   const monthsToCalculate = parsedData.monthsUntilEnd < 12 ? 12 : parsedData.monthsUntilEnd;
   
-  // Рассчитываем премию за 1 год
-  const annualPremium = parsedData.installmentAmount * (tariff / 100);
+  // Рассчитываем премию за 1 год с учетом эффективной суммы
+  let annualPremium = effectiveInstallmentAmount * (tariff / 100);
+  
+  // Применяем коэффициент медицинского андеррайтинга
+  if (medicalUnderwritingFactor === 1.25) {
+    annualPremium = annualPremium * 1.25;
+  }
   
   // Рассчитываем премию за месяц
   const monthlyPremium = annualPremium / 12;
@@ -335,11 +553,13 @@ function calculateInstallmentPremium(parsedData) {
   // Рассчитываем итоговую премию (за все месяцы рассрочки)
   const totalPremium = monthlyPremium * monthsToCalculate;
   
-  // Вариант 1: без скидки
+  // Вариант 1: без скидки (скидки отключены при мед. андеррайтинге)
   const variant1 = Math.round(totalPremium * 100) / 100;
   
-  // Вариант 2: со скидкой 25%
-  const variant2 = Math.round(totalPremium * 0.75 * 100) / 100;
+  // Вариант 2: со скидкой 25% (только если нет мед. андеррайтинга)
+  const variant2 = finalRequiresMedicalExam || medicalUnderwritingFactor === 1.25 
+    ? variant1 
+    : Math.round(totalPremium * 0.75 * 100) / 100;
   
   return {
     success: true,
@@ -348,6 +568,7 @@ function calculateInstallmentPremium(parsedData) {
       age: parsedData.age,
       gender: parsedData.gender === 'm' ? 'мужчина' : 'женщина',
       installmentAmount: parsedData.installmentAmount,
+      effectiveInstallmentAmount: effectiveInstallmentAmount,
       endDate: parsedData.endDate,
       monthsUntilEnd: parsedData.monthsUntilEnd,
       monthsCalculated: monthsToCalculate,
@@ -355,7 +576,10 @@ function calculateInstallmentPremium(parsedData) {
       annualPremium: annualPremium,
       monthlyPremium: monthlyPremium,
       variant1: variant1,
-      variant2: variant2
+      variant2: variant2,
+      medicalUnderwritingFactor: medicalUnderwritingFactor,
+      requiresMedicalExam: finalRequiresMedicalExam,
+      medicalUnderwritingMessage: combinedMessage
     }
   };
 }
