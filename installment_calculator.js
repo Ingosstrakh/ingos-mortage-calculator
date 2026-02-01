@@ -99,9 +99,21 @@ function extractInstallmentAmount(text) {
       // Убираем пробелы и преобразуем в число
       const amountStr = match[1].replace(/\s+/g, '').trim();
       const amount = parseInt(amountStr, 10);
-      if (amount > 0 && amountStr.length >= 6) { // Минимум 6 цифр для суммы рассрочки
+      // Минимум 5 цифр для суммы рассрочки (может быть меньше 1 млн)
+      if (amount > 0 && amountStr.length >= 5) {
         return amount;
       }
+    }
+  }
+  
+  // Если не нашли по паттернам, ищем любое большое число после слова "рассрочку"
+  const fallbackPattern = /рассрочку[^\d]*(\d{1,3}(?:\s+\d{3})+|\d{5,})/;
+  const fallbackMatch = text.match(fallbackPattern);
+  if (fallbackMatch) {
+    const amountStr = fallbackMatch[1].replace(/\s+/g, '').trim();
+    const amount = parseInt(amountStr, 10);
+    if (amount > 0) {
+      return amount;
     }
   }
   
@@ -110,20 +122,38 @@ function extractInstallmentAmount(text) {
 
 // Функция извлечения даты окончания рассрочки
 function extractInstallmentEndDate(text) {
-  // Ищем паттерн: "до 20.12.2026" или "до 20.03.2029 г." или "до 20.09.2026г."
+  // Ищем паттерн: "до 20.12.2026" или "до 20.03.2029 г." или "до 20.09.2026г." или "до 20.03.29 г"
   const patterns = [
     /[Дд]о\s+(\d{1,2}\.\d{1,2}\.\d{4})\s*г/,
     /[Дд]о\s+(\d{1,2}\.\d{1,2}\.\d{4})г/,
     /[Дд]о\s+(\d{1,2}\.\d{1,2}\.\d{4})/,
     /[Сс]рок\s+рассрочки\s+до\s+(\d{1,2}\.\d{1,2}\.\d{4})\s*г/,
     /[Сс]рок\s+рассрочки\s+до\s+(\d{1,2}\.\d{1,2}\.\d{4})г/,
-    /[Сс]рок\s+рассрочки\s+до\s+(\d{1,2}\.\d{1,2}\.\d{4})/
+    /[Сс]рок\s+рассрочки\s+до\s+(\d{1,2}\.\d{1,2}\.\d{4})/,
+    // Паттерны с коротким годом (2 цифры)
+    /[Дд]о\s+(\d{1,2}\.\d{1,2}\.\d{2})\s*г/,
+    /[Дд]о\s+(\d{1,2}\.\d{1,2}\.\d{2})г/,
+    /[Дд]о\s+(\d{1,2}\.\d{1,2}\.\d{2})/,
+    /[Сс]рок\s+рассрочки\s+до\s+(\d{1,2}\.\d{1,2}\.\d{2})\s*г/,
+    /[Сс]рок\s+рассрочки\s+до\s+(\d{1,2}\.\d{1,2}\.\d{2})г/,
+    /[Сс]рок\s+рассрочки\s+до\s+(\d{1,2}\.\d{1,2}\.\d{2})/
   ];
   
   for (const pattern of patterns) {
     const match = text.match(pattern);
     if (match) {
-      return match[1];
+      let dateStr = match[1];
+      
+      // Если год короткий (2 цифры), преобразуем в полный (4 цифры)
+      const parts = dateStr.split('.');
+      if (parts.length === 3 && parts[2].length === 2) {
+        const shortYear = parseInt(parts[2], 10);
+        // Если год меньше 50, считаем что это 20XX, иначе 19XX
+        const fullYear = shortYear < 50 ? 2000 + shortYear : 1900 + shortYear;
+        dateStr = `${parts[0]}.${parts[1]}.${fullYear}`;
+      }
+      
+      return dateStr;
     }
   }
   
