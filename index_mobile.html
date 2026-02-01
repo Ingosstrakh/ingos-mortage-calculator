@@ -739,7 +739,7 @@
   <script src="tariffs_life.js?v=16"></script>
   <script src="tariffs_property.js?v=16"></script>
   <script src="tariffs_ifl.js?v=16"></script>
-  <script src="parser.js?v=18"></script>
+  <script src="parser.js?v=19"></script>
   <script src="calculator_v2.js?v=20"></script>
   <script src="installment_calculator.js?v=4"></script>
   <script src="openai.js?v=17"></script>
@@ -806,7 +806,10 @@
       showLoading('health-results', 'Выполняем медицинский андеррайтинг...');
 
       try {
-        const age = calculateAge(birthDate);
+        const age = calculateAgeForModal(birthDate);
+        if (age === null || isNaN(age)) {
+          throw new Error('Не удалось рассчитать возраст из даты рождения');
+        }
         const bmi = weight / ((height / 100) ** 2);
         const underwritingFactor = getUnderwritingFactor(age, height, weight);
 
@@ -852,9 +855,34 @@
       }
     }
 
-    function calculateAge(birthDate) {
+    // Используем calculateAge из parser.js, которая правильно парсит DD.MM.YYYY
+    // Функция window.calculateAge экспортируется из parser.js и правильно обрабатывает формат DD.MM.YYYY
+    function calculateAgeForModal(birthDate) {
+      // Используем window.calculateAge из parser.js для правильного парсинга DD.MM.YYYY
+      if (window.calculateAge) {
+        return window.calculateAge(birthDate, null);
+      }
+      // Fallback: используем parseDateDMY напрямую
+      if (window.parseDateDMY) {
+        const birth = window.parseDateDMY(birthDate);
+        if (!birth || isNaN(birth.getTime())) {
+          console.warn('Failed to parse birth date:', birthDate);
+          return null;
+        }
+        const today = new Date();
+        let age = today.getFullYear() - birth.getFullYear();
+        const monthDiff = today.getMonth() - birth.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+          age--;
+        }
+        return age;
+      }
+      // Последний fallback: используем стандартный Date (может не работать для DD.MM.YYYY)
       const today = new Date();
       const birth = new Date(birthDate);
+      if (isNaN(birth.getTime())) {
+        return null;
+      }
       let age = today.getFullYear() - birth.getFullYear();
       const monthDiff = today.getMonth() - birth.getMonth();
       if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
