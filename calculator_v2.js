@@ -88,9 +88,67 @@ function validateParsedData(data) {
   return errors.length > 0 ? errors : null;
 }
 
+// Функция форматирования результатов рассрочки
+function formatInstallmentResult(calculationResult) {
+  if (!calculationResult.success) {
+    return `<div style="color: #dc3545; padding: 15px; border: 1px solid #dc3545; border-radius: 8px; margin: 15px 0; background-color: #f8d7da;">
+      <strong>❌ Ошибка расчета рассрочки</strong><br><br>
+      ${calculationResult.error}
+    </div>`;
+  }
+  
+  const data = calculationResult.data;
+  let output = `<b>Расчет рассрочки</b><br><br>`;
+  output += `<b>ФИО:</b> ${data.fullName}<br>`;
+  output += `<b>Возраст:</b> ${data.age} лет<br>`;
+  output += `<b>Пол:</b> ${data.gender}<br>`;
+  output += `<b>Сумма в рассрочку:</b> ${data.installmentAmount.toLocaleString('ru-RU')} ₽<br>`;
+  output += `<b>Срок рассрочки до:</b> ${data.endDate}<br>`;
+  output += `<b>Количество месяцев:</b> ${data.monthsUntilEnd}<br>`;
+  if (data.monthsUntilEnd < 12) {
+    output += `<b>Примечание:</b> Срок менее 12 месяцев, расчет выполнен как за 1 год (12 месяцев)<br>`;
+  }
+  output += `<b>Тариф:</b> ${data.tariff}%<br><br>`;
+  
+  output += `<b>Вариант 1 (без скидки):</b><br>`;
+  output += `жизнь заемщик ${data.variant1.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2})}<br><br>`;
+  
+  output += `<b>Вариант 2 (со скидкой 25%):</b><br>`;
+  output += `жизнь заемщик ${data.variant2.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2})}<br>`;
+  
+  return output;
+}
+
 // Основная функция для обработки запроса клиента
 function handleClientRequest(clientText) {
   try {
+    // Проверяем, является ли запрос данными рассрочки
+    const hasInstallmentKeywords = /рассрочку|рассрочка/i.test(clientText) && 
+                                   /[Сс]умма/i.test(clientText) && 
+                                   /[Дд]о\s+\d{1,2}\.\d{1,2}\.\d{4}/.test(clientText);
+    
+    if (hasInstallmentKeywords && typeof window.parseInstallmentData === 'function') {
+      // Это запрос на расчет рассрочки
+      console.log("Обнаружен запрос на расчет рассрочки");
+      
+      const parsedData = window.parseInstallmentData(clientText);
+      console.log("Разобранные данные рассрочки:", parsedData);
+      
+      if (!parsedData.isValid) {
+        return `<div style="color: #dc3545; padding: 15px; border: 1px solid #dc3545; border-radius: 8px; margin: 15px 0; background-color: #f8d7da;">
+          <strong>❌ Ошибка парсинга данных рассрочки</strong><br><br>
+          ${parsedData.errors.join('<br>')}<br><br>
+          <strong>Формат данных:</strong><br>
+          ФИО, дата рождения (ДД.ММ.ГГГГ гр)<br>
+          Сумма в рассрочку [сумма] р.<br>
+          Срок рассрочки до [дата]
+        </div>`;
+      }
+      
+      const calculationResult = window.calculateInstallmentPremium(parsedData);
+      return formatInstallmentResult(calculationResult);
+    }
+    
     // Парсим текст с помощью parseTextToObject
     const parsedData = parseTextToObject(clientText);
 
