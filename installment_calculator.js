@@ -29,11 +29,12 @@ function detectGenderBySurname(surname) {
 // Функция извлечения ФИО из текста
 function extractFullName(text) {
   // Ищем паттерн: Фамилия Имя Отчество
-  // Пример: "Николаев Олег Юрьевич" или "Эгамова Дильором Якубовна"
+  // Пример: "Николаев Олег Юрьевич" или "Эгамова Дильором Якубовна" или "Саляхов Марсель Камилевич"
   const patterns = [
-    /^([А-ЯЁ][а-яё]+)\s+([А-ЯЁ][а-яё]+)\s+([А-ЯЁ][а-яё]+)/,
+    /^([А-ЯЁ][а-яё]+)\s+([А-ЯЁ][а-яё]+)\s+([А-ЯЁ][а-яё]+)/m,
     /([А-ЯЁ][а-яё]+)\s+([А-ЯЁ][а-яё]+)\s+([А-ЯЁ][а-яё]+),/,
-    /([А-ЯЁ][а-яё]+)\s+([А-ЯЁ][а-яё]+)\s+([А-ЯЁ][а-яё]+)\s+гр/
+    /([А-ЯЁ][а-яё]+)\s+([А-ЯЁ][а-яё]+)\s+([А-ЯЁ][а-яё]+)\s*[,\s]*\d{1,2}\.\d{1,2}\.\d{4}/,
+    /([А-ЯЁ][а-яё]+)\s+([А-ЯЁ][а-яё]+)\s+([А-ЯЁ][а-яё]+)\s*гр/
   ];
   
   for (const pattern of patterns) {
@@ -53,17 +54,29 @@ function extractFullName(text) {
 
 // Функция извлечения даты рождения
 function extractBirthDate(text) {
-  // Ищем паттерн: DD.MM.YYYY или DD.MM.YYYY гр
+  // Ищем паттерн: DD.MM.YYYY или DD.MM.YYYY гр или DD.MM.YYYYгр
   const patterns = [
     /(\d{1,2}\.\d{1,2}\.\d{4})\s*гр/,
-    /(\d{1,2}\.\d{1,2}\.\d{4})/,
-    /,\s*(\d{1,2}\.\d{1,2}\.\d{4})/
+    /(\d{1,2}\.\d{1,2}\.\d{4})гр/,
+    /,\s*(\d{1,2}\.\d{1,2}\.\d{4})\s*гр/,
+    /,\s*(\d{1,2}\.\d{1,2}\.\d{4})/,
+    /(\d{1,2}\.\d{1,2}\.\d{4})/
   ];
+  
+  // Исключаем дату окончания рассрочки (она обычно идет после слова "до")
+  const installmentEndDatePattern = /[Дд]о\s+(\d{1,2}\.\d{1,2}\.\d{4})/;
+  const installmentEndMatch = text.match(installmentEndDatePattern);
+  const installmentEndDate = installmentEndMatch ? installmentEndMatch[1] : null;
   
   for (const pattern of patterns) {
     const match = text.match(pattern);
     if (match) {
-      return match[1];
+      const date = match[1];
+      // Пропускаем дату окончания рассрочки
+      if (installmentEndDate && date === installmentEndDate) {
+        continue;
+      }
+      return date;
     }
   }
   
@@ -72,20 +85,21 @@ function extractBirthDate(text) {
 
 // Функция извлечения суммы рассрочки
 function extractInstallmentAmount(text) {
-  // Ищем паттерн: "Сумма в рассрочку 18 038 600 р." или "Сумма в рассрочку 18038600"
+  // Ищем паттерн: "Сумма в рассрочку 18 038 600 р." или "Сумма в рассрочку 18038600" или "рассрочку 11 793 972 р."
   const patterns = [
     /[Сс]умма\s+в\s+рассрочку\s+([\d\s]+)\s*р/,
     /[Сс]умма\s+в\s+рассрочку\s+([\d\s]+)/,
-    /рассрочку\s+([\d\s]+)\s*р/
+    /рассрочку\s+([\d\s]+)\s*р/,
+    /рассрочку\s+([\d\s]+)/
   ];
   
   for (const pattern of patterns) {
     const match = text.match(pattern);
     if (match) {
       // Убираем пробелы и преобразуем в число
-      const amountStr = match[1].replace(/\s+/g, '');
+      const amountStr = match[1].replace(/\s+/g, '').trim();
       const amount = parseInt(amountStr, 10);
-      if (amount > 0) {
+      if (amount > 0 && amountStr.length >= 6) { // Минимум 6 цифр для суммы рассрочки
         return amount;
       }
     }
@@ -96,10 +110,13 @@ function extractInstallmentAmount(text) {
 
 // Функция извлечения даты окончания рассрочки
 function extractInstallmentEndDate(text) {
-  // Ищем паттерн: "до 20.12.2026" или "до 20.03.2029 г."
+  // Ищем паттерн: "до 20.12.2026" или "до 20.03.2029 г." или "до 20.09.2026г."
   const patterns = [
     /[Дд]о\s+(\d{1,2}\.\d{1,2}\.\d{4})\s*г/,
+    /[Дд]о\s+(\d{1,2}\.\d{1,2}\.\d{4})г/,
     /[Дд]о\s+(\d{1,2}\.\d{1,2}\.\d{4})/,
+    /[Сс]рок\s+рассрочки\s+до\s+(\d{1,2}\.\d{1,2}\.\d{4})\s*г/,
+    /[Сс]рок\s+рассрочки\s+до\s+(\d{1,2}\.\d{1,2}\.\d{4})г/,
     /[Сс]рок\s+рассрочки\s+до\s+(\d{1,2}\.\d{1,2}\.\d{4})/
   ];
   
