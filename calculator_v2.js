@@ -123,28 +123,22 @@ function formatInstallmentResult(calculationResult) {
 function handleClientRequest(clientText) {
   try {
     // Проверяем, является ли запрос данными рассрочки
-    // Более гибкая проверка: наличие слова "рассрочку/рассрочка" И наличие суммы И наличие даты окончания
-    const hasInstallmentKeywords = /рассрочку|рассрочка/i.test(clientText) && 
-                                   (/[Сс]умма/i.test(clientText) || /\d{1,3}(?:\s+\d{3})+\s*р/i.test(clientText)) && 
-                                   (/[Дд]о\s+\d{1,2}\.\d{1,2}\.\d{4}/.test(clientText) || /[Сс]рок\s+рассрочки/i.test(clientText) || /\d{1,2}\.\d{1,2}\.\d{4}\s*г/i.test(clientText));
+    // Если есть слово "рассрочку" или "рассрочка" - это точно рассрочка
+    const hasInstallmentWord = /рассрочку|рассрочка/i.test(clientText);
     
-    // Дополнительная проверка: если есть ФИО (три слова подряд с заглавной буквы) и дата рождения и сумма - это может быть рассрочка
+    // Дополнительные проверки для надежности
     const hasFullNamePattern = /^[А-ЯЁ][а-яё]+\s+[А-ЯЁ][а-яё]+\s+[А-ЯЁ][а-яё]+/m.test(clientText);
-    const hasBirthDate = /\d{1,2}\.\d{1,2}\.\d{4}\s*гр/.test(clientText);
-    const hasLargeAmount = /\d{1,3}(?:\s+\d{3}){2,}\s*р/.test(clientText) || /\d{7,}/.test(clientText);
-    const hasEndDate = /[Дд]о\s+\d{1,2}\.\d{1,2}\.\d{4}/.test(clientText) || /[Сс]рок\s+рассрочки/.test(clientText);
     
-    const isInstallmentRequest = (hasInstallmentKeywords || (hasFullNamePattern && hasBirthDate && hasLargeAmount && hasEndDate)) && 
+    // Если есть слово "рассрочка" И есть ФИО - это точно рассрочка (не требуем обязательного наличия всех полей)
+    const isInstallmentRequest = hasInstallmentWord && 
+                                 hasFullNamePattern && 
                                  typeof window.parseInstallmentData === 'function';
     
     if (isInstallmentRequest) {
       // Это запрос на расчет рассрочки
       console.log("Обнаружен запрос на расчет рассрочки");
-      console.log("hasInstallmentKeywords:", hasInstallmentKeywords);
+      console.log("hasInstallmentWord:", hasInstallmentWord);
       console.log("hasFullNamePattern:", hasFullNamePattern);
-      console.log("hasBirthDate:", hasBirthDate);
-      console.log("hasLargeAmount:", hasLargeAmount);
-      console.log("hasEndDate:", hasEndDate);
       
       const parsedData = window.parseInstallmentData(clientText);
       console.log("Разобранные данные рассрочки:", parsedData);
