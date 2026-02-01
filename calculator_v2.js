@@ -292,23 +292,31 @@ function performCalculations(data) {
   }
 
   if (data.risks.life && lifeResult) {
-    // ВАЖНО: используем data.borrowers.length, а не lifeResult.borrowers.length
-    // чтобы правильно определить, один заемщик или несколько
-    const isMultipleBorrowers = data.borrowers && data.borrowers.length > 1;
-    lifeResult.borrowers.forEach((borrower, index) => {
-      const borrowerLabel = isMultipleBorrowers ? `заемщик ${index + 1}` : 'заемщик';
-      output += `жизнь ${borrowerLabel} ${borrower.premium.toLocaleString('ru-RU')}`;
-      
-      // Добавляем сообщение о медицинском андеррайтинге сразу после премии жизни (только для первого заемщика)
-      if (index === 0) {
-        if (lifeResult.requiresMedicalExam) {
-          output += ` <span style="color: #dc3545; font-weight: bold;">⚠️ ${lifeResult.medicalUnderwritingMessage}</span>`;
-        } else if (lifeResult.medicalUnderwritingFactor === 1.25) {
-          output += ` <span style="color: #f59e0b; font-weight: bold;">${lifeResult.medicalUnderwritingMessage}</span>`;
+    // Если требуется медобследование и премия = 0, показываем только сообщение
+    if (lifeResult.requiresMedicalExam && lifeResult.total === 0) {
+      output += `<span style="color: #dc3545; font-weight: bold;">${lifeResult.medicalUnderwritingMessage}</span><br>`;
+    } else if (lifeResult.borrowers && lifeResult.borrowers.length > 0) {
+      // ВАЖНО: используем data.borrowers.length, а не lifeResult.borrowers.length
+      // чтобы правильно определить, один заемщик или несколько
+      const isMultipleBorrowers = data.borrowers && data.borrowers.length > 1;
+      lifeResult.borrowers.forEach((borrower, index) => {
+        const borrowerLabel = isMultipleBorrowers ? `заемщик ${index + 1}` : 'заемщик';
+        output += `жизнь ${borrowerLabel} ${borrower.premium.toLocaleString('ru-RU')}`;
+        
+        // Добавляем сообщение о медицинском андеррайтинге/лимитах сразу после премии жизни (только для первого заемщика)
+        if (index === 0 && lifeResult.medicalUnderwritingMessage) {
+          if (lifeResult.requiresMedicalExam) {
+            output += ` <span style="color: #dc3545; font-weight: bold;">⚠️ ${lifeResult.medicalUnderwritingMessage}</span>`;
+          } else if (lifeResult.medicalUnderwritingFactor === 1.25) {
+            output += ` <span style="color: #f59e0b; font-weight: bold;">${lifeResult.medicalUnderwritingMessage}</span>`;
+          } else {
+            // Сообщение о лимитах по возрасту (не критичное)
+            output += ` <span style="color: #f59e0b; font-weight: bold;">${lifeResult.medicalUnderwritingMessage}</span>`;
+          }
         }
-      }
-      output += `<br>`;
-    });
+        output += `<br>`;
+      });
+    }
   }
 
   if (data.risks.titul && titleResult) {
@@ -468,13 +476,76 @@ function getUnderwritingFactor(age, height, weight) {
   return UNDERWRITING_TABLE[closestHeight][ageGroup][weightIndex] || 1.00;
 }
 
+// Функция проверки лимитов страховой суммы по возрасту
+// Возвращает объект: { maxAmount: максимальная сумма, requiresMedicalExam: требуется ли медобследование, message: сообщение }
+function getAgeLimitForLifeInsurance(age) {
+  if (!age) {
+    return { maxAmount: null, requiresMedicalExam: false, message: '' };
+  }
+  
+  if (age >= 65) {
+    return {
+      maxAmount: null,
+      requiresMedicalExam: true,
+      message: '⚠️ Необходимо пройти медобследование (возраст 65+ лет)'
+    };
+  } else if (age >= 56 && age <= 64) {
+    return {
+      maxAmount: 15000000, // 15 млн
+      requiresMedicalExam: false,
+      message: `⚠️ Максимальная страховая сумма для возраста ${age} лет: 15 000 000 ₽`
+    };
+  } else if (age >= 50 && age <= 55) {
+    return {
+      maxAmount: 25000000, // 25 млн
+      requiresMedicalExam: false,
+      message: `⚠️ Максимальная страховая сумма для возраста ${age} лет: 25 000 000 ₽`
+    };
+  } else if (age >= 45 && age <= 49) {
+    return {
+      maxAmount: 35000000, // 35 млн
+      requiresMedicalExam: false,
+      message: `⚠️ Максимальная страховая сумма для возраста ${age} лет: 35 000 000 ₽`
+    };
+  } else {
+    // До 44 лет включительно
+    return {
+      maxAmount: 45000000, // 45 млн
+      requiresMedicalExam: false,
+      message: ''
+    };
+  }
+}
+
 // Расчет страхования жизни
 function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
   if (!data.borrowers || data.borrowers.length === 0) {
     return null;
   }
 
-  // Проверяем медицинский андеррайтинг для первого заемщика
+  // Проверяем лимиты по возрасту для первого заемщика
+  let ageLimitMessage = '';
+  let ageLimitRequiresMedicalExam = false;
+  let effectiveInsuranceAmount = insuranceAmount;
+  
+  if (data.borrowers && data.borrowers.length > 0) {
+    const firstBorrower = data.borrowers[0];
+    if (firstBorrower.age) {
+      const ageLimit = getAgeLimitForLifeInsurance(firstBorrower.age);
+      
+      if (ageLimit.requiresMedicalExam) {
+        // Возраст 65+ - требуется медобследование
+        ageLimitRequiresMedicalExam = true;
+        ageLimitMessage = ageLimit.message;
+      } else if (ageLimit.maxAmount && insuranceAmount > ageLimit.maxAmount) {
+        // Страховая сумма превышает лимит для данного возраста
+        effectiveInsuranceAmount = ageLimit.maxAmount;
+        ageLimitMessage = ageLimit.message;
+      }
+    }
+  }
+
+  // Проверяем медицинский андеррайтинг для первого заемщика (рост/вес)
   let medicalUnderwritingFactor = 1.00;
   let requiresMedicalExam = false;
   let medicalUnderwritingMessage = '';
@@ -493,9 +564,40 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
     }
   }
 
+  // Объединяем требования медобследования (от возраста или от роста/веса)
+  const finalRequiresMedicalExam = requiresMedicalExam || ageLimitRequiresMedicalExam;
+  
+  // Объединяем сообщения
+  let combinedMessage = '';
+  if (ageLimitMessage) {
+    combinedMessage = ageLimitMessage;
+  }
+  if (medicalUnderwritingMessage) {
+    if (combinedMessage) {
+      combinedMessage += '; ' + medicalUnderwritingMessage;
+    } else {
+      combinedMessage = medicalUnderwritingMessage;
+    }
+  }
+
+  // Если возраст 65+ и требуется медобследование, возвращаем только сообщение без расчета премии
+  if (ageLimitRequiresMedicalExam) {
+    return {
+      total: 0,
+      totalWithoutDiscount: 0,
+      hasDiscount: false,
+      borrowers: [],
+      medicalUnderwritingFactor: medicalUnderwritingFactor,
+      requiresMedicalExam: true,
+      medicalUnderwritingMessage: combinedMessage,
+      effectiveInsuranceAmount: 0,
+      originalInsuranceAmount: insuranceAmount
+    };
+  }
+
   // Если требуется медобследование или есть надбавка +25%, отключаем скидки
   const hasDiscount = bankConfig.allow_discount_life !== false && 
-                      !requiresMedicalExam && 
+                      !finalRequiresMedicalExam && 
                       medicalUnderwritingFactor !== 1.25;
 
   let totalPremium = 0;
@@ -598,7 +700,8 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
       return null;
     }
 
-    const shareAmount = insuranceAmount * (borrower.share / 100);
+    // Используем эффективную страховую сумму (с учетом лимитов по возрасту)
+    const shareAmount = effectiveInsuranceAmount * (borrower.share / 100);
     let premium = Math.round(shareAmount * (tariff / 100) * 100) / 100;
     
     // Применяем коэффициент медицинского андеррайтинга (только для первого заемщика)
@@ -634,8 +737,10 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
     hasDiscount: hasDiscount,
     borrowers: borrowerPremiums,
     medicalUnderwritingFactor: medicalUnderwritingFactor,
-    requiresMedicalExam: requiresMedicalExam,
-    medicalUnderwritingMessage: medicalUnderwritingMessage
+    requiresMedicalExam: finalRequiresMedicalExam,
+    medicalUnderwritingMessage: combinedMessage,
+    effectiveInsuranceAmount: effectiveInsuranceAmount,
+    originalInsuranceAmount: insuranceAmount
   };
 }
 
@@ -1147,18 +1252,26 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
     const borrowerLabel = data.borrowers.length > 1 ? 'заемщики' : 'заемщик';
     // Форматируем с 2 знаками после запятой
     const formattedLife = lifePremiumV2.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-    output += `жизнь ${borrowerLabel} ${formattedLife}`;
     
-    // Добавляем сообщение о медицинском андеррайтинге во 2 варианте (только для жизни)
+    // Добавляем сообщение о медицинском андеррайтинге/лимитах во 2 варианте (только для жизни)
     const lifeResult = calculateLifeInsurance(data, bankConfig, insuranceAmount);
-    if (lifeResult) {
-      if (lifeResult.requiresMedicalExam) {
-        output += ` <span style="color: #dc3545; font-weight: bold;">⚠️ ${lifeResult.medicalUnderwritingMessage}</span>`;
-      } else if (lifeResult.medicalUnderwritingFactor === 1.25) {
-        output += ` <span style="color: #f59e0b; font-weight: bold;">${lifeResult.medicalUnderwritingMessage}</span>`;
+    if (lifeResult && lifeResult.requiresMedicalExam && lifeResult.total === 0) {
+      // Если требуется медобследование и премия = 0, показываем только сообщение
+      output += `<span style="color: #dc3545; font-weight: bold;">${lifeResult.medicalUnderwritingMessage}</span><br>`;
+    } else {
+      output += `жизнь ${borrowerLabel} ${formattedLife}`;
+      if (lifeResult && lifeResult.medicalUnderwritingMessage) {
+        if (lifeResult.requiresMedicalExam) {
+          output += ` <span style="color: #dc3545; font-weight: bold;">⚠️ ${lifeResult.medicalUnderwritingMessage}</span>`;
+        } else if (lifeResult.medicalUnderwritingFactor === 1.25) {
+          output += ` <span style="color: #f59e0b; font-weight: bold;">${lifeResult.medicalUnderwritingMessage}</span>`;
+        } else {
+          // Сообщение о лимитах по возрасту (не критичное)
+          output += ` <span style="color: #f59e0b; font-weight: bold;">${lifeResult.medicalUnderwritingMessage}</span>`;
+        }
       }
+      output += `<br>`;
     }
-    output += `<br>`;
   }
   
   // Если используем только увеличенные риски (без основного продукта) или Бастион с дополнительными рисками
