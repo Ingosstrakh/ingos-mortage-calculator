@@ -371,7 +371,7 @@ function performCalculations(data) {
   const propertyResult = calculations.find(calc => calc.type === 'property');
   const titleResult = calculations.find(calc => calc.type === 'title');
 
-  // Собираем итоговые суммы
+  // Собираем итоговые суммы (уже с учетом минимальных сумм из функций расчета)
   calculations.forEach(calc => {
     totalWithoutDiscount += calc.totalWithoutDiscount || calc.total;
     totalWithDiscount += calc.total;
@@ -397,12 +397,37 @@ function performCalculations(data) {
       // ВАЖНО: используем data.borrowers.length, а не lifeResult.borrowers.length
       // чтобы правильно определить, один заемщик или несколько
       const isMultipleBorrowers = data.borrowers && data.borrowers.length > 1;
-      lifeResult.borrowers.forEach((borrower, index) => {
-        const borrowerLabel = isMultipleBorrowers ? `заемщик ${index + 1}` : 'заемщик';
-        output += `жизнь ${borrowerLabel} ${borrower.premium.toLocaleString('ru-RU')}`;
+      
+      // Минимальная сумма для жизни: 600 рублей на каждого заемщика
+      // Премии уже содержат минимум для каждого заемщика (применено в calculateLifeInsurance)
+      
+      if (isMultipleBorrowers && lifeResult.borrowers.length > 1) {
+        // Несколько заемщиков - показываем каждого с его премией (уже с учетом минимума 600 руб)
+        lifeResult.borrowers.forEach((borrower, index) => {
+          const borrowerLabel = `заемщик ${index + 1}`;
+          output += `жизнь ${borrowerLabel} ${borrower.premium.toLocaleString('ru-RU')}`;
+          
+          // Добавляем сообщение о медицинском андеррайтинге/лимитах сразу после премии жизни (только для первого заемщика)
+          if (index === 0 && lifeResult.medicalUnderwritingMessage) {
+            if (lifeResult.requiresMedicalExam) {
+              output += ` <span style="color: #dc3545; font-weight: bold;">⚠️ ${lifeResult.medicalUnderwritingMessage}</span>`;
+            } else if (lifeResult.medicalUnderwritingFactor === 1.25) {
+              output += ` <span style="color: #f59e0b; font-weight: bold;">${lifeResult.medicalUnderwritingMessage}</span>`;
+            } else {
+              // Сообщение о лимитах по возрасту (не критичное)
+              output += ` <span style="color: #f59e0b; font-weight: bold;">${lifeResult.medicalUnderwritingMessage}</span>`;
+            }
+          }
+          output += `<br>`;
+        });
+      } else {
+        // Один заемщик - показываем премию заемщика (уже с учетом минимума 600 руб)
+        const borrowerLabel = 'заемщик';
+        const borrowerPremium = lifeResult.borrowers[0] ? lifeResult.borrowers[0].premium : lifeResult.total;
+        output += `жизнь ${borrowerLabel} ${borrowerPremium.toLocaleString('ru-RU')}`;
         
-        // Добавляем сообщение о медицинском андеррайтинге/лимитах сразу после премии жизни (только для первого заемщика)
-        if (index === 0 && lifeResult.medicalUnderwritingMessage) {
+        // Добавляем сообщение о медицинском андеррайтинге/лимитах
+        if (lifeResult.medicalUnderwritingMessage) {
           if (lifeResult.requiresMedicalExam) {
             output += ` <span style="color: #dc3545; font-weight: bold;">⚠️ ${lifeResult.medicalUnderwritingMessage}</span>`;
           } else if (lifeResult.medicalUnderwritingFactor === 1.25) {
@@ -413,7 +438,7 @@ function performCalculations(data) {
           }
         }
         output += `<br>`;
-      });
+      }
     }
   }
 
@@ -816,7 +841,12 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
     if (hasDiscount && bankConfig.discount_life_percent) {
       discountMultiplier = 1 - (bankConfig.discount_life_percent / 100);
     }
-    const premiumWithDiscount = hasDiscount ? Math.round(premium * discountMultiplier * 100) / 100 : premium;
+    let premiumWithDiscount = hasDiscount ? Math.round(premium * discountMultiplier * 100) / 100 : premium;
+
+    // Минимальная сумма премии для жизни: 600 рублей на каждого заемщика
+    const MIN_PREMIUM_LIFE = 600;
+    premium = Math.max(premium, MIN_PREMIUM_LIFE);
+    premiumWithDiscount = Math.max(premiumWithDiscount, MIN_PREMIUM_LIFE);
 
     borrowerPremiums.push({
       gender: borrower.gender,
@@ -832,9 +862,13 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
     }
   });
 
+  // Итоговые суммы уже с учетом минимума для каждого заемщика
+  const finalTotalPremium = totalPremium;
+  const finalTotalPremiumWithDiscount = hasDiscount ? totalPremiumWithDiscount : finalTotalPremium;
+
   return {
-    total: hasDiscount ? totalPremiumWithDiscount : totalPremium,
-    totalWithoutDiscount: totalPremium,
+    total: hasDiscount ? finalTotalPremiumWithDiscount : finalTotalPremium,
+    totalWithoutDiscount: finalTotalPremium,
     hasDiscount: hasDiscount,
     borrowers: borrowerPremiums,
     medicalUnderwritingFactor: medicalUnderwritingFactor,
@@ -889,9 +923,14 @@ function calculatePropertyInsurance(data, bankConfig, insuranceAmount) {
     discountApplied = true;
   }
 
+  // Минимальная сумма премии для имущества: 600 рублей
+  const MIN_PREMIUM_PROPERTY = 600;
+  const finalPremium = Math.max(discountedPremium, MIN_PREMIUM_PROPERTY);
+  const finalPremiumWithoutDiscount = Math.max(premium, MIN_PREMIUM_PROPERTY);
+
   return {
-    total: discountedPremium,
-    totalWithoutDiscount: premium,
+    total: finalPremium,
+    totalWithoutDiscount: finalPremiumWithoutDiscount,
     hasDiscount: discountApplied
   };
 }
@@ -972,9 +1011,14 @@ function calculateTitleInsurance(dataOrAmount, bankConfig, insuranceAmount, with
     discountApplied = true;
   }
 
+  // Минимальная сумма премии для титула: 600 рублей
+  const MIN_PREMIUM_TITLE = 600;
+  const finalPremium = Math.max(discountedPremium, MIN_PREMIUM_TITLE);
+  const finalPremiumWithoutDiscount = Math.max(premium, MIN_PREMIUM_TITLE);
+
   return {
-    total: discountedPremium,
-    totalWithoutDiscount: premium,
+    total: finalPremium,
+    totalWithoutDiscount: finalPremiumWithoutDiscount,
     hasDiscount: discountApplied
   };
 }
@@ -1014,20 +1058,47 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
     let lifePremiumV2 = 0;
 
     // Расчет имущества с скидкой 30%
+    const MIN_PREMIUM_PROPERTY = 600;
+    const MIN_PREMIUM_LIFE = 600;
+    
     if (data.risks.property) {
       const propertyResult = calculatePropertyInsurance(data, bankConfig, insuranceAmount);
       if (propertyResult && bankConfig.allow_discount_property) {
         const basePremium = propertyResult.totalWithoutDiscount;
         propertyPremiumV2 = Math.round(basePremium * 0.7 * 100) / 100;
+        // Применяем минимальную сумму
+        propertyPremiumV2 = Math.max(propertyPremiumV2, MIN_PREMIUM_PROPERTY);
+      } else if (propertyResult) {
+        // Если скидки не разрешены, используем базовую премию (уже с учетом минимума из функции)
+        propertyPremiumV2 = propertyResult.total || propertyResult.totalWithoutDiscount;
       }
     }
 
     // Расчет жизни с скидкой 30%
     if (data.risks.life) {
       const lifeResult = calculateLifeInsurance(data, bankConfig, insuranceAmount);
-      if (lifeResult && bankConfig.allow_discount_life) {
-        const basePremium = lifeResult.totalWithoutDiscount;
-        lifePremiumV2 = Math.round(basePremium * 0.7 * 100) / 100;
+      if (lifeResult && bankConfig.allow_discount_life && !lifeResult.requiresMedicalExam && lifeResult.medicalUnderwritingFactor !== 1.25) {
+        // Применяем скидку к премиям каждого заемщика отдельно
+        const numBorrowers = data.borrowers ? data.borrowers.length : 1;
+        let totalWithDiscount = 0;
+        
+        if (lifeResult.borrowers && lifeResult.borrowers.length > 0) {
+          // Применяем скидку к каждому заемщику и суммируем
+          lifeResult.borrowers.forEach(borrower => {
+            const borrowerPremiumWithDiscount = borrower.premiumWithDiscount || borrower.premium;
+            totalWithDiscount += borrowerPremiumWithDiscount;
+          });
+        } else {
+          // Fallback: применяем скидку к итоговой сумме
+          const basePremium = lifeResult.totalWithoutDiscount;
+          totalWithDiscount = Math.round(basePremium * 0.7 * 100) / 100;
+        }
+        
+        // Минимум 600 руб на каждого заемщика
+        lifePremiumV2 = Math.max(totalWithDiscount, MIN_PREMIUM_LIFE * numBorrowers);
+      } else if (lifeResult) {
+        // Если скидки не разрешены или есть мед. андеррайтинг, используем базовую премию (уже с учетом минимума из функции)
+        lifePremiumV2 = lifeResult.total || lifeResult.totalWithoutDiscount;
       }
     }
 
@@ -1039,8 +1110,20 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
       output += `имущество ${propertyPremiumV2.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}<br>`;
     }
     if (data.risks.life && lifePremiumV2 > 0) {
-      const borrowerLabel = data.borrowers.length > 1 ? 'заемщики' : 'заемщик';
-      output += `жизнь ${borrowerLabel} ${lifePremiumV2.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}<br>`;
+      // Показываем каждого заемщика отдельно, если есть данные
+      const lifeResult = calculateLifeInsurance(data, bankConfig, insuranceAmount);
+      if (lifeResult && lifeResult.borrowers && lifeResult.borrowers.length > 0) {
+        const isMultipleBorrowers = data.borrowers && data.borrowers.length > 1;
+        lifeResult.borrowers.forEach((borrower, index) => {
+          const borrowerLabel = isMultipleBorrowers ? `заемщик ${index + 1}` : 'заемщик';
+          const borrowerPremium = borrower.premiumWithDiscount || borrower.premium;
+          output += `жизнь ${borrowerLabel} ${borrowerPremium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}<br>`;
+        });
+      } else {
+        // Fallback: показываем итоговую сумму
+        const borrowerLabel = data.borrowers.length > 1 ? 'заемщики' : 'заемщик';
+        output += `жизнь ${borrowerLabel} ${lifePremiumV2.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}<br>`;
+      }
     }
 
     output += `<br>Итого тариф взнос ${totalV2.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}`;
@@ -1090,6 +1173,10 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
   let propertyPremiumV2 = 0;
   let lifePremiumV2 = 0;
 
+  // Минимальные суммы для варианта 2
+  const MIN_PREMIUM_PROPERTY_V2 = 600;
+  const MIN_PREMIUM_LIFE_V2 = 600;
+  
   // Расчет имущества с скидкой 30% (где разрешено)
   if (data.risks.property) {
     const propertyResult = calculatePropertyInsurance(data, bankConfig, insuranceAmount);
@@ -1098,8 +1185,10 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
         // Применяем скидку 30% вместо стандартной (10% или другой)
         const basePremium = propertyResult.totalWithoutDiscount;
         propertyPremiumV2 = Math.round(basePremium * 0.7 * 100) / 100; // 30% скидка
+        // Применяем минимальную сумму
+        propertyPremiumV2 = Math.max(propertyPremiumV2, MIN_PREMIUM_PROPERTY_V2);
       } else {
-        // Если скидки не разрешены, используем базовую премию без скидки
+        // Если скидки не разрешены, используем базовую премию без скидки (уже с учетом минимума из функции)
         propertyPremiumV2 = propertyResult.totalWithoutDiscount || propertyResult.total;
       }
     }
@@ -1112,12 +1201,27 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
       // Медицинский андеррайтинг: если требуется медобследование или есть надбавка +25%, скидки отключены
       // В calculateLifeInsurance уже применен коэффициент 1.25 и отключены скидки при необходимости
       if (bankConfig.allow_discount_life && !lifeResult.requiresMedicalExam && lifeResult.medicalUnderwritingFactor !== 1.25) {
-        // Применяем скидку 30% вместо стандартной (25% или другой)
-        const basePremium = lifeResult.totalWithoutDiscount;
-        lifePremiumV2 = Math.round(basePremium * 0.7 * 100) / 100; // 30% скидка
+        // Применяем скидку 30% к премиям каждого заемщика отдельно
+        const numBorrowers = data.borrowers ? data.borrowers.length : 1;
+        let totalWithDiscount = 0;
+        
+        if (lifeResult.borrowers && lifeResult.borrowers.length > 0) {
+          // Применяем скидку к каждому заемщику и суммируем
+          lifeResult.borrowers.forEach(borrower => {
+            const borrowerPremiumWithDiscount = borrower.premiumWithDiscount || borrower.premium;
+            totalWithDiscount += borrowerPremiumWithDiscount;
+          });
+        } else {
+          // Fallback: применяем скидку к итоговой сумме
+          const basePremium = lifeResult.totalWithoutDiscount;
+          totalWithDiscount = Math.round(basePremium * 0.7 * 100) / 100;
+        }
+        
+        // Минимум 600 руб на каждого заемщика
+        lifePremiumV2 = Math.max(totalWithDiscount, MIN_PREMIUM_LIFE_V2 * numBorrowers);
       } else {
         // Если скидки не разрешены или есть медицинский андеррайтинг, используем базовую премию без скидки
-        // (уже с учетом надбавки +25% если применимо)
+        // (уже с учетом надбавки +25% если применимо и минимума из функции)
         lifePremiumV2 = lifeResult.total || lifeResult.totalWithoutDiscount;
       }
     }
@@ -1350,16 +1454,39 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
     output += `имущество ${formattedProperty}<br>`;
   }
   if (data.risks.life) {
-    const borrowerLabel = data.borrowers.length > 1 ? 'заемщики' : 'заемщик';
-    // Форматируем с 2 знаками после запятой
-    const formattedLife = lifePremiumV2.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-    
     // Добавляем сообщение о медицинском андеррайтинге/лимитах во 2 варианте (только для жизни)
     const lifeResult = calculateLifeInsurance(data, bankConfig, insuranceAmount);
     if (lifeResult && lifeResult.requiresMedicalExam && lifeResult.total === 0) {
       // Если требуется медобследование и премия = 0, показываем только сообщение
       output += `<span style="color: #dc3545; font-weight: bold;">${lifeResult.medicalUnderwritingMessage}</span><br>`;
+    } else if (lifeResult && lifeResult.borrowers && lifeResult.borrowers.length > 0) {
+      // Показываем каждого заемщика отдельно
+      const isMultipleBorrowers = data.borrowers && data.borrowers.length > 1;
+      
+      lifeResult.borrowers.forEach((borrower, index) => {
+        const borrowerLabel = isMultipleBorrowers ? `заемщик ${index + 1}` : 'заемщик';
+        // Используем премию со скидкой, если есть, иначе обычную (уже с учетом минимума)
+        const borrowerPremium = borrower.premiumWithDiscount || borrower.premium;
+        const formattedLife = borrowerPremium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+        output += `жизнь ${borrowerLabel} ${formattedLife}`;
+        
+        // Добавляем сообщение о медицинском андеррайтинге/лимитах (только для первого заемщика)
+        if (index === 0 && lifeResult.medicalUnderwritingMessage) {
+          if (lifeResult.requiresMedicalExam) {
+            output += ` <span style="color: #dc3545; font-weight: bold;">⚠️ ${lifeResult.medicalUnderwritingMessage}</span>`;
+          } else if (lifeResult.medicalUnderwritingFactor === 1.25) {
+            output += ` <span style="color: #f59e0b; font-weight: bold;">${lifeResult.medicalUnderwritingMessage}</span>`;
+          } else {
+            // Сообщение о лимитах по возрасту (не критичное)
+            output += ` <span style="color: #f59e0b; font-weight: bold;">${lifeResult.medicalUnderwritingMessage}</span>`;
+          }
+        }
+        output += `<br>`;
+      });
     } else {
+      // Fallback: показываем итоговую сумму
+      const borrowerLabel = data.borrowers.length > 1 ? 'заемщики' : 'заемщик';
+      const formattedLife = lifePremiumV2.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
       output += `жизнь ${borrowerLabel} ${formattedLife}`;
       if (lifeResult && lifeResult.medicalUnderwritingMessage) {
         if (lifeResult.requiresMedicalExam) {
