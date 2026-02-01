@@ -409,6 +409,22 @@ function extractBorrowers(text, contractDate = null) {
       continue;
     }
 
+    // ПРИОРИТЕТ: Специальный паттерн для формата "МУЖ,21.03.1986" или "жен,15.01.2000" (запятая без пробела)
+    // Проверяем это ПЕРВЫМ, чтобы не пропустить такой формат
+    const commaPattern = /(МУЖ|ЖЕН|муж|жен|МУЖЧИНА|ЖЕНЩИНА|мужчина|женщина|она|он|мужч)[,\s]+(\d{1,2}\.\d{1,2}\.\d{4})/ig;
+    const commaMatches = Array.from(line.matchAll(commaPattern));
+    
+    for (const match of commaMatches) {
+      const genderWord = match[1].toLowerCase();
+      const gender = (genderWord === 'женщина' || genderWord === 'жен' || genderWord === 'она') ? 'f' : 'm';
+      const dob = match[2];
+
+      // Проверяем, что такая дата еще не добавлена
+      if (!found.some(f => f.dob === dob)) {
+        found.push({ dob, gender, share: undefined, raw: line });
+      }
+    }
+
     // Ищем заемщиков с долями (формат: "жен 04.06.1981- 50%" или "он - 50%- 13.04.1968")
     const sharePattern = /(мужчина|женщина|муж|жен|она|он|мужч)[^\d]{0,20}(\d{1,2}\.\d{1,2}\.\d{4})[^\d]{0,20}(\d{1,3})\s*%/ig;
 
@@ -460,8 +476,9 @@ function extractBorrowers(text, contractDate = null) {
       }
     }
 
-    // Если не нашли с долями, ищем просто пол + дата
-    if (!sharePattern.test(line)) {
+    // Если не нашли с долями и еще не нашли через commaPattern, ищем просто пол + дата
+    if (!sharePattern.test(line) && commaMatches.length === 0) {
+      // Стандартный паттерн для других форматов
       const simplePattern = /(мужчина|женщина|муж|жен|она|он|мужч)[^\d]{0,20}(\d{1,2}\.\d{1,2}\.\d{4})/ig;
       const simpleMatches = Array.from(line.matchAll(simplePattern));
 
@@ -480,6 +497,18 @@ function extractBorrowers(text, contractDate = null) {
 
   // 2) Если все еще не найдено, ищем глобально (менее надежно)
   if (found.length === 0) {
+    // Сначала пробуем паттерн с запятой без пробела (МУЖ,21.03.1986)
+    const commaPatternGlobal = /(МУЖ|ЖЕН|муж|жен|МУЖЧИНА|ЖЕНЩИНА|мужчина|женщина|она|он|мужч)[,\s]+(\d{1,2}\.\d{1,2}\.\d{4})/ig;
+    const commaMatchesGlobal = Array.from(text.matchAll(commaPatternGlobal));
+    for (const match of commaMatchesGlobal) {
+      const genderWord = match[1].toLowerCase();
+      const gender = (genderWord === 'женщина' || genderWord === 'жен' || genderWord === 'она') ? 'f' : 'm';
+      const dob = match[2];
+      if (!/\bкд\b/i.test(match[0]) && !found.some(f => f.dob === dob)) {
+        found.push({ dob, gender, share: undefined });
+      }
+    }
+    
     const globalPatterns = [
       /(женщина)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/ig,
       /(мужчина)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/ig,
