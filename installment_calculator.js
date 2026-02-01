@@ -52,6 +52,65 @@ function extractFullName(text) {
   return null;
 }
 
+// Функция извлечения нескольких заемщиков с их долями
+function extractMultipleBorrowers(text) {
+  const borrowers = [];
+  
+  // Паттерн для ФИО и даты рождения: "Фамилия Имя Отчество, DD.MM.YYYY гр"
+  const borrowerPattern = /([А-ЯЁ][а-яё]+)\s+([А-ЯЁ][а-яё]+)\s+([А-ЯЁ][а-яё]+)[,\s]+(\d{1,2}\.\d{1,2}\.\d{4})\s*гр?/g;
+  
+  let match;
+  while ((match = borrowerPattern.exec(text)) !== null) {
+    const surname = match[1];
+    const firstName = match[2];
+    const middleName = match[3];
+    const birthDate = match[4];
+    
+    borrowers.push({
+      surname: surname,
+      firstName: firstName,
+      middleName: middleName,
+      fullName: `${surname} ${firstName} ${middleName}`,
+      birthDate: birthDate,
+      gender: detectGenderBySurname(surname),
+      age: calculateAge(birthDate)
+    });
+  }
+  
+  // Извлекаем доли (формат: "Доли 50/50" или "50/50" или "50 на 50")
+  const sharePatterns = [
+    /[Дд]оли\s+(\d+)\s*[\/\sна]\s*(\d+)/i,
+    /(\d+)\s*[\/\sна]\s*(\d+)\s*%/i,
+    /(\d+)\s*\/\s*(\d+)/i
+  ];
+  
+  let shares = null;
+  for (const pattern of sharePatterns) {
+    const shareMatch = text.match(pattern);
+    if (shareMatch) {
+      const share1 = parseInt(shareMatch[1], 10);
+      const share2 = parseInt(shareMatch[2], 10);
+      shares = [share1, share2];
+      break;
+    }
+  }
+  
+  // Если нашли несколько заемщиков и доли, распределяем доли
+  if (borrowers.length > 1 && shares && shares.length === borrowers.length) {
+    borrowers.forEach((borrower, index) => {
+      borrower.share = shares[index];
+    });
+  } else if (borrowers.length > 1) {
+    // Если доли не указаны, делим поровну
+    const equalShare = Math.floor(100 / borrowers.length);
+    borrowers.forEach((borrower, index) => {
+      borrower.share = index < borrowers.length - 1 ? equalShare : 100 - (equalShare * (borrowers.length - 1));
+    });
+  }
+  
+  return borrowers.length > 0 ? borrowers : null;
+}
+
 // Функция извлечения даты рождения
 function extractBirthDate(text) {
   // Ищем паттерн: DD.MM.YYYY или DD.MM.YYYY гр или DD.MM.YYYYгр
@@ -220,7 +279,8 @@ function calculateMonthsUntilEnd(endDateStr) {
 // Основная функция парсинга данных рассрочки
 function parseInstallmentData(text) {
   const result = {
-    fullName: null,
+    borrowers: [], // Массив заемщиков (для поддержки нескольких заемщиков)
+    fullName: null, // Для обратной совместимости (первый заемщик)
     surname: null,
     firstName: null,
     middleName: null,
@@ -234,29 +294,58 @@ function parseInstallmentData(text) {
     errors: []
   };
   
-  // Извлекаем ФИО
-  const nameData = extractFullName(text);
-  if (nameData) {
-    result.fullName = nameData.fullName;
-    result.surname = nameData.surname;
-    result.firstName = nameData.firstName;
-    result.middleName = nameData.middleName;
-    
-    // Определяем пол по фамилии
-    result.gender = detectGenderBySurname(nameData.surname);
-  } else {
-    result.errors.push('Не удалось извлечь ФИО');
-  }
+  // Сначала пробуем извлечь несколько заемщиков
+  const multipleBorrowers = extractMultipleBorrowers(text);
   
-  // Извлекаем дату рождения
-  result.birthDate = extractBirthDate(text);
-  if (result.birthDate) {
-    result.age = calculateAge(result.birthDate);
-    if (!result.age) {
-      result.errors.push('Не удалось рассчитать возраст');
-    }
+  if (multipleBorrowers && multipleBorrowers.length > 1) {
+    // Несколько заемщиков
+    result.borrowers = multipleBorrowers;
+    
+    // Для обратной совместимости устанавливаем данные первого заемщика
+    const firstBorrower = multipleBorrowers[0];
+    result.fullName = firstBorrower.fullName;
+    result.surname = firstBorrower.surname;
+    result.firstName = firstBorrower.firstName;
+    result.middleName = firstBorrower.middleName;
+    result.birthDate = firstBorrower.birthDate;
+    result.age = firstBorrower.age;
+    result.gender = firstBorrower.gender;
   } else {
-    result.errors.push('Не удалось извлечь дату рождения');
+    // Один заемщик - используем старую логику
+    const nameData = extractFullName(text);
+    if (nameData) {
+      result.fullName = nameData.fullName;
+      result.surname = nameData.surname;
+      result.firstName = nameData.firstName;
+      result.middleName = nameData.middleName;
+      result.gender = detectGenderBySurname(nameData.surname);
+      
+      result.borrowers = [{
+        surname: nameData.surname,
+        firstName: nameData.firstName,
+        middleName: nameData.middleName,
+        fullName: nameData.fullName,
+        gender: result.gender,
+        share: 100
+      }];
+    } else {
+      result.errors.push('Не удалось извлечь ФИО');
+    }
+    
+    // Извлекаем дату рождения
+    result.birthDate = extractBirthDate(text);
+    if (result.birthDate) {
+      result.age = calculateAge(result.birthDate);
+      if (!result.age) {
+        result.errors.push('Не удалось рассчитать возраст');
+      }
+      if (result.borrowers.length > 0) {
+        result.borrowers[0].birthDate = result.birthDate;
+        result.borrowers[0].age = result.age;
+      }
+    } else {
+      result.errors.push('Не удалось извлечь дату рождения');
+    }
   }
   
   // Извлекаем сумму рассрочки
@@ -281,9 +370,10 @@ function parseInstallmentData(text) {
   result.weight = extractWeight(text);
   
   // Проверяем валидность данных
-  result.isValid = result.fullName && 
-                   result.age !== null && 
-                   result.gender && 
+  const hasValidBorrowers = result.borrowers.length > 0 && 
+                           result.borrowers.every(b => b.age !== null && b.gender);
+  
+  result.isValid = hasValidBorrowers && 
                    result.installmentAmount && 
                    result.monthsUntilEnd !== null &&
                    result.errors.length === 0;
@@ -465,123 +555,265 @@ function calculateInstallmentPremium(parsedData) {
     };
   }
   
-  // Проверяем возраст (должен быть в диапазоне тарифов)
-  if (parsedData.age < 18 || parsedData.age > 64) {
-    return {
-      success: false,
-      error: `Возраст ${parsedData.age} лет вне диапазона тарифов (18-64 года)`
-    };
-  }
-  
-  // Проверяем лимиты по возрасту
-  let ageLimitMessage = '';
-  let ageLimitRequiresMedicalExam = false;
-  let effectiveInstallmentAmount = parsedData.installmentAmount;
-  
-  const ageLimit = getAgeLimitForLifeInsuranceInstallment(parsedData.age);
-  
-  if (ageLimit.requiresMedicalExam) {
-    // Возраст 65+ - требуется медобследование
-    return {
-      success: false,
-      error: ageLimit.message
-    };
-  } else if (ageLimit.maxAmount && parsedData.installmentAmount > ageLimit.maxAmount) {
-    // Страховая сумма превышает лимит для данного возраста
-    effectiveInstallmentAmount = ageLimit.maxAmount;
-    if (ageLimit.message) {
-      ageLimitMessage = ageLimit.message;
-    }
-  }
-  
-  // Проверяем медицинский андеррайтинг (рост/вес)
-  let medicalUnderwritingFactor = 1.00;
-  let requiresMedicalExam = false;
-  let medicalUnderwritingMessage = '';
-  
-  if (parsedData.height && parsedData.weight) {
-    medicalUnderwritingFactor = getUnderwritingFactorInstallment(parsedData.age, parsedData.height, parsedData.weight);
-    
-    if (medicalUnderwritingFactor === "МЕДО") {
-      requiresMedicalExam = true;
-      medicalUnderwritingMessage = '⚠️ Необходимо пройти медобследование';
-    } else if (medicalUnderwritingFactor === 1.25) {
-      medicalUnderwritingMessage = '⚠️ Применена надбавка +25% к тарифу жизни (мед. андеррайтинг)';
-    }
-  }
-  
-  // Объединяем требования медобследования
-  const finalRequiresMedicalExam = requiresMedicalExam || ageLimitRequiresMedicalExam;
-  
-  // Объединяем сообщения
-  let combinedMessage = '';
-  if (ageLimitMessage) {
-    combinedMessage = ageLimitMessage;
-  }
-  if (medicalUnderwritingMessage) {
-    if (combinedMessage) {
-      combinedMessage += '; ' + medicalUnderwritingMessage;
-    } else {
-      combinedMessage = medicalUnderwritingMessage;
-    }
-  }
-  
-  // Получаем тариф для данного возраста и пола
-  const tariff = tariffTable[parsedData.gender] && tariffTable[parsedData.gender][parsedData.age];
-  if (!tariff) {
-    return {
-      success: false,
-      error: `Тариф не найден для возраста ${parsedData.age} лет и пола ${parsedData.gender}`
-    };
-  }
-  
   // Определяем количество месяцев для расчета
   // Если меньше 12 месяцев, считаем как 1 год
   const monthsToCalculate = parsedData.monthsUntilEnd < 12 ? 12 : parsedData.monthsUntilEnd;
   
-  // Рассчитываем премию за 1 год с учетом эффективной суммы
-  let annualPremium = effectiveInstallmentAmount * (tariff / 100);
-  
-  // Применяем коэффициент медицинского андеррайтинга
-  if (medicalUnderwritingFactor === 1.25) {
-    annualPremium = annualPremium * 1.25;
-  }
-  
-  // Рассчитываем премию за месяц
-  const monthlyPremium = annualPremium / 12;
-  
-  // Рассчитываем итоговую премию (за все месяцы рассрочки)
-  const totalPremium = monthlyPremium * monthsToCalculate;
-  
-  // Вариант 1: без скидки (скидки отключены при мед. андеррайтинге)
-  const variant1 = Math.round(totalPremium * 100) / 100;
-  
-  // Вариант 2: со скидкой 25% (только если нет мед. андеррайтинга)
-  const variant2 = finalRequiresMedicalExam || medicalUnderwritingFactor === 1.25 
-    ? variant1 
-    : Math.round(totalPremium * 0.75 * 100) / 100;
-  
-  return {
-    success: true,
-    data: {
-      fullName: parsedData.fullName,
-      age: parsedData.age,
-      gender: parsedData.gender === 'm' ? 'мужчина' : 'женщина',
-      installmentAmount: parsedData.installmentAmount,
-      effectiveInstallmentAmount: effectiveInstallmentAmount,
-      endDate: parsedData.endDate,
-      monthsUntilEnd: parsedData.monthsUntilEnd,
-      monthsCalculated: monthsToCalculate,
-      tariff: tariff,
-      annualPremium: annualPremium,
-      monthlyPremium: monthlyPremium,
-      variant1: variant1,
-      variant2: variant2,
-      medicalUnderwritingFactor: medicalUnderwritingFactor,
-      requiresMedicalExam: finalRequiresMedicalExam,
-      medicalUnderwritingMessage: combinedMessage
+  // Если несколько заемщиков, рассчитываем для каждого отдельно
+  if (parsedData.borrowers && parsedData.borrowers.length > 1) {
+    const borrowerResults = [];
+    let totalVariant1 = 0;
+    let totalVariant2 = 0;
+    const allMessages = [];
+    
+    for (const borrower of parsedData.borrowers) {
+      // Проверяем возраст (должен быть в диапазоне тарифов)
+      if (borrower.age < 18 || borrower.age > 64) {
+        return {
+          success: false,
+          error: `Возраст заемщика ${borrower.fullName} (${borrower.age} лет) вне диапазона тарифов (18-64 года)`
+        };
+      }
+      
+      // Рассчитываем долю заемщика от общей суммы
+      const borrowerShare = borrower.share || (100 / parsedData.borrowers.length);
+      const borrowerAmount = Math.round(parsedData.installmentAmount * borrowerShare / 100);
+      
+      // Проверяем лимиты по возрасту для данного заемщика
+      let ageLimitMessage = '';
+      let ageLimitRequiresMedicalExam = false;
+      let effectiveBorrowerAmount = borrowerAmount;
+      
+      const ageLimit = getAgeLimitForLifeInsuranceInstallment(borrower.age);
+      
+      if (ageLimit.requiresMedicalExam) {
+        // Возраст 65+ - требуется медобследование
+        return {
+          success: false,
+          error: `Заемщик ${borrower.fullName}: ${ageLimit.message}`
+        };
+      } else if (ageLimit.maxAmount && borrowerAmount > ageLimit.maxAmount) {
+        // Страховая сумма превышает лимит для данного возраста
+        effectiveBorrowerAmount = ageLimit.maxAmount;
+        if (ageLimit.message) {
+          ageLimitMessage = `${borrower.fullName}: ${ageLimit.message}`;
+        }
+      }
+      
+      // Проверяем медицинский андеррайтинг (рост/вес) - применяем к первому заемщику
+      let medicalUnderwritingFactor = 1.00;
+      let requiresMedicalExam = false;
+      let medicalUnderwritingMessage = '';
+      
+      if (parsedData.height && parsedData.weight && borrower === parsedData.borrowers[0]) {
+        medicalUnderwritingFactor = getUnderwritingFactorInstallment(borrower.age, parsedData.height, parsedData.weight);
+        
+        if (medicalUnderwritingFactor === "МЕДО") {
+          requiresMedicalExam = true;
+          medicalUnderwritingMessage = '⚠️ Необходимо пройти медобследование';
+        } else if (medicalUnderwritingFactor === 1.25) {
+          medicalUnderwritingMessage = '⚠️ Применена надбавка +25% к тарифу жизни (мед. андеррайтинг)';
+        }
+      }
+      
+      // Объединяем требования медобследования
+      const finalRequiresMedicalExam = requiresMedicalExam || ageLimitRequiresMedicalExam;
+      
+      // Получаем тариф для данного возраста и пола
+      const tariff = tariffTable[borrower.gender] && tariffTable[borrower.gender][borrower.age];
+      if (!tariff) {
+        return {
+          success: false,
+          error: `Тариф не найден для заемщика ${borrower.fullName} (возраст ${borrower.age} лет, пол ${borrower.gender})`
+        };
+      }
+      
+      // Рассчитываем премию за 1 год с учетом эффективной суммы заемщика
+      let annualPremium = effectiveBorrowerAmount * (tariff / 100);
+      
+      // Применяем коэффициент медицинского андеррайтинга (только для первого заемщика)
+      if (borrower === parsedData.borrowers[0] && medicalUnderwritingFactor === 1.25) {
+        annualPremium = annualPremium * 1.25;
+      }
+      
+      // Рассчитываем премию за месяц
+      const monthlyPremium = annualPremium / 12;
+      
+      // Рассчитываем итоговую премию (за все месяцы рассрочки)
+      const totalPremium = monthlyPremium * monthsToCalculate;
+      
+      // Вариант 1: без скидки (скидки отключены при мед. андеррайтинге)
+      const variant1 = Math.round(totalPremium * 100) / 100;
+      
+      // Вариант 2: со скидкой 25% (только если нет мед. андеррайтинга)
+      const variant2 = finalRequiresMedicalExam || medicalUnderwritingFactor === 1.25 
+        ? variant1 
+        : Math.round(totalPremium * 0.75 * 100) / 100;
+      
+      totalVariant1 += variant1;
+      totalVariant2 += variant2;
+      
+      borrowerResults.push({
+        fullName: borrower.fullName,
+        age: borrower.age,
+        gender: borrower.gender === 'm' ? 'мужчина' : 'женщина',
+        share: borrowerShare,
+        installmentAmount: borrowerAmount,
+        effectiveInstallmentAmount: effectiveBorrowerAmount,
+        tariff: tariff,
+        annualPremium: annualPremium,
+        monthlyPremium: monthlyPremium,
+        variant1: variant1,
+        variant2: variant2,
+        medicalUnderwritingFactor: borrower === parsedData.borrowers[0] ? medicalUnderwritingFactor : 1.00,
+        requiresMedicalExam: finalRequiresMedicalExam
+      });
+      
+      // Собираем сообщения
+      if (ageLimitMessage) {
+        allMessages.push(ageLimitMessage);
+      }
+      if (borrower === parsedData.borrowers[0] && medicalUnderwritingMessage) {
+        allMessages.push(medicalUnderwritingMessage);
+      }
     }
-  };
+    
+    return {
+      success: true,
+      data: {
+        borrowers: borrowerResults,
+        fullName: parsedData.borrowers.map(b => b.fullName).join(', '),
+        installmentAmount: parsedData.installmentAmount,
+        endDate: parsedData.endDate,
+        monthsUntilEnd: parsedData.monthsUntilEnd,
+        monthsCalculated: monthsToCalculate,
+        variant1: Math.round(totalVariant1 * 100) / 100,
+        variant2: Math.round(totalVariant2 * 100) / 100,
+        medicalUnderwritingMessage: allMessages.join('; ')
+      }
+    };
+  } else {
+    // Один заемщик - используем старую логику
+    const borrower = parsedData.borrowers[0] || {
+      age: parsedData.age,
+      gender: parsedData.gender,
+      fullName: parsedData.fullName
+    };
+    
+    // Проверяем возраст (должен быть в диапазоне тарифов)
+    if (borrower.age < 18 || borrower.age > 64) {
+      return {
+        success: false,
+        error: `Возраст ${borrower.age} лет вне диапазона тарифов (18-64 года)`
+      };
+    }
+    
+    // Проверяем лимиты по возрасту
+    let ageLimitMessage = '';
+    let ageLimitRequiresMedicalExam = false;
+    let effectiveInstallmentAmount = parsedData.installmentAmount;
+    
+    const ageLimit = getAgeLimitForLifeInsuranceInstallment(borrower.age);
+    
+    if (ageLimit.requiresMedicalExam) {
+      // Возраст 65+ - требуется медобследование
+      return {
+        success: false,
+        error: ageLimit.message
+      };
+    } else if (ageLimit.maxAmount && parsedData.installmentAmount > ageLimit.maxAmount) {
+      // Страховая сумма превышает лимит для данного возраста
+      effectiveInstallmentAmount = ageLimit.maxAmount;
+      if (ageLimit.message) {
+        ageLimitMessage = ageLimit.message;
+      }
+    }
+    
+    // Проверяем медицинский андеррайтинг (рост/вес)
+    let medicalUnderwritingFactor = 1.00;
+    let requiresMedicalExam = false;
+    let medicalUnderwritingMessage = '';
+    
+    if (parsedData.height && parsedData.weight) {
+      medicalUnderwritingFactor = getUnderwritingFactorInstallment(borrower.age, parsedData.height, parsedData.weight);
+      
+      if (medicalUnderwritingFactor === "МЕДО") {
+        requiresMedicalExam = true;
+        medicalUnderwritingMessage = '⚠️ Необходимо пройти медобследование';
+      } else if (medicalUnderwritingFactor === 1.25) {
+        medicalUnderwritingMessage = '⚠️ Применена надбавка +25% к тарифу жизни (мед. андеррайтинг)';
+      }
+    }
+    
+    // Объединяем требования медобследования
+    const finalRequiresMedicalExam = requiresMedicalExam || ageLimitRequiresMedicalExam;
+    
+    // Объединяем сообщения
+    let combinedMessage = '';
+    if (ageLimitMessage) {
+      combinedMessage = ageLimitMessage;
+    }
+    if (medicalUnderwritingMessage) {
+      if (combinedMessage) {
+        combinedMessage += '; ' + medicalUnderwritingMessage;
+      } else {
+        combinedMessage = medicalUnderwritingMessage;
+      }
+    }
+    
+    // Получаем тариф для данного возраста и пола
+    const tariff = tariffTable[borrower.gender] && tariffTable[borrower.gender][borrower.age];
+    if (!tariff) {
+      return {
+        success: false,
+        error: `Тариф не найден для возраста ${borrower.age} лет и пола ${borrower.gender}`
+      };
+    }
+    
+    // Рассчитываем премию за 1 год с учетом эффективной суммы
+    let annualPremium = effectiveInstallmentAmount * (tariff / 100);
+    
+    // Применяем коэффициент медицинского андеррайтинга
+    if (medicalUnderwritingFactor === 1.25) {
+      annualPremium = annualPremium * 1.25;
+    }
+    
+    // Рассчитываем премию за месяц
+    const monthlyPremium = annualPremium / 12;
+    
+    // Рассчитываем итоговую премию (за все месяцы рассрочки)
+    const totalPremium = monthlyPremium * monthsToCalculate;
+    
+    // Вариант 1: без скидки (скидки отключены при мед. андеррайтинге)
+    const variant1 = Math.round(totalPremium * 100) / 100;
+    
+    // Вариант 2: со скидкой 25% (только если нет мед. андеррайтинга)
+    const variant2 = finalRequiresMedicalExam || medicalUnderwritingFactor === 1.25 
+      ? variant1 
+      : Math.round(totalPremium * 0.75 * 100) / 100;
+    
+    return {
+      success: true,
+      data: {
+        fullName: borrower.fullName,
+        age: borrower.age,
+        gender: borrower.gender === 'm' ? 'мужчина' : 'женщина',
+        installmentAmount: parsedData.installmentAmount,
+        effectiveInstallmentAmount: effectiveInstallmentAmount,
+        endDate: parsedData.endDate,
+        monthsUntilEnd: parsedData.monthsUntilEnd,
+        monthsCalculated: monthsToCalculate,
+        tariff: tariff,
+        annualPremium: annualPremium,
+        monthlyPremium: monthlyPremium,
+        variant1: variant1,
+        variant2: variant2,
+        medicalUnderwritingFactor: medicalUnderwritingFactor,
+        requiresMedicalExam: finalRequiresMedicalExam,
+        medicalUnderwritingMessage: combinedMessage
+      }
+    };
+  }
 }
 
 // Экспорт функций для использования в других файлах
