@@ -735,13 +735,13 @@
   </script>
 
   <!-- Подключаем данные и логику -->
-  <script src="config_banks.js"></script>
-  <script src="tariffs_life.js"></script>
-  <script src="tariffs_property.js"></script>
-  <script src="tariffs_ifl.js"></script>
-  <script src="parser.js"></script>
-  <script src="calculator_v2.js"></script>
-  <script src="openai.js"></script>
+  <script src="config_banks.js?v=13"></script>
+  <script src="tariffs_life.js?v=13"></script>
+  <script src="tariffs_property.js?v=13"></script>
+  <script src="tariffs_ifl.js?v=13"></script>
+  <script src="parser.js?v=13"></script>
+  <script src="calculator_v2.js?v=13"></script>
+  <script src="openai.js?v=13"></script>
 
   <!-- JavaScript для андеррайтинга -->
   <script>
@@ -851,64 +851,14 @@
       }
     }
 
-    // ✅ ИСПРАВЛЕННАЯ ФУНКЦИЯ calculateAge для корректной работы с форматом DD.MM.YYYY
     function calculateAge(birthDate) {
-      // birthDate может быть в формате:
-      // 1. YYYY-MM-DD (из input type="date")
-      // 2. DD.MM.YYYY (из текстовых полей)
-      
-      let day, month, year;
-      
-      if (birthDate.includes('-')) {
-        // Формат YYYY-MM-DD (из input type="date")
-        const [y, m, d] = birthDate.split('-');
-        day = parseInt(d, 10);
-        month = parseInt(m, 10);
-        year = parseInt(y, 10);
-      } else if (birthDate.includes('.')) {
-        // Формат DD.MM.YYYY (из текстовых полей)
-        const [d, m, y] = birthDate.split('.');
-        day = parseInt(d, 10);
-        month = parseInt(m, 10);
-        year = parseInt(y, 10);
-      } else {
-        // Неизвестный формат, пытаемся использовать встроенный Date
-        const birth = new Date(birthDate);
-        if (isNaN(birth.getTime())) {
-          console.error('Invalid date format:', birthDate);
-          return NaN;
-        }
-        day = birth.getDate();
-        month = birth.getMonth() + 1;
-        year = birth.getFullYear();
-      }
-      
-      // Валидация значений
-      if (isNaN(day) || isNaN(month) || isNaN(year) || day < 1 || day > 31 || month < 1 || month > 12 || year < 1900 || year > 2100) {
-        console.error('Invalid date values:', { day, month, year });
-        return NaN;
-      }
-      
-      // Создаем дату рождения, используя конструктор Date(year, month-1, day)
-      // Это гарантирует локальную интерпретацию даты, а не UTC
-      const birthDateObj = new Date(year, month - 1, day);
       const today = new Date();
-      
-      // Проверяем корректность созданной даты
-      if (birthDateObj.getFullYear() !== year || birthDateObj.getMonth() !== month - 1 || birthDateObj.getDate() !== day) {
-        console.error('Date validation failed:', { year, month, day, created: birthDateObj });
-        return NaN;
-      }
-      
-      // Рассчитываем возраст
-      let age = today.getFullYear() - birthDateObj.getFullYear();
-      const monthDiff = today.getMonth() - birthDateObj.getMonth();
-      
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDateObj.getDate())) {
+      const birth = new Date(birthDate);
+      let age = today.getFullYear() - birth.getFullYear();
+      const monthDiff = today.getMonth() - birth.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
         age--;
       }
-      
-      console.log(`calculateAge: ${birthDate} => Age: ${age} years`);
       return age;
     }
 
@@ -1013,7 +963,7 @@
         } else if (wearPercent > 50) {
           risk = 'medium';
           riskLevel = 'Средний риск';
-          message = 'Износ здания превышает 50%. Возможны ограниче��ия в страховании.';
+          message = 'Износ здания превышает 50%. Возможны ограничения в страховании.';
         }
 
         showResult('wear-results', {
@@ -1051,7 +1001,7 @@
         return;
       }
 
-      showLoading('egrn-results', 'А��ализируем файл выписки ЕГРН...');
+      showLoading('egrn-results', 'Анализируем файл выписки ЕГРН...');
 
       try {
         const result = await analyzeEGRNFile(file);
@@ -1085,7 +1035,7 @@
             const encumbrances = xmlDoc.querySelectorAll('Encumbrance, encumbrance');
             const seizures = xmlDoc.querySelectorAll('*[contains(text(), "изъятие")], *[contains(text(), "seizure")]');
 
-                        let issues = [];
+            let issues = [];
             let risk = 'normal';
             let riskLevel = 'Низкий риск';
             let message = 'Файл ЕГРН успешно проанализирован';
