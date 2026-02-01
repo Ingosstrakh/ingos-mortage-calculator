@@ -283,6 +283,52 @@ function extractOszByKey(text) {
   return null;
 }
 
+// извлечение роста (в см)
+function extractHeight(text) {
+  if (!text) return null;
+  const patterns = [
+    /рост\s+(\d{2,3})/i,
+    /рост:\s*(\d{2,3})/i,
+    /ростом\s+(\d{2,3})/i,
+    /height\s*:?\s*(\d{2,3})/i
+  ];
+  
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      const height = parseInt(match[1], 10);
+      // Проверяем разумность значения (120-220 см)
+      if (height >= 120 && height <= 220) {
+        return height;
+      }
+    }
+  }
+  return null;
+}
+
+// извлечение веса (в кг)
+function extractWeight(text) {
+  if (!text) return null;
+  const patterns = [
+    /вес\s+(\d{2,3})/i,
+    /вес:\s*(\d{2,3})/i,
+    /весом\s+(\d{2,3})/i,
+    /weight\s*:?\s*(\d{2,3})/i
+  ];
+  
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      const weight = parseInt(match[1], 10);
+      // Проверяем разумность значения (30-200 кг)
+      if (weight >= 30 && weight <= 200) {
+        return weight;
+      }
+    }
+  }
+  return null;
+}
+
 // извлечение "кд" (даты сделки / кредитной даты)
 function extractCreditDate(text) {
   // Поиск даты после ключевых слов (кд, выдача, договор, кредит)
@@ -513,6 +559,8 @@ function parseTextToObject(rawText) {
     gas: null,
     markupPercent: null,
     borrowers: [],
+    height: null,  // Рост для медицинского андеррайтинга
+    weight: null,  // Вес для медицинского андеррайтинга
     confidence: 0.0,
     notes: []
   };
@@ -576,6 +624,10 @@ function parseTextToObject(rawText) {
   // 4) borrowers (перенесено вверх для правильного определения рисков)
   // Возраст заемщика считаем от ТЕКУЩЕЙ даты (не от даты выдачи кредита), иначе тариф жизни неверный
   result.borrowers = extractBorrowers(text, null);
+
+  // 4.5) Извлечение роста и веса для медицинского андеррайтинга
+  result.height = extractHeight(text);
+  result.weight = extractWeight(text);
 
   // 4.1) Дополнительная проверка на наличие слов, указывающих на заемщиков
   // Если есть слова "муж"/"жен"/"мужчина"/"женщина" без даты, создаем заемщика
