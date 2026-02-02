@@ -451,9 +451,15 @@ function performCalculations(data) {
       
       if (isMultipleBorrowers && lifeResult.borrowers.length > 1) {
         // Несколько заемщиков - показываем каждого с его премией (уже с учетом минимума 600 руб)
+        const isSovcombank = bankConfig && bankConfig.bankName === "Совкомбанк";
         lifeResult.borrowers.forEach((borrower, index) => {
           const borrowerLabel = `заемщик ${index + 1}`;
           output += `жизнь ${borrowerLabel} ${borrower.premium.toLocaleString('ru-RU')}`;
+          
+          // Для Совкомбанка добавляем текст "без РИСКА СВО"
+          if (isSovcombank) {
+            output += ` <span style="color: #64748b; font-size: 0.9em;">(без РИСКА СВО)</span>`;
+          }
           
           // Добавляем сообщение о медицинском андеррайтинге/лимитах сразу после премии жизни (только для первого заемщика)
           if (index === 0 && lifeResult.medicalUnderwritingMessage) {
@@ -472,7 +478,13 @@ function performCalculations(data) {
         // Один заемщик - показываем премию заемщика (уже с учетом минимума 600 руб)
         const borrowerLabel = 'заемщик';
         const borrowerPremium = lifeResult.borrowers[0] ? lifeResult.borrowers[0].premium : lifeResult.total;
+        const isSovcombank = bankConfig && bankConfig.bankName === "Совкомбанк";
         output += `жизнь ${borrowerLabel} ${borrowerPremium.toLocaleString('ru-RU')}`;
+        
+        // Для Совкомбанка добавляем текст "без РИСКА СВО"
+        if (isSovcombank) {
+          output += ` <span style="color: #64748b; font-size: 0.9em;">(без РИСКА СВО)</span>`;
+        }
         
         // Добавляем сообщение о медицинском андеррайтинге/лимитах
         if (lifeResult.medicalUnderwritingMessage) {
@@ -1177,10 +1189,16 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
       const lifeResult = calculateLifeInsurance(data, bankConfig, insuranceAmount);
       if (lifeResult && lifeResult.borrowers && lifeResult.borrowers.length > 0) {
         const isMultipleBorrowers = data.borrowers && data.borrowers.length > 1;
+        const isSovcombank = bankConfig && bankConfig.bankName === "Совкомбанк";
         lifeResult.borrowers.forEach((borrower, index) => {
           const borrowerLabel = isMultipleBorrowers ? `заемщик ${index + 1}` : 'заемщик';
           const borrowerPremium = borrower.premiumWithDiscount || borrower.premium;
-          output += `жизнь ${borrowerLabel} ${borrowerPremium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}<br>`;
+          output += `жизнь ${borrowerLabel} ${borrowerPremium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}`;
+          // Для Совкомбанка добавляем текст "без РИСКА СВО"
+          if (isSovcombank) {
+            output += ` <span style="color: #64748b; font-size: 0.9em;">(без РИСКА СВО)</span>`;
+          }
+          output += `<br>`;
         });
       } else {
         // Fallback: показываем итоговую сумму
@@ -1533,12 +1551,18 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
       // Показываем каждого заемщика отдельно
       const isMultipleBorrowers = data.borrowers && data.borrowers.length > 1;
       
+      const isSovcombank = bankConfig && bankConfig.bankName === "Совкомбанк";
       lifeResult.borrowers.forEach((borrower, index) => {
         const borrowerLabel = isMultipleBorrowers ? `заемщик ${index + 1}` : 'заемщик';
         // Используем премию со скидкой, если есть, иначе обычную (уже с учетом минимума)
         const borrowerPremium = borrower.premiumWithDiscount || borrower.premium;
         const formattedLife = borrowerPremium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
         output += `жизнь ${borrowerLabel} ${formattedLife}`;
+        
+        // Для Совкомбанка добавляем текст "без РИСКА СВО"
+        if (isSovcombank) {
+          output += ` <span style="color: #64748b; font-size: 0.9em;">(без РИСКА СВО)</span>`;
+        }
         
         // Добавляем сообщение о медицинском андеррайтинге/лимитах (только для первого заемщика)
         if (index === 0 && lifeResult.medicalUnderwritingMessage) {
@@ -1557,7 +1581,14 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
       // Fallback: показываем итоговую сумму
       const borrowerLabel = data.borrowers.length > 1 ? 'заемщики' : 'заемщик';
       const formattedLife = lifePremiumV2.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+      const isSovcombank = bankConfig && bankConfig.bankName === "Совкомбанк";
       output += `жизнь ${borrowerLabel} ${formattedLife}`;
+      
+      // Для Совкомбанка добавляем текст "без РИСКА СВО"
+      if (isSovcombank) {
+        output += ` <span style="color: #64748b; font-size: 0.9em;">(без РИСКА СВО)</span>`;
+      }
+      
       if (lifeResult && lifeResult.medicalUnderwritingMessage) {
         if (lifeResult.requiresMedicalExam) {
           output += ` <span style="color: #dc3545; font-weight: bold;">⚠️ ${lifeResult.medicalUnderwritingMessage}</span>`;
