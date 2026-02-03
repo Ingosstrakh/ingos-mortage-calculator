@@ -342,7 +342,8 @@ function extractCreditDate(text) {
     /кредитный\s+договор\s+от\s+(\d{1,2}\.\d{1,2}\.\d{4})/ig,
     /кредит\s+от\s+(\d{1,2}\.\d{1,2}\.\d{4})/ig,
     /выдача\s+(\d{1,2}\.\d{1,2}\.\d{4})/ig,
-    /договор\s+от\s+(\d{1,2}\.\d{1,2}\.\d{4})/ig
+    /договор\s+от\s+(\d{1,2}\.\d{1,2}\.\d{4})/ig,
+    /от\s+(\d{1,2}\.\d{1,2}\.\d{4})\s*г?\.?/ig  // "от 01.11.2025" или "от 01.11.2025г." - распознается как кредитная дата
   ];
 
   let latestDate = null;
@@ -504,18 +505,6 @@ function extractBorrowers(text, contractDate = null) {
       const genderWord = match[1].toLowerCase();
       const gender = (genderWord === 'женщина' || genderWord === 'жен' || genderWord === 'она') ? 'f' : 'm';
       const dob = match[2];
-      if (!/\bкд\b/i.test(match[0]) && !found.some(f => f.dob === dob)) {
-        found.push({ dob, gender, share: undefined });
-      }
-    }
-    
-    // Также добавляем паттерн для даты перед полом с "г" после даты (например, "18.05.1985г женщина")
-    const dateBeforeGenderPatternGlobal = /(\d{1,2}\.\d{1,2}\.\d{4})\s*г\.?\s*(ЖЕНЩИНА|МУЖЧИНА|ЖЕН|МУЖ|ОНА|ОН|МУЖЧ|женщина|мужчина|жен|муж|она|он|мужч)/ig;
-    const dateBeforeMatchesGlobal = Array.from(text.matchAll(dateBeforeGenderPatternGlobal));
-    for (const match of dateBeforeMatchesGlobal) {
-      const dob = match[1];
-      const genderWord = match[2].toLowerCase();
-      const gender = (genderWord === 'женщина' || genderWord === 'жен' || genderWord === 'она') ? 'f' : 'm';
       if (!/\bкд\b/i.test(match[0]) && !found.some(f => f.dob === dob)) {
         found.push({ dob, gender, share: undefined });
       }
