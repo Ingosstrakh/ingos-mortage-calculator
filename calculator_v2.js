@@ -903,9 +903,9 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
       premium = Math.round(premium * 1.25 * 100) / 100;
     }
     
-    // Применяем скидку: стандартная 20% (0.8) или кастомная из конфигурации банка
+    // Применяем скидку: стандартная 30% (0.7) или кастомная из конфигурации банка
     // Скидки отключены если требуется медобследование или есть надбавка +25%
-    let discountMultiplier = 0.8; // стандартная скидка 20%
+    let discountMultiplier = 0.7; // стандартная скидка 30%
     if (hasDiscount && bankConfig.discount_life_percent) {
       discountMultiplier = 1 - (bankConfig.discount_life_percent / 100);
     }
@@ -1753,20 +1753,19 @@ function increaseMoyaKvartiraSumsForDifference(data, insuranceAmount, currentDif
     return null; // Ничего не нужно добавлять
   }
 
-  // Равномерное распределение: 1/3 целевой премии на каждый риск (отделка, движимое, ГО), без лимита 500k на отделку
-  const targetPremiumPerRisk = neededAdditionalPremium / 3;
   const risks = [];
   let totalPremium = 0;
 
-  // ШАГ 1: Отделка — сумма по тарифу (границы из тарифа)
+  // ШАГ 1: Добавляем отделку "Моя квартира" с рассчитанной суммой
   if (moyaTariff.finish && moyaTariff.finish.length > 0) {
-    const finishMin = moyaTariff.finish[0].min;
-    const finishMax = moyaTariff.finish[moyaTariff.finish.length - 1].max;
-    const avgFinishRate = moyaTariff.finish.reduce((s, r) => s + r.rate, 0) / moyaTariff.finish.length;
-    const targetFinishSum = Math.round(targetPremiumPerRisk / avgFinishRate);
-    const actualFinishSum = Math.max(finishMin, Math.min(finishMax, targetFinishSum));
-    const finishRange = moyaTariff.finish.find(r => actualFinishSum >= r.min && actualFinishSum <= r.max) || moyaTariff.finish[moyaTariff.finish.length - 1];
-    const finishPremium = Math.round(actualFinishSum * finishRange.rate * 100) / 100;
+    // Используем среднюю ставку для расчета нужной суммы
+    const avgFinishRate = 0.008; // Примерная ставка
+    const targetFinishSum = Math.round(neededAdditionalPremium / avgFinishRate);
+    const actualFinishSum = Math.max(50000, Math.min(500000, targetFinishSum));
+
+    // Находим правильную ставку для рассчитанной суммы
+    const finishRate = moyaTariff.finish.find(r => actualFinishSum >= r.min && actualFinishSum <= r.max)?.rate || 0.0095;
+    const finishPremium = Math.round(actualFinishSum * finishRate * 100) / 100;
 
     risks.push({
       name: 'Моя квартира',
@@ -1774,19 +1773,30 @@ function increaseMoyaKvartiraSumsForDifference(data, insuranceAmount, currentDif
       sum: actualFinishSum,
       premium: finishPremium
     });
-    totalPremium += finishPremium;
-    console.log('Добавлена отделка:', actualFinishSum, '->', finishPremium);
+
+    totalPremium = finishPremium;
+    console.log('Добавлена отделка:', actualFinishSum, '->', finishPremium, '(итого:', totalPremium, ', нужно:', neededAdditionalPremium + ')');
+
+    // Если достаточно, возвращаем
+    if (totalPremium >= neededAdditionalPremium) {
+      return { risks: risks, totalPremium: totalPremium };
+    }
   }
 
-  // ШАГ 2: Движимое — 1/3 целевой премии
-  if (moyaTariff.movable && moyaTariff.movable.length > 0) {
-    const avgMovableRate = moyaTariff.movable.reduce((s, r) => s + r.rate, 0) / moyaTariff.movable.length;
-    const targetMovableSum = Math.round(targetPremiumPerRisk / avgMovableRate);
-    const movableMin = moyaTariff.movable[0].min;
-    const movableMax = moyaTariff.movable[moyaTariff.movable.length - 1].max;
-    const actualMovableSum = Math.min(movableMax, Math.max(movableMin, targetMovableSum));
-    const movableRange = moyaTariff.movable.find(r => actualMovableSum >= r.min && actualMovableSum <= r.max) || moyaTariff.movable[moyaTariff.movable.length - 1];
-    const movablePremium = Math.round(actualMovableSum * movableRange.rate * 100) / 100;
+  // ШАГ 2: Добавляем движимое имущество (если нужно)
+  if (totalPremium < neededAdditionalPremium && moyaTariff.movable && moyaTariff.movable.length > 0) {
+    const remainingNeeded = neededAdditionalPremium - totalPremium;
+
+    // Рассчитываем сумму движимого имущества
+    const avgMovableRate = 0.004; // Примерная ставка для движимого
+    const targetMovableSum = Math.round(remainingNeeded / avgMovableRate);
+
+    // Находим подходящий диапазон
+    const suitableRange = moyaTariff.movable.find(r => targetMovableSum >= r.min && targetMovableSum <= r.max) ||
+                         moyaTariff.movable[moyaTariff.movable.length - 1]; // Максимальный диапазон
+
+    const actualMovableSum = Math.min(suitableRange.max, Math.max(suitableRange.min, targetMovableSum));
+    const movablePremium = Math.round(actualMovableSum * suitableRange.rate * 100) / 100;
 
     risks.push({
       name: 'Моя квартира',
@@ -1794,19 +1804,30 @@ function increaseMoyaKvartiraSumsForDifference(data, insuranceAmount, currentDif
       sum: actualMovableSum,
       premium: movablePremium
     });
+
     totalPremium += movablePremium;
-    console.log('Добавлено движимое:', actualMovableSum, '->', movablePremium);
+    console.log('Добавлено движимое:', actualMovableSum, '->', movablePremium, '(итого:', totalPremium, ', нужно:', neededAdditionalPremium + ')');
+
+    // Если достаточно, возвращаем
+    if (totalPremium >= neededAdditionalPremium) {
+      return { risks: risks, totalPremium: totalPremium };
+    }
   }
 
-  // ШАГ 3: ГО — 1/3 целевой премии
-  if (moyaTariff.go && moyaTariff.go.pack && moyaTariff.go.pack.length > 0) {
-    const avgGoRate = moyaTariff.go.pack.reduce((s, r) => s + r.rate, 0) / moyaTariff.go.pack.length;
-    const targetGoSum = Math.round(targetPremiumPerRisk / avgGoRate);
-    const goMin = moyaTariff.go.pack[0].min;
-    const goMax = moyaTariff.go.pack[moyaTariff.go.pack.length - 1].max;
-    const actualGoSum = Math.min(goMax, Math.max(goMin, targetGoSum));
-    const goRange = moyaTariff.go.pack.find(r => actualGoSum >= r.min && actualGoSum <= r.max) || moyaTariff.go.pack[moyaTariff.go.pack.length - 1];
-    const goPremium = Math.round(actualGoSum * goRange.rate * 100) / 100;
+  // ШАГ 3: Добавляем гражданскую ответственность (если нужно)
+  if (totalPremium < neededAdditionalPremium && moyaTariff.go && moyaTariff.go.pack && moyaTariff.go.pack.length > 0) {
+    const remainingNeeded = neededAdditionalPremium - totalPremium;
+
+    // Рассчитываем сумму ГО
+    const avgGoRate = 0.002; // Примерная ставка для ГО
+    const targetGoSum = Math.round(remainingNeeded / avgGoRate);
+
+    // Находим подходящий диапазон
+    const suitableRange = moyaTariff.go.pack.find(r => targetGoSum >= r.min && targetGoSum <= r.max) ||
+                         moyaTariff.go.pack[moyaTariff.go.pack.length - 1]; // Максимальный диапазон
+
+    const actualGoSum = Math.min(suitableRange.max, Math.max(suitableRange.min, targetGoSum));
+    const goPremium = Math.round(actualGoSum * suitableRange.rate * 100) / 100;
 
     risks.push({
       name: 'Моя квартира',
@@ -1814,12 +1835,19 @@ function increaseMoyaKvartiraSumsForDifference(data, insuranceAmount, currentDif
       sum: actualGoSum,
       premium: goPremium
     });
+
     totalPremium += goPremium;
-    console.log('Добавлено ГО:', actualGoSum, '->', goPremium);
+    console.log('Добавлено ГО:', actualGoSum, '->', goPremium, '(итого:', totalPremium, ', нужно:', neededAdditionalPremium + ')');
   }
 
-  console.log('Моя квартира (равномерно): итого', totalPremium, ', нужно', neededAdditionalPremium);
-  return totalPremium > 0 ? { risks: risks, totalPremium: totalPremium } : null;
+
+  console.log('Финальный результат: totalPremium =', totalPremium, 'из neededAdditionalPremium =', neededAdditionalPremium);
+  console.log('Возвращаемые риски:', risks.map(r => `${r.name} ${r.objects}: ${r.sum} -> ${r.premium}`).join(', '));
+
+  return totalPremium > 0 ? {
+    risks: risks,
+    totalPremium: totalPremium
+  } : null;
 }
 
 // Функция для увеличения сумм Бастиона для достижения разницы около 3000
