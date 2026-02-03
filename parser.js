@@ -342,7 +342,8 @@ function extractCreditDate(text) {
     /кредитный\s+договор\s+от\s+(\d{1,2}\.\d{1,2}\.\d{4})/ig,
     /кредит\s+от\s+(\d{1,2}\.\d{1,2}\.\d{4})/ig,
     /выдача\s+(\d{1,2}\.\d{1,2}\.\d{4})/ig,
-    /договор\s+от\s+(\d{1,2}\.\d{1,2}\.\d{4})/ig
+    /договор\s+от\s+(\d{1,2}\.\d{1,2}\.\d{4})/ig,
+    /от\s+(\d{1,2}\.\d{1,2}\.\d{4})\s*г?\.?/ig  // "от 01.11.2025" или "от 01.11.2025г." - распознается как кредитная дата
   ];
 
   let latestDate = null;
@@ -601,12 +602,8 @@ function parseTextToObject(rawText) {
 
   // 2) Dates and years
   result.dates = extractDates(text); // all dates present
-  // Год постройки: явно из "кв 2023" / "квартира 2023" / "2015гп", иначе последний год в тексте
-  result.yearBuilt = extractYearBuilt(text);
-  if (result.yearBuilt == null) {
-    const years = extractYears(text);
-    if (years.length > 0) result.yearBuilt = years[years.length - 1];
-  }
+  const years = extractYears(text);
+  if (years.length > 0) result.yearBuilt = years[years.length - 1];
 
   // credit date
   const credit = extractCreditDate ? extractCreditDate(text) : null;
