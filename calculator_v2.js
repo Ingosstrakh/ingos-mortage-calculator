@@ -1554,15 +1554,8 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
       const isSovcombank = bankConfig && bankConfig.bankName === "Совкомбанк";
       lifeResult.borrowers.forEach((borrower, index) => {
         const borrowerLabel = isMultipleBorrowers ? `заемщик ${index + 1}` : 'заемщик';
-        // Для варианта 2 используем скидку 30% вместо стандартной 20%
-        // Проверяем, применяется ли скидка 30% для варианта 2
-        const hasDiscount30 = bankConfig.allow_discount_life && !lifeResult.requiresMedicalExam && lifeResult.medicalUnderwritingFactor !== 1.25;
-        let hasAgeRestrictionForSberbank = false;
-        if (bankConfig && bankConfig.bankName === "Сбербанк" && data.borrowers && data.borrowers.length > 0) {
-          hasAgeRestrictionForSberbank = data.borrowers.some(b => b.age >= 55);
-        }
-        const applyDiscount30 = hasDiscount30 && !hasAgeRestrictionForSberbank;
-        const borrowerPremium = applyDiscount30 ? Math.round(borrower.premium * 0.7 * 100) / 100 : (borrower.premiumWithDiscount || borrower.premium);
+        // Используем премию со скидкой, если есть, иначе обычную (уже с учетом минимума)
+        const borrowerPremium = borrower.premiumWithDiscount || borrower.premium;
         const formattedLife = borrowerPremium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
         output += `жизнь ${borrowerLabel} ${formattedLife}`;
         
@@ -1821,13 +1814,20 @@ function increaseMoyaKvartiraSumsForDifference(data, insuranceAmount, currentDif
     }
   }
 
-  // ШАГ 3: Добавляем гражданскую ответственность (если нужно)
+  // ШАГ 3: Добавляем гражданскую ответственность (если нужно) - делаем меньше отделки для равномерности
   if (totalPremium < neededAdditionalPremium && moyaTariff.go && moyaTariff.go.pack && moyaTariff.go.pack.length > 0) {
     const remainingNeeded = neededAdditionalPremium - totalPremium;
-
-    // Рассчитываем сумму ГО
+    
+    // Для равномерности: ГО должна быть меньше отделки (примерно 40-50% от суммы отделки)
+    const finishSum = risks[0]?.sum || 1000000;
+    const targetGoSumForUniformity = Math.round(finishSum * 0.45); // 45% от отделки для равномерности
+    
+    // Рассчитываем сумму ГО на основе нужной премии
     const avgGoRate = 0.002; // Примерная ставка для ГО
-    const targetGoSum = Math.round(remainingNeeded / avgGoRate);
+    const targetGoSumByPremium = Math.round(remainingNeeded / avgGoRate);
+    
+    // Выбираем меньшую из двух сумм для равномерности
+    const targetGoSum = Math.min(targetGoSumForUniformity, targetGoSumByPremium);
 
     // Находим подходящий диапазон
     const suitableRange = moyaTariff.go.pack.find(r => targetGoSum >= r.min && targetGoSum <= r.max) ||
