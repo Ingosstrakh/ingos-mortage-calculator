@@ -1756,16 +1756,20 @@ function increaseMoyaKvartiraSumsForDifference(data, insuranceAmount, currentDif
   const risks = [];
   let totalPremium = 0;
 
-  // ШАГ 1: Добавляем отделку "Моя квартира" с рассчитанной суммой
+  // ШАГ 1: Отделка "Моя квартира" — цель до 1 млн для равномерного распределения (без лимита 500 000)
   if (moyaTariff.finish && moyaTariff.finish.length > 0) {
-    // Используем среднюю ставку для расчета нужной суммы
-    const avgFinishRate = 0.008; // Примерная ставка
-    const targetFinishSum = Math.round(neededAdditionalPremium / avgFinishRate);
-    const actualFinishSum = Math.max(50000, Math.min(500000, targetFinishSum));
-
-    // Находим правильную ставку для рассчитанной суммы
-    const finishRate = moyaTariff.finish.find(r => actualFinishSum >= r.min && actualFinishSum <= r.max)?.rate || 0.0095;
-    const finishPremium = Math.round(actualFinishSum * finishRate * 100) / 100;
+    const maxFinishRange = moyaTariff.finish[moyaTariff.finish.length - 1];
+    const maxFinishSum = maxFinishRange ? maxFinishRange.max : 500000;
+    let targetFinishSum = Math.min(1000000, maxFinishSum);
+    let finishRate = moyaTariff.finish.find(r => targetFinishSum >= r.min && targetFinishSum <= r.max)?.rate || 0.0095;
+    let finishPremium = Math.round(targetFinishSum * finishRate * 100) / 100;
+    if (finishPremium > neededAdditionalPremium * 1.2) {
+      const optimalFinishSum = Math.round(neededAdditionalPremium / finishRate);
+      targetFinishSum = Math.max(500000, Math.min(targetFinishSum, optimalFinishSum));
+      finishRate = moyaTariff.finish.find(r => targetFinishSum >= r.min && targetFinishSum <= r.max)?.rate || 0.0095;
+      finishPremium = Math.round(targetFinishSum * finishRate * 100) / 100;
+    }
+    const actualFinishSum = targetFinishSum;
 
     risks.push({
       name: 'Моя квартира',
@@ -1783,19 +1787,13 @@ function increaseMoyaKvartiraSumsForDifference(data, insuranceAmount, currentDif
     }
   }
 
-  // ШАГ 2: Добавляем движимое имущество (если нужно) - делаем меньше отделки для равномерности
+  // ШАГ 2: Движимое имущество — пропорционально отделке (около 60%) для равномерности
   if (totalPremium < neededAdditionalPremium && moyaTariff.movable && moyaTariff.movable.length > 0) {
     const remainingNeeded = neededAdditionalPremium - totalPremium;
-    
-    // Для равномерности: движимое должно быть меньше отделки (примерно 60% от суммы отделки)
     const finishSum = risks[0]?.sum || 1000000;
-    const targetMovableSumForUniformity = Math.round(finishSum * 0.6); // 60% от отделки для равномерности
-    
-    // Рассчитываем сумму движимого имущества на основе нужной премии
-    const avgMovableRate = 0.004; // Примерная ставка для движимого
+    const targetMovableSumForUniformity = Math.round(finishSum * 0.6);
+    const avgMovableRate = 0.004;
     const targetMovableSumByPremium = Math.round(remainingNeeded / avgMovableRate);
-    
-    // Выбираем меньшую из двух сумм для равномерности
     const targetMovableSum = Math.min(targetMovableSumForUniformity, targetMovableSumByPremium);
 
     // Находим подходящий диапазон
