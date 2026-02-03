@@ -1554,8 +1554,15 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
       const isSovcombank = bankConfig && bankConfig.bankName === "Совкомбанк";
       lifeResult.borrowers.forEach((borrower, index) => {
         const borrowerLabel = isMultipleBorrowers ? `заемщик ${index + 1}` : 'заемщик';
-        // Используем премию со скидкой, если есть, иначе обычную (уже с учетом минимума)
-        const borrowerPremium = borrower.premiumWithDiscount || borrower.premium;
+        // Для варианта 2 используем скидку 30% вместо стандартной 20%
+        // Проверяем, применяется ли скидка 30% для варианта 2
+        const hasDiscount30 = bankConfig.allow_discount_life && !lifeResult.requiresMedicalExam && lifeResult.medicalUnderwritingFactor !== 1.25;
+        let hasAgeRestrictionForSberbank = false;
+        if (bankConfig && bankConfig.bankName === "Сбербанк" && data.borrowers && data.borrowers.length > 0) {
+          hasAgeRestrictionForSberbank = data.borrowers.some(b => b.age >= 55);
+        }
+        const applyDiscount30 = hasDiscount30 && !hasAgeRestrictionForSberbank;
+        const borrowerPremium = applyDiscount30 ? Math.round(borrower.premium * 0.7 * 100) / 100 : (borrower.premiumWithDiscount || borrower.premium);
         const formattedLife = borrowerPremium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
         output += `жизнь ${borrowerLabel} ${formattedLife}`;
         
