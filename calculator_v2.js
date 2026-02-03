@@ -1185,14 +1185,15 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
       output += `имущество ${propertyPremiumV2.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}<br>`;
     }
     if (data.risks.life && lifePremiumV2 > 0) {
-      // Показываем каждого заемщика отдельно, если есть данные
+      // Показываем каждого заемщика отдельно (вариант 2: скидка 30% к базовой премии)
       const lifeResult = calculateLifeInsurance(data, bankConfig, insuranceAmount);
       if (lifeResult && lifeResult.borrowers && lifeResult.borrowers.length > 0) {
         const isMultipleBorrowers = data.borrowers && data.borrowers.length > 1;
         const isSovcombank = bankConfig && bankConfig.bankName === "Совкомбанк";
+        const useV2Discount = bankConfig.allow_discount_life && !lifeResult.requiresMedicalExam && lifeResult.medicalUnderwritingFactor !== 1.25 && !(bankConfig.bankName === "Сбербанк" && data.borrowers && data.borrowers.some(b => b.age >= 55));
         lifeResult.borrowers.forEach((borrower, index) => {
           const borrowerLabel = isMultipleBorrowers ? `заемщик ${index + 1}` : 'заемщик';
-          const borrowerPremium = borrower.premiumWithDiscount || borrower.premium;
+          const borrowerPremium = useV2Discount ? Math.round(borrower.premium * 0.7 * 100) / 100 : (borrower.premiumWithDiscount || borrower.premium);
           output += `жизнь ${borrowerLabel} ${borrowerPremium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}`;
           // Для Совкомбанка добавляем текст "без РИСКА СВО"
           if (isSovcombank) {
@@ -1756,20 +1757,16 @@ function increaseMoyaKvartiraSumsForDifference(data, insuranceAmount, currentDif
   const risks = [];
   let totalPremium = 0;
 
-  // ШАГ 1: Отделка "Моя квартира" — цель до 1 млн для равномерного распределения (без лимита 500 000)
+  // ШАГ 1: Добавляем отделку "Моя квартира" с рассчитанной суммой
   if (moyaTariff.finish && moyaTariff.finish.length > 0) {
-    const maxFinishRange = moyaTariff.finish[moyaTariff.finish.length - 1];
-    const maxFinishSum = maxFinishRange ? maxFinishRange.max : 500000;
-    let targetFinishSum = Math.min(1000000, maxFinishSum);
-    let finishRate = moyaTariff.finish.find(r => targetFinishSum >= r.min && targetFinishSum <= r.max)?.rate || 0.0095;
-    let finishPremium = Math.round(targetFinishSum * finishRate * 100) / 100;
-    if (finishPremium > neededAdditionalPremium * 1.2) {
-      const optimalFinishSum = Math.round(neededAdditionalPremium / finishRate);
-      targetFinishSum = Math.max(500000, Math.min(targetFinishSum, optimalFinishSum));
-      finishRate = moyaTariff.finish.find(r => targetFinishSum >= r.min && targetFinishSum <= r.max)?.rate || 0.0095;
-      finishPremium = Math.round(targetFinishSum * finishRate * 100) / 100;
-    }
-    const actualFinishSum = targetFinishSum;
+    // Используем среднюю ставку для расчета нужной суммы
+    const avgFinishRate = 0.008; // Примерная ставка
+    const targetFinishSum = Math.round(neededAdditionalPremium / avgFinishRate);
+    const actualFinishSum = Math.max(50000, Math.min(500000, targetFinishSum));
+
+    // Находим правильную ставку для рассчитанной суммы
+    const finishRate = moyaTariff.finish.find(r => actualFinishSum >= r.min && actualFinishSum <= r.max)?.rate || 0.0095;
+    const finishPremium = Math.round(actualFinishSum * finishRate * 100) / 100;
 
     risks.push({
       name: 'Моя квартира',
@@ -1787,14 +1784,13 @@ function increaseMoyaKvartiraSumsForDifference(data, insuranceAmount, currentDif
     }
   }
 
-  // ШАГ 2: Движимое имущество — пропорционально отделке (около 60%) для равномерности
+  // ШАГ 2: Добавляем движимое имущество (если нужно)
   if (totalPremium < neededAdditionalPremium && moyaTariff.movable && moyaTariff.movable.length > 0) {
     const remainingNeeded = neededAdditionalPremium - totalPremium;
-    const finishSum = risks[0]?.sum || 1000000;
-    const targetMovableSumForUniformity = Math.round(finishSum * 0.6);
-    const avgMovableRate = 0.004;
-    const targetMovableSumByPremium = Math.round(remainingNeeded / avgMovableRate);
-    const targetMovableSum = Math.min(targetMovableSumForUniformity, targetMovableSumByPremium);
+
+    // Рассчитываем сумму движимого имущества
+    const avgMovableRate = 0.004; // Примерная ставка для движимого
+    const targetMovableSum = Math.round(remainingNeeded / avgMovableRate);
 
     // Находим подходящий диапазон
     const suitableRange = moyaTariff.movable.find(r => targetMovableSum >= r.min && targetMovableSum <= r.max) ||
