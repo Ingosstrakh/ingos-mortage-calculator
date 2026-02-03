@@ -509,6 +509,18 @@ function extractBorrowers(text, contractDate = null) {
       }
     }
     
+    // Также добавляем паттерн для даты перед полом с "г" после даты (например, "18.05.1985г женщина")
+    const dateBeforeGenderPatternGlobal = /(\d{1,2}\.\d{1,2}\.\d{4})\s*г\.?\s*(ЖЕНЩИНА|МУЖЧИНА|ЖЕН|МУЖ|ОНА|ОН|МУЖЧ|женщина|мужчина|жен|муж|она|он|мужч)/ig;
+    const dateBeforeMatchesGlobal = Array.from(text.matchAll(dateBeforeGenderPatternGlobal));
+    for (const match of dateBeforeMatchesGlobal) {
+      const dob = match[1];
+      const genderWord = match[2].toLowerCase();
+      const gender = (genderWord === 'женщина' || genderWord === 'жен' || genderWord === 'она') ? 'f' : 'm';
+      if (!/\bкд\b/i.test(match[0]) && !found.some(f => f.dob === dob)) {
+        found.push({ dob, gender, share: undefined });
+      }
+    }
+    
     const globalPatterns = [
       /(женщина)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/ig,
       /(мужчина)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/ig,
