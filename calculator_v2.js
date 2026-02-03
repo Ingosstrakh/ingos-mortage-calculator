@@ -903,9 +903,9 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
       premium = Math.round(premium * 1.25 * 100) / 100;
     }
     
-    // Применяем скидку: стандартная 20% (0.8) или кастомная из конфигурации банка
+    // Применяем скидку: стандартная 30% (0.7) или кастомная из конфигурации банка
     // Скидки отключены если требуется медобследование или есть надбавка +25%
-    let discountMultiplier = 0.8; // стандартная скидка 20%
+    let discountMultiplier = 0.7; // стандартная скидка 30%
     if (hasDiscount && bankConfig.discount_life_percent) {
       discountMultiplier = 1 - (bankConfig.discount_life_percent / 100);
     }
@@ -1185,15 +1185,14 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
       output += `имущество ${propertyPremiumV2.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}<br>`;
     }
     if (data.risks.life && lifePremiumV2 > 0) {
-      // Показываем каждого заемщика отдельно (вариант 2: скидка 30% к базовой премии)
+      // Показываем каждого заемщика отдельно, если есть данные
       const lifeResult = calculateLifeInsurance(data, bankConfig, insuranceAmount);
       if (lifeResult && lifeResult.borrowers && lifeResult.borrowers.length > 0) {
         const isMultipleBorrowers = data.borrowers && data.borrowers.length > 1;
         const isSovcombank = bankConfig && bankConfig.bankName === "Совкомбанк";
-        const useV2Discount = bankConfig.allow_discount_life && !lifeResult.requiresMedicalExam && lifeResult.medicalUnderwritingFactor !== 1.25 && !(bankConfig.bankName === "Сбербанк" && data.borrowers && data.borrowers.some(b => b.age >= 55));
         lifeResult.borrowers.forEach((borrower, index) => {
           const borrowerLabel = isMultipleBorrowers ? `заемщик ${index + 1}` : 'заемщик';
-          const borrowerPremium = useV2Discount ? Math.round(borrower.premium * 0.7 * 100) / 100 : (borrower.premiumWithDiscount || borrower.premium);
+          const borrowerPremium = borrower.premiumWithDiscount || borrower.premium;
           output += `жизнь ${borrowerLabel} ${borrowerPremium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}`;
           // Для Совкомбанка добавляем текст "без РИСКА СВО"
           if (isSovcombank) {
