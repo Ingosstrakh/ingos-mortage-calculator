@@ -1783,13 +1783,20 @@ function increaseMoyaKvartiraSumsForDifference(data, insuranceAmount, currentDif
     }
   }
 
-  // ШАГ 2: Добавляем движимое имущество (если нужно)
+  // ШАГ 2: Добавляем движимое имущество (если нужно) - делаем меньше отделки для равномерности
   if (totalPremium < neededAdditionalPremium && moyaTariff.movable && moyaTariff.movable.length > 0) {
     const remainingNeeded = neededAdditionalPremium - totalPremium;
-
-    // Рассчитываем сумму движимого имущества
+    
+    // Для равномерности: движимое должно быть меньше отделки (примерно 60% от суммы отделки)
+    const finishSum = risks[0]?.sum || 1000000;
+    const targetMovableSumForUniformity = Math.round(finishSum * 0.6); // 60% от отделки для равномерности
+    
+    // Рассчитываем сумму движимого имущества на основе нужной премии
     const avgMovableRate = 0.004; // Примерная ставка для движимого
-    const targetMovableSum = Math.round(remainingNeeded / avgMovableRate);
+    const targetMovableSumByPremium = Math.round(remainingNeeded / avgMovableRate);
+    
+    // Выбираем меньшую из двух сумм для равномерности
+    const targetMovableSum = Math.min(targetMovableSumForUniformity, targetMovableSumByPremium);
 
     // Находим подходящий диапазон
     const suitableRange = moyaTariff.movable.find(r => targetMovableSum >= r.min && targetMovableSum <= r.max) ||
@@ -1814,20 +1821,13 @@ function increaseMoyaKvartiraSumsForDifference(data, insuranceAmount, currentDif
     }
   }
 
-  // ШАГ 3: Добавляем гражданскую ответственность (если нужно) - делаем меньше отделки для равномерности
+  // ШАГ 3: Добавляем гражданскую ответственность (если нужно)
   if (totalPremium < neededAdditionalPremium && moyaTariff.go && moyaTariff.go.pack && moyaTariff.go.pack.length > 0) {
     const remainingNeeded = neededAdditionalPremium - totalPremium;
-    
-    // Для равномерности: ГО должна быть меньше отделки (примерно 40-50% от суммы отделки)
-    const finishSum = risks[0]?.sum || 1000000;
-    const targetGoSumForUniformity = Math.round(finishSum * 0.45); // 45% от отделки для равномерности
-    
-    // Рассчитываем сумму ГО на основе нужной премии
+
+    // Рассчитываем сумму ГО
     const avgGoRate = 0.002; // Примерная ставка для ГО
-    const targetGoSumByPremium = Math.round(remainingNeeded / avgGoRate);
-    
-    // Выбираем меньшую из двух сумм для равномерности
-    const targetGoSum = Math.min(targetGoSumForUniformity, targetGoSumByPremium);
+    const targetGoSum = Math.round(remainingNeeded / avgGoRate);
 
     // Находим подходящий диапазон
     const suitableRange = moyaTariff.go.pack.find(r => targetGoSum >= r.min && targetGoSum <= r.max) ||
