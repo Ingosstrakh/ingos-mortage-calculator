@@ -1603,17 +1603,24 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
     }
   }
   
+  // кв - 35% = агент получит по ИФЛ (сумма 35% от премии)
+  const formatKv35 = (premium) => {
+    const agentAmount = Math.round(premium * 0.35 * 100) / 100;
+    const fmt = agentAmount.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    return ` кв - 35% = агент получит по ИФЛ (${fmt})`;
+  };
+
   // Если используем только увеличенные риски (без основного продукта) или Бастион с дополнительными рисками
   if (finalProduct.useIncreasedRisksOnly && additionalRisks.length > 0) {
     additionalRisks.forEach(risk => {
       const formattedRiskPremium = risk.premium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-      output += `доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${formattedRiskPremium} кв - 35%<br>`;
+      output += `доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${formattedRiskPremium}${formatKv35(risk.premium)}<br>`;
     });
   } else if (finalProduct.product === 'bastion' && additionalRisks.length > 0) {
     // Для Бастиона с дополнительными рисками показываем только дополнительные риски
     additionalRisks.forEach(risk => {
       const formattedRiskPremium = risk.premium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-      output += `доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${formattedRiskPremium} кв - 35%<br>`;
+      output += `доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${formattedRiskPremium}${formatKv35(risk.premium)}<br>`;
     });
   } else {
     // Стандартная логика с основным продуктом
@@ -1622,16 +1629,16 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
     // Форматируем доп. риск с деталями
     const formattedRisk = finalProduct.premium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
     if (riskDetails.sum) {
-      output += `доп риск - ${finalProduct.productName} (${riskDetails.objects}) ${riskDetails.sum} ${formattedRisk} кв - 35%`;
+      output += `доп риск - ${finalProduct.productName} (${riskDetails.objects}) ${riskDetails.sum} ${formattedRisk}${formatKv35(finalProduct.premium)}`;
     } else {
-      output += `доп риск - ${finalProduct.productName} (${riskDetails.objects}) ${formattedRisk} кв - 35%`;
+      output += `доп риск - ${finalProduct.productName} (${riskDetails.objects}) ${formattedRisk}${formatKv35(finalProduct.premium)}`;
     }
 
     // Добавляем дополнительные риски, если есть
     if (additionalRisks.length > 0) {
       additionalRisks.forEach(risk => {
         const formattedRiskPremium = risk.premium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-        output += `<br>доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${formattedRiskPremium} кв - 35%`;
+        output += `<br>доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${formattedRiskPremium}${formatKv35(risk.premium)}`;
       });
     }
   }
