@@ -903,9 +903,9 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
       premium = Math.round(premium * 1.25 * 100) / 100;
     }
     
-    // Применяем скидку: стандартная 30% (0.7) или кастомная из конфигурации банка
+    // Применяем скидку: стандартная 20% (0.8) или кастомная из конфигурации банка
     // Скидки отключены если требуется медобследование или есть надбавка +25%
-    let discountMultiplier = 0.7; // стандартная скидка 30%
+    let discountMultiplier = 0.8; // стандартная скидка 20%
     if (hasDiscount && bankConfig.discount_life_percent) {
       discountMultiplier = 1 - (bankConfig.discount_life_percent / 100);
     }
@@ -1607,13 +1607,13 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
   if (finalProduct.useIncreasedRisksOnly && additionalRisks.length > 0) {
     additionalRisks.forEach(risk => {
       const formattedRiskPremium = risk.premium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-      output += `доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${formattedRiskPremium}<br>`;
+      output += `доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${formattedRiskPremium} кв - 35%<br>`;
     });
   } else if (finalProduct.product === 'bastion' && additionalRisks.length > 0) {
     // Для Бастиона с дополнительными рисками показываем только дополнительные риски
     additionalRisks.forEach(risk => {
       const formattedRiskPremium = risk.premium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-      output += `доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${formattedRiskPremium}<br>`;
+      output += `доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${formattedRiskPremium} кв - 35%<br>`;
     });
   } else {
     // Стандартная логика с основным продуктом
@@ -1622,16 +1622,16 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
     // Форматируем доп. риск с деталями
     const formattedRisk = finalProduct.premium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
     if (riskDetails.sum) {
-      output += `доп риск - ${finalProduct.productName} (${riskDetails.objects}) ${riskDetails.sum} ${formattedRisk}`;
+      output += `доп риск - ${finalProduct.productName} (${riskDetails.objects}) ${riskDetails.sum} ${formattedRisk} кв - 35%`;
     } else {
-      output += `доп риск - ${finalProduct.productName} (${riskDetails.objects}) ${formattedRisk}`;
+      output += `доп риск - ${finalProduct.productName} (${riskDetails.objects}) ${formattedRisk} кв - 35%`;
     }
 
     // Добавляем дополнительные риски, если есть
     if (additionalRisks.length > 0) {
       additionalRisks.forEach(risk => {
         const formattedRiskPremium = risk.premium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-        output += `<br>доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${formattedRiskPremium}`;
+        output += `<br>доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${formattedRiskPremium} кв - 35%`;
       });
     }
   }
