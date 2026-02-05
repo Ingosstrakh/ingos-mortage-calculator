@@ -903,9 +903,9 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
       premium = Math.round(premium * 1.25 * 100) / 100;
     }
     
-    // Применяем скидку: стандартная 20% (0.8) или кастомная из конфигурации банка
+    // Применяем скидку: стандартная 30% (0.7) или кастомная из конфигурации банка
     // Скидки отключены если требуется медобследование или есть надбавка +25%
-    let discountMultiplier = 0.8; // стандартная скидка 20%
+    let discountMultiplier = 0.7; // стандартная скидка 20%
     if (hasDiscount && bankConfig.discount_life_percent) {
       discountMultiplier = 1 - (bankConfig.discount_life_percent / 100);
     }
@@ -2341,3 +2341,4 @@ function calculateIFLAdditionalRisk(product, data, insuranceAmount) {
       return null;
   }
 }
+
