@@ -1146,13 +1146,10 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
     if (data.risks.life) {
       const lifeResult = calculateLifeInsurance(data, bankConfig, insuranceAmount);
       
-      // Проверяем ограничение по возрасту для Сбербанка (55+ лет - скидки запрещены)
-      let hasAgeRestrictionForSberbank = false;
-      if (bankConfig && bankConfig.bankName === "Сбербанк" && data.borrowers && data.borrowers.length > 0) {
-        hasAgeRestrictionForSberbank = data.borrowers.some(borrower => borrower.age >= 55);
-      }
+      // 55 лет включительно и старше — скидки по жизни запрещены (все банки)
+      let hasAgeRestriction55 = data.borrowers && data.borrowers.some(borrower => borrower.age >= 55);
       
-      if (lifeResult && bankConfig.allow_discount_life && !lifeResult.requiresMedicalExam && lifeResult.medicalUnderwritingFactor !== 1.25 && !hasAgeRestrictionForSberbank) {
+      if (lifeResult && bankConfig.allow_discount_life && !lifeResult.requiresMedicalExam && lifeResult.medicalUnderwritingFactor !== 1.25 && !hasAgeRestriction55) {
         // Применяем скидку к премиям каждого заемщика отдельно
         const numBorrowers = data.borrowers ? data.borrowers.length : 1;
         let totalWithDiscount = 0;
@@ -1603,24 +1600,17 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
     }
   }
   
-  // кв - 35% = агент получит по ИФЛ (сумма 35% от премии)
-  const formatKv35 = (premium) => {
-    const agentAmount = Math.round(premium * 0.35 * 100) / 100;
-    const fmt = agentAmount.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-    return ` кв - 35% = агент получит по ИФЛ (${fmt})`;
-  };
-
   // Если используем только увеличенные риски (без основного продукта) или Бастион с дополнительными рисками
   if (finalProduct.useIncreasedRisksOnly && additionalRisks.length > 0) {
     additionalRisks.forEach(risk => {
       const formattedRiskPremium = risk.premium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-      output += `доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${formattedRiskPremium}${formatKv35(risk.premium)}<br>`;
+      output += `доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${formattedRiskPremium}<br>`;
     });
   } else if (finalProduct.product === 'bastion' && additionalRisks.length > 0) {
     // Для Бастиона с дополнительными рисками показываем только дополнительные риски
     additionalRisks.forEach(risk => {
       const formattedRiskPremium = risk.premium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-      output += `доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${formattedRiskPremium}${formatKv35(risk.premium)}<br>`;
+      output += `доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${formattedRiskPremium}<br>`;
     });
   } else {
     // Стандартная логика с основным продуктом
@@ -1629,16 +1619,16 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
     // Форматируем доп. риск с деталями
     const formattedRisk = finalProduct.premium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
     if (riskDetails.sum) {
-      output += `доп риск - ${finalProduct.productName} (${riskDetails.objects}) ${riskDetails.sum} ${formattedRisk}${formatKv35(finalProduct.premium)}`;
+      output += `доп риск - ${finalProduct.productName} (${riskDetails.objects}) ${riskDetails.sum} ${formattedRisk}`;
     } else {
-      output += `доп риск - ${finalProduct.productName} (${riskDetails.objects}) ${formattedRisk}${formatKv35(finalProduct.premium)}`;
+      output += `доп риск - ${finalProduct.productName} (${riskDetails.objects}) ${formattedRisk}`;
     }
 
     // Добавляем дополнительные риски, если есть
     if (additionalRisks.length > 0) {
       additionalRisks.forEach(risk => {
         const formattedRiskPremium = risk.premium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-        output += `<br>доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${formattedRiskPremium}${formatKv35(risk.premium)}`;
+        output += `<br>доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${formattedRiskPremium}`;
       });
     }
   }
