@@ -781,18 +781,17 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
     };
   }
 
-  // Проверяем ограничение по возрасту для Сбербанка (55+ лет - скидки запрещены)
-  let hasAgeRestrictionForSberbank = false;
-  if (bankConfig && bankConfig.bankName === "Сбербанк" && data.borrowers && data.borrowers.length > 0) {
-    // Проверяем всех заемщиков - если хотя бы один >= 55 лет, скидки запрещены
-    hasAgeRestrictionForSberbank = data.borrowers.some(borrower => borrower.age >= 55);
-  }
-  
-  // Если требуется медобследование или есть надбавка +25%, или возраст >= 55 для Сбербанка, отключаем скидки
-  const hasDiscount = bankConfig.allow_discount_life !== false && 
-                      !finalRequiresMedicalExam && 
-                      medicalUnderwritingFactor !== 1.25 &&
-                      !hasAgeRestrictionForSberbank;
+  // Запрещаем скидки по жизни для ВСЕХ банков, если хотя бы одному заемщику >= 55 лет
+let hasAge55PlusRestriction = false;
+if (data.borrowers && data.borrowers.length > 0) {
+  hasAge55PlusRestriction = data.borrowers.some(borrower => borrower.age >= 55);
+}
+
+// Если требуется медобследование или есть надбавка +25%, или возраст >= 55, отключаем скидки
+const hasDiscount = bankConfig.allow_discount_life !== false && 
+                    !finalRequiresMedicalExam && 
+                    medicalUnderwritingFactor !== 1.25 &&
+                    !hasAge55PlusRestriction;
 
   let totalPremium = 0;
   let totalPremiumWithDiscount = 0;
@@ -903,9 +902,9 @@ function calculateLifeInsurance(data, bankConfig, insuranceAmount) {
       premium = Math.round(premium * 1.25 * 100) / 100;
     }
     
-    // Применяем скидку: стандартная 20% (0.8) или кастомная из конфигурации банка
+    // Применяем скидку: стандартная 30% (0.7) или кастомная из конфигурации банка
     // Скидки отключены если требуется медобследование или есть надбавка +25%
-    let discountMultiplier = 0.8; // стандартная скидка 20%
+    let discountMultiplier = 0.7; // стандартная скидка 30%
     if (hasDiscount && bankConfig.discount_life_percent) {
       discountMultiplier = 1 - (bankConfig.discount_life_percent / 100);
     }
@@ -2340,3 +2339,4 @@ function calculateIFLAdditionalRisk(product, data, insuranceAmount) {
       return null;
   }
 }
+
