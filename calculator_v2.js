@@ -1217,22 +1217,7 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
     };
   }
 
-  // Для мобильных устройств используем полную версию, но с ограничениями
-  if (isMobile) {
-    console.log('Мобильное устройство - используем полную версию с ограничениями');
-    // Ограничиваем количество продуктов для мобильных
-    if (availableProducts.length > 2) {
-      availableProducts = availableProducts.slice(0, 2);
-    }
-  }
-
-  // Полная версия для десктопных устройств
-  if (isMobile && availableProducts.length > 2) {
-    // На мобильных устройствах оставляем только 2 наиболее приоритетных продукта
-    availableProducts = availableProducts.slice(0, 2);
-  }
-
-  // Определяем доступные продукты IFL
+  // Определяем доступные продукты IFL (до блоков isMobile)
   let availableProducts = [];
   const isFlat = data.objectType === 'flat' || data.objectType === null;
   const isHouse = data.objectType === 'house_brick' || data.objectType === 'house_wood' || 
@@ -1250,6 +1235,11 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
   } else {
     // Для других типов объектов не показываем вариант 2
     return null;
+  }
+
+  // Для мобильных устройств ограничиваем количество продуктов
+  if (isMobile && availableProducts.length > 2) {
+    availableProducts = availableProducts.slice(0, 2);
   }
 
   // Рассчитываем вариант 2 с скидками 30%
@@ -2397,3 +2387,4 @@ function calculateLichnieVeshchi(variant, riskCombo) {
   return { pack, premium, sum: pack.sum };
 }
 window.calculateLichnieVeshchi = calculateLichnieVeshchi;
+
