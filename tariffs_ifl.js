@@ -49,6 +49,16 @@ const EXPRESS_GO_PACKS = [
   { id: 9, sum: 50000, price: 350 }
 ];
 
+// 5. Личные вещи - готовые пакеты (мобильная техника, ручная кладь, верхняя одежда, спортинвентарь)
+// Риски: ПДТЛ (грабеж, кража и т.д.), Повреждения по неосторожности, Типовые (пожар, взрыв, вода и т.д.)
+const LICHNIE_VESHCHI_PACKS = [
+  { id: 1, sum: 30000, pdtl: 0, povrezhd: 800, tipovye: 600, all: 1000 },
+  { id: 2, sum: 50000, pdtl: 0, povrezhd: 1300, tipovye: 1000, all: 1700 },
+  { id: 3, sum: 100000, pdtl: 0, povrezhd: 2600, tipovye: 2000, all: 3400 },
+  { id: 4, sum: 150000, pdtl: 0, povrezhd: 4000, tipovye: 3000, all: 5000 },
+  { id: 5, sum: 300000, pdtl: 0, povrezhd: 8000, tipovye: 6000, all: 10000 }
+];
+
 // 4. Моя квартира - конструктор
 const T_MOYA = {
   constructive: { only: 0.001, withOthers: 0.0001 },
@@ -79,6 +89,7 @@ if (typeof window !== 'undefined') {
   window.EXPRESS_PACKS = EXPRESS_PACKS;
   window.EXPRESS_GO_SUMS = EXPRESS_GO_SUMS;
   window.EXPRESS_GO_PACKS = EXPRESS_GO_PACKS;
+  window.LICHNIE_VESHCHI_PACKS = LICHNIE_VESHCHI_PACKS;
   window.T_MOYA = T_MOYA;
 }
 
@@ -88,6 +99,7 @@ if (typeof module !== 'undefined') {
     EXPRESS_PACKS,
     EXPRESS_GO_SUMS,
     EXPRESS_GO_PACKS,
+    LICHNIE_VESHCHI_PACKS,
     T_MOYA
   };
 }
