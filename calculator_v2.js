@@ -1103,14 +1103,17 @@ function getObjectTypeName(type) {
 
 // Расчет варианта 2 с доп. рисками IFL
 function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
-  // Исключение: если только жизнь - не показываем вариант 2
-  if (data.risks.life && !data.risks.property) {
+  // Исключение: если только жизнь и скидка НЕ разрешена - не показываем вариант 2
+  const isLifeOnly = data.risks.life && !data.risks.property && !data.risks.titul;
+  if (isLifeOnly && !bankConfig.allow_discount_life) {
     return null;
   }
 
   // Проверяем наличие необходимых данных для расчета
-  const hasFullData = window.T_MOYA && window.EXPRESS_PACKS && window.EXPRESS_GO_PACKS && window.T_BASTION;
-  console.log('Полные данные загружены:', hasFullData);
+  const hasLifeOnlyData = isLifeOnly && window.LICHNIE_VESHCHI_PACKS;
+  const hasPropertyData = window.T_MOYA && window.EXPRESS_PACKS && window.EXPRESS_GO_PACKS && window.T_BASTION;
+  const hasFullData = hasLifeOnlyData || hasPropertyData;
+  console.log('Полные данные загружены:', hasFullData, '(lifeOnly:', hasLifeOnlyData, ', property:', hasPropertyData, ')');
 
   // Проверяем, является ли устройство мобильным
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -1235,7 +1238,10 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
   const isHouse = data.objectType === 'house_brick' || data.objectType === 'house_wood' || 
                   (data.objectType === 'house' && (data.material === 'brick' || data.material === 'wood'));
 
-  if (isFlat) {
+  if (isLifeOnly && bankConfig.allow_discount_life) {
+    // Только жизнь + скидка разрешена: добавляем "Личные вещи" как доп. риск
+    availableProducts = ['lichnie_veschi'];
+  } else if (isFlat) {
     // Для квартиры приоритет: "Моя квартира" и "Экспресс квартира", затем остальные
     availableProducts = ['moyakvartira', 'express', 'express_go', 'bastion'];
   } else if (isHouse) {
@@ -1331,19 +1337,42 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
   console.log('Базовый вариант 2 (property + life + title):', baseVariant2Total);
 
   for (const product of availableProducts) {
-    const additionalRisk = calculateIFLAdditionalRisk(product, data, insuranceAmount);
-    if (additionalRisk) {
-      // ВАЖНО: НЕ включаем титул в total продукта, титул добавим в конце
-      // Это нужно для правильного расчета разницы и доп. рисков
-      const totalV2 = propertyPremiumV2 + lifePremiumV2 + additionalRisk.premium;
-      console.log('Продукт', product, '- дополнительная премия:', additionalRisk.premium, '- итого (без титула):', totalV2);
-      productResults.push({
-        product: product,
-        productName: additionalRisk.productName,
-        riskName: additionalRisk.riskName,
-        premium: additionalRisk.premium,
-        total: totalV2
-      });
+    if (product === 'lichnie_veschi') {
+      // Личные вещи: перебираем все пакеты (5 вариантов × 3 набора рисков) для выбора лучшего
+      const packs = window.LICHNIE_VESHCHI_PACKS;
+      if (!packs) continue;
+      const riskCombos = [
+        { key: 'povrezhd', label: 'ПДТЛ + Повреждения' },
+        { key: 'tipovye', label: 'ПДТЛ + Типовые' },
+        { key: 'all', label: 'все риски' }
+      ];
+      for (const pack of packs) {
+        for (const combo of riskCombos) {
+          const premium = pack[combo.key];
+          const totalV2 = propertyPremiumV2 + lifePremiumV2 + premium;
+          productResults.push({
+            product: 'lichnie_veschi',
+            productName: 'Личные вещи',
+            riskName: combo.label,
+            premium: premium,
+            total: totalV2,
+            packDetails: { pack, riskCombo: combo.key }
+          });
+        }
+      }
+    } else {
+      const additionalRisk = calculateIFLAdditionalRisk(product, data, insuranceAmount);
+      if (additionalRisk) {
+        const totalV2 = propertyPremiumV2 + lifePremiumV2 + additionalRisk.premium;
+        console.log('Продукт', product, '- дополнительная премия:', additionalRisk.premium, '- итого (без титула):', totalV2);
+        productResults.push({
+          product: product,
+          productName: additionalRisk.productName,
+          riskName: additionalRisk.riskName,
+          premium: additionalRisk.premium,
+          total: totalV2
+        });
+      }
     }
   }
 
@@ -1352,10 +1381,11 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
     return null;
   }
 
-  // Сортируем продукты с приоритетом: сначала "Моя квартира" и "Экспресс квартира", потом остальные
-  // Разделяем на приоритетные и остальные
-  const priorityProducts = productResults.filter(p => p.product === 'moyakvartira' || p.product === 'express');
-  const otherProducts = productResults.filter(p => p.product !== 'moyakvartira' && p.product !== 'express');
+  // Сортируем продукты с приоритетом: "Моя квартира", "Экспресс квартира", "Личные вещи" (для life-only)
+  const priorityProducts = productResults.filter(p => 
+    p.product === 'moyakvartira' || p.product === 'express' || p.product === 'lichnie_veschi');
+  const otherProducts = productResults.filter(p => 
+    p.product !== 'moyakvartira' && p.product !== 'express' && p.product !== 'lichnie_veschi');
 
   // Сортируем приоритетные по сумме
   priorityProducts.sort((a, b) => a.total - b.total);
@@ -1602,11 +1632,13 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
     }
   }
 
-  const formatKv35 = (premium) => {
-    const agentAmount = Math.round(premium * 0.35 * 100) / 100;
+  const formatKv = (premium, percent = 35) => {
+    const agentAmount = Math.round(premium * (percent / 100) * 100) / 100;
     const fmt = agentAmount.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-    return ` кв - 35% = агент получит по ИФЛ (${fmt})`;
+    return ` кв - ${percent}% = агент получит по ИФЛ (${fmt})`;
   };
+  const formatKv35 = (premium) => formatKv(premium, 35);
+  const formatKv50 = (premium) => formatKv(premium, 50);
 
   // Если используем только увеличенные риски (без основного продукта) или Бастион с дополнительными рисками
   if (finalProduct.useIncreasedRisksOnly && additionalRisks.length > 0) {
@@ -1621,15 +1653,16 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
       output += `доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${formattedRiskPremium}${formatKv35(risk.premium)}<br>`;
     });
   } else {
-    // Стандартная логика с основным продуктом
+    // Стандартная логика с основным продуктом (Личные вещи — кв 50%, остальные — 35%)
+    const formatKvForProduct = finalProduct.product === 'lichnie_veschi' ? formatKv50 : formatKv35;
     const riskDetails = getAdditionalRiskDetails(finalProduct.product, data, insuranceAmount, finalProduct.premium, additionalRisks, finalProduct.packDetails);
 
     // Форматируем доп. риск с деталями
     const formattedRisk = finalProduct.premium.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
     if (riskDetails.sum) {
-      output += `доп риск - ${finalProduct.productName} (${riskDetails.objects}) ${riskDetails.sum} ${formattedRisk}${formatKv35(finalProduct.premium)}`;
+      output += `доп риск - ${finalProduct.productName} (${riskDetails.objects}) ${riskDetails.sum} ${formattedRisk}${formatKvForProduct(finalProduct.premium)}`;
     } else {
-      output += `доп риск - ${finalProduct.productName} (${riskDetails.objects}) ${formattedRisk}${formatKv35(finalProduct.premium)}`;
+      output += `доп риск - ${finalProduct.productName} (${riskDetails.objects}) ${formattedRisk}${formatKvForProduct(finalProduct.premium)}`;
     }
 
     // Добавляем дополнительные риски, если есть
@@ -2117,7 +2150,8 @@ function upgradeExpressPack(neededIncrease) {
 
 // Получение деталей доп. риска для вывода
 function getAdditionalRiskDetails(product, data, insuranceAmount, premium, additionalRisks = [], packDetails = null) {
-  if (!window.T_BASTION || !window.EXPRESS_PACKS || !window.EXPRESS_GO_PACKS || !window.T_MOYA) {
+  // Личные вещи не требует T_BASTION и др.
+  if (product !== 'lichnie_veschi' && (!window.T_BASTION || !window.EXPRESS_PACKS || !window.EXPRESS_GO_PACKS || !window.T_MOYA)) {
     return { objects: '', sum: '' };
   }
 
@@ -2180,6 +2214,16 @@ function getAdditionalRiskDetails(product, data, insuranceAmount, premium, addit
       return {
         objects: 'гражданская ответственность',
         sum: `на сумму ${sum} ₽ премия`
+      };
+    }
+
+    case 'lichnie_veschi': {
+      const pack = packDetails?.pack;
+      if (!pack) return { objects: 'мобильная техника, ручная кладь, верхняя одежда, спортинвентарь', sum: '' };
+      const formattedSum = pack.sum.toLocaleString('ru-RU');
+      return {
+        objects: 'мобильная техника, ручная кладь, верхняя одежда, спортинвентарь',
+        sum: `на сумму ${formattedSum} ₽ премия`
       };
     }
 
@@ -2339,3 +2383,17 @@ function calculateIFLAdditionalRisk(product, data, insuranceAmount) {
       return null;
   }
 }
+
+// Продукт "Личные вещи" - мобильная техника, ручная кладь, верхняя одежда, спортинвентарь
+// variant: 1-5, riskCombo: 'povrezhd'|'tipovye'|'all'
+function calculateLichnieVeshchi(variant, riskCombo) {
+  const packs = window.LICHNIE_VESHCHI_PACKS;
+  if (!packs) return null;
+  const pack = packs.find(p => p.id === variant) || packs[0];
+  let premium = 0;
+  if (riskCombo === 'povrezhd') premium = pack.povrezhd;
+  else if (riskCombo === 'tipovye') premium = pack.tipovye;
+  else premium = pack.all; // 'all' по умолчанию
+  return { pack, premium, sum: pack.sum };
+}
+window.calculateLichnieVeshchi = calculateLichnieVeshchi;
