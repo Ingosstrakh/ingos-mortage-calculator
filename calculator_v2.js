@@ -76,7 +76,7 @@ function validateParsedData(data) {
   if (bankConfig && bankConfig.add_percent === null) {
     // Банки, где нужно указывать процентную ставку вручную
     if (!data.markupPercent && data.markupPercent !== 0) {
-      const banksNeedingPercent = ['Альфа Банк', 'УБРИР'];
+      const banksNeedingPercent = ['Альфа Банк', 'УБРИР', 'Банк СПБ'];
       if (banksNeedingPercent.includes(data.bank)) {
         errors.push(`❌ Для банка "${data.bank}" нужно указать процент надбавки (например: "${data.bank} 6%" или "ставка 6%")`);
       }
