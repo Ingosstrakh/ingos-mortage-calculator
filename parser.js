@@ -104,12 +104,15 @@ function similarityScore(a,b){
   return 1 - (ed / maxlen);
 }
 
-// извлекает все даты формата DD.MM.YYYY
+// извлекает все даты формата DD.MM.YYYY (поддержка разделителей . , /)
 function extractDates(text) {
-  const re = /(\d{1,2}\.\d{1,2}\.\d{4})/g;
+  const re = /(\d{1,2}[.,/]\d{1,2}[.,/]\d{4})/g;
   const arr = [];
   let m;
-  while ((m=re.exec(text)) !== null) arr.push(m[1]);
+  while ((m=re.exec(text)) !== null) {
+    // нормализуем разделители к точке
+    arr.push(m[1].replace(/[,/]/g, '.'));
+  }
   return arr;
 }
 
@@ -143,7 +146,13 @@ function findLargeNumbers(text) {
     let m;
     while ((m = re.exec(line)) !== null) {
       const n = normalizeNumber(m[1]);
-      if (n && n >= MIN_BIG_NUMBER) arr.push(n);
+      if (n && n >= MIN_BIG_NUMBER) {
+        // Фильтруем вероятные годы (1900-2099) из крупных чисел, чтобы не путать с ОСЗ
+        const asInt = Math.round(n);
+        if (!(asInt >= 1900 && asInt <= 2099 && Math.abs(n - asInt) < 1e-9)) {
+          arr.push(n);
+        }
+      }
     }
   }
   return arr;
@@ -153,7 +162,9 @@ function findLargeNumbers(text) {
 function parseDateDMY(dateStr) {
   if (!dateStr) return null;
   if (typeof dateStr !== 'string') return null;
-  
+  // Нормализуем разделители / и , к точке
+  dateStr = dateStr.replace(/[,/]/g, '.');
+ 
   // Всегда пытаемся парсить как DD.MM.YYYY (русский формат)
   // Важно: НЕ используем new Date(dateStr) напрямую, так как он может интерпретировать
   // дату в американском формате MM/DD/YYYY, что приведет к ошибкам для дней > 12
@@ -335,16 +346,16 @@ function extractCreditDate(text) {
   // Поиск даты после ключевых слов (кд, выдача, договор, кредит)
   // Ищем все возможные комбинации и берем последнюю найденную дату
   const patterns = [
-    /кд\s+от\s+(\d{1,2}\.\d{1,2}\.\d{4})/ig,
-    /кд\.\s*(\d{1,2}\.\d{1,2}\.\d{4})/ig,  // "кд. 21.02.2025" или "кд.02.12.2025"
-    /кд\.(\d{1,2}\.\d{1,2}\.\d{4})/ig,  // "кд.02.12.2025" (без пробела после точки)
-    /кд\.\s*(\d{1,2}\.\d{1,2}\.\d{4})\s*г\.?/ig,  // "кд. 21.02.2025г."
-    /кд[^\d]{1,10}(\d{1,2}\.\d{1,2}\.\d{4})/ig,
-    /кредитный\s+договор\s+от\s+(\d{1,2}\.\d{1,2}\.\d{4})/ig,
-    /кредит\s+от\s+(\d{1,2}\.\d{1,2}\.\d{4})/ig,
-    /выдача\s+(\d{1,2}\.\d{1,2}\.\d{4})/ig,
-    /договор\s+от\s+(\d{1,2}\.\d{1,2}\.\d{4})/ig,
-    /от\s+(\d{1,2}\.\d{1,2}\.\d{4})\s*г?\.?/ig  // "от 01.11.2025" или "от 01.11.2025г." - распознается как кредитная дата
+    /кд\s+от\s+(\d{1,2}[.,/]\d{1,2}[.,/]\d{4})/ig,
+    /кд\.\s*(\d{1,2}[.,/]\d{1,2}[.,/]\d{4})/ig,  // "кд. 21.02.2025" или "кд.02.12.2025"
+    /кд\.(\d{1,2}[.,/]\d{1,2}[.,/]\d{4})/ig,  // "кд.02.12.2025" (без пробела после точки)
+    /кд\.\s*(\d{1,2}[.,/]\d{1,2}[.,/]\d{4})\s*г\.?/ig,  // "кд. 21.02.2025г."
+    /кд[^\d]{1,10}(\d{1,2}[.,/]\d{1,2}[.,/]\d{4})/ig,
+    /кредитный\s+договор\s+от\s+(\d{1,2}[.,/]\d{1,2}[.,/]\d{4})/ig,
+    /кредит\s+от\s+(\d{1,2}[.,/]\d{1,2}[.,/]\d{4})/ig,
+    /выдача\s+(\d{1,2}[.,/]\d{1,2}[.,/]\d{4})/ig,
+    /договор\s+от\s+(\d{1,2}[.,/]\d{1,2}[.,/]\d{4})/ig,
+    /от\s+(\d{1,2}[.,/]\d{1,2}[.,/]\d{4})\s*г?\.?/ig  // "от 01.11.2025" или "от 01.11.2025г." - распознается как кредитная дата
   ];
 
   let latestDate = null;
@@ -353,7 +364,7 @@ function extractCreditDate(text) {
   for (const pattern of patterns) {
     const matches = [...text.matchAll(pattern)];
     for (const match of matches) {
-      const date = match[1];
+      const date = match[1].replace(/[,/]/g, '.');
       const position = match.index;
       if (position > latestPosition) {
         latestDate = date;
@@ -638,14 +649,21 @@ function parseTextToObject(rawText) {
       }
     }
     if (!result.osz) {
-      // Если есть только одно большое число, используем его как OSZ
-      if (large.length === 1) {
-        result.osz = large[0];
-        result.oszCandidates.push({source:'singleLarge',value:large[0]});
-      } else if (large.length > 1) {
-        // Если несколько чисел, выбираем наиболее подходящее (обычно первое)
-        result.osz = large[0];
-        result.oszCandidates.push({source:'firstOfMultiple',value:large[0]});
+      // Исключаем вероятные года (доп. защита) и предпочитаем более крупные суммы
+      const filtered = large.filter(n => {
+        const asInt = Math.round(n);
+        return !(asInt >= 1900 && asInt <= 2099 && Math.abs(n - asInt) < 1e-9);
+      });
+      const preferHigh = filtered.filter(n => n >= 10000);
+      const candidates = preferHigh.length > 0 ? preferHigh : filtered;
+      if (candidates.length === 1) {
+        result.osz = candidates[0];
+        result.oszCandidates.push({source:'singleLarge', value:candidates[0]});
+      } else if (candidates.length > 1) {
+        // выбираем максимально большую сумму как наиболее вероятный остаток
+        const maxVal = candidates.reduce((a,b)=> a>b?a:b, candidates[0]);
+        result.osz = maxVal;
+        result.oszCandidates.push({source:'maxOfMultiple', value:maxVal});
       }
     }
     // push other candidates
