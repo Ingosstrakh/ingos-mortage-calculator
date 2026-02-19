@@ -27,7 +27,7 @@ window.BANKS = {
 
   "Банк СПБ": {
     aliases: ["банк спб", "спб", "спб банк", "банк санкт-петербург"],
-    add_percent: 10,
+    add_percent: null,
     allow_discount_property: false, // запрещена
     allow_discount_life: false      // запрещена
   },
