@@ -415,6 +415,14 @@ function extractBorrowers(text, contractDate = null) {
   const found = [];
   const lines = text.split(/[\n\r]/g).map(l => l.trim()).filter(Boolean);
 
+  function detectGenderBySurname(surname) {
+    if (!surname) return null;
+    const s = surname.toLowerCase();
+    if (/(ова|ёва|ева|ина|ына|ская|цкая)$/.test(s)) return 'f';
+    if (/(ов|ев|ёв|ин|ский|цкий|ой|ый)$/.test(s)) return 'm';
+    return null;
+  }
+
   // 1) Сначала ищем заемщиков в отдельных строках (более надежно)
   for (const line of lines) {
     // Пропускаем строки, которые явно являются датами кредитных договоров
@@ -446,6 +454,15 @@ function extractBorrowers(text, contractDate = null) {
 
     // Паттерн для даты перед полом: "02.03.1980 ЖЕНЩИНА"
     const dateBeforeGenderPattern = /(\d{1,2}\.\d{1,2}\.\d{4})\s+(ЖЕНЩИНА|МУЖЧИНА|ЖЕН|МУЖ|ОНА|ОН|МУЖЧ)/ig;
+
+    // Паттерн: дата, затем пол, затем доля
+    const dateGenderSharePattern = /(\d{1,2}[.,/]\d{1,2}[.,/]\d{4})\s+(мужчина|женщина|муж|жен|она|он|мужч)\.?\s*(\d{1,3})\s*%/ig;
+
+    // Паттерн: ФИО + дата рождения + доля
+    const fioDobSharePattern = /([А-ЯЁ][а-яё]+)\s+[А-ЯЁ][а-яё]+\s+[А-ЯЁ][а-яё]+\s+(\d{1,2}[.,/]\d{1,2}[.,/]\d{4})\s+(\d{1,3})\s*%/g;
+
+    // Паттерн: ФИО + дата рождения (без доли)
+    const fioDobPattern = /([А-ЯЁ][а-яё]+)\s+[А-ЯЁ][а-яё]+\s+[А-ЯЁ][а-яё]+\s+(\d{1,2}[.,/]\d{1,2}[.,/]\d{4})/g;
 
     // Обработка паттерна "дата перед полом"
     const dateBeforeMatches = Array.from(text.matchAll(dateBeforeGenderPattern));
@@ -486,6 +503,41 @@ function extractBorrowers(text, contractDate = null) {
       // Проверяем, что такая дата еще не добавлена
       if (!found.some(f => f.dob === dob)) {
         found.push({ dob, gender, share, raw: line });
+      }
+    }
+
+    // Обработка: дата, затем пол, затем доля
+    const dgsMatches = Array.from(line.matchAll(dateGenderSharePattern));
+    for (const m of dgsMatches) {
+      const dob = m[1].replace(/[,/]/g, '.');
+      const genderWord = m[2].toLowerCase();
+      const gender = (genderWord === 'женщина' || genderWord === 'жен' || genderWord === 'она') ? 'f' : 'm';
+      const share = Number(m[3]);
+      if (!found.some(f => f.dob === dob)) {
+        found.push({ dob, gender, share, raw: line });
+      }
+    }
+
+    // Обработка: ФИО + дата рождения + доля
+    const fioShareMatches = Array.from(line.matchAll(fioDobSharePattern));
+    for (const m of fioShareMatches) {
+      const surname = m[1];
+      const dob = m[2].replace(/[,/]/g, '.');
+      const share = Number(m[3]);
+      const gender = detectGenderBySurname(surname) || null;
+      if (!found.some(f => f.dob === dob)) {
+        found.push({ dob, gender, share, raw: line });
+      }
+    }
+
+    // Обработка: ФИО + дата рождения (без доли)
+    const fioMatches = Array.from(line.matchAll(fioDobPattern));
+    for (const m of fioMatches) {
+      const surname = m[1];
+      const dob = m[2].replace(/[,/]/g, '.');
+      const gender = detectGenderBySurname(surname) || null;
+      if (!found.some(f => f.dob === dob)) {
+        found.push({ dob, gender, share: undefined, raw: line });
       }
     }
 
