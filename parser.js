@@ -465,7 +465,7 @@ function extractBorrowers(text, contractDate = null) {
     const fioDobPattern = /([А-ЯЁ][а-яё]+)\s+[А-ЯЁ][а-яё]+\s+[А-ЯЁ][а-яё]+\s+(\d{1,2}[.,/]\d{1,2}[.,/]\d{4})/g;
 
     // Обработка паттерна "дата перед полом"
-    const dateBeforeMatches = Array.from(text.matchAll(dateBeforeGenderPattern));
+    const dateBeforeMatches = Array.from(line.matchAll(dateBeforeGenderPattern));
     for (const match of dateBeforeMatches) {
       const dob = match[1];
       const genderWord = match[2].toLowerCase();
@@ -500,8 +500,12 @@ function extractBorrowers(text, contractDate = null) {
       const dob = match[2];
       const share = Number(match[3]);
 
-      // Проверяем, что такая дата еще не добавлена
-      if (!found.some(f => f.dob === dob)) {
+      // Обновляем долю, если заемщик уже добавлен ранее; иначе добавляем
+      const ex = found.find(f => f.dob === dob);
+      if (ex) {
+        ex.share = share;
+        if (!ex.gender) ex.gender = gender;
+      } else {
         found.push({ dob, gender, share, raw: line });
       }
     }
@@ -513,7 +517,11 @@ function extractBorrowers(text, contractDate = null) {
       const genderWord = m[2].toLowerCase();
       const gender = (genderWord === 'женщина' || genderWord === 'жен' || genderWord === 'она') ? 'f' : 'm';
       const share = Number(m[3]);
-      if (!found.some(f => f.dob === dob)) {
+      const ex = found.find(f => f.dob === dob);
+      if (ex) {
+        ex.share = share;
+        if (!ex.gender) ex.gender = gender;
+      } else {
         found.push({ dob, gender, share, raw: line });
       }
     }
@@ -525,7 +533,11 @@ function extractBorrowers(text, contractDate = null) {
       const dob = m[2].replace(/[,/]/g, '.');
       const share = Number(m[3]);
       const gender = detectGenderBySurname(surname) || null;
-      if (!found.some(f => f.dob === dob)) {
+      const ex = found.find(f => f.dob === dob);
+      if (ex) {
+        ex.share = share;
+        if (!ex.gender) ex.gender = gender;
+      } else {
         found.push({ dob, gender, share, raw: line });
       }
     }
