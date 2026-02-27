@@ -491,18 +491,8 @@ function extractBorrowers(text, contractDate = null) {
       }
     }
 
-    // Сначала проверяем специальный паттерн для дат в начале
-    const dateFirstMatches = Array.from(line.matchAll(dateFirstPattern));
-    for (const match of dateFirstMatches) {
-      const dob = match[1];
-      const genderWord = match[2].toLowerCase();
-      const gender = (genderWord === 'женщина' || genderWord === 'жен' || genderWord === 'она') ? 'f' : 'm';
-
-      if (!found.some(f => f.dob === dob)) {
-        found.push({ dob, gender, share: 100, raw: line });
-      }
-    }
-
+    // Ищем заемщиков с долями (формат: "жен 04.06.1981- 50%" или "он - 50%- 13.04.1968")
+    const sharePattern = /(мужчина|женщина|муж|жен|она|он|мужч)[^\d]{0,20}(\d{1,2}\.\d{1,2}\.\d{4})[^\d]{0,20}(\d{1,3})\s*%/ig;
     const matches = Array.from(line.matchAll(sharePattern));
 
     for (const match of matches) {
