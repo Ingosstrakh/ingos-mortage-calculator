@@ -21,8 +21,9 @@ window.BANKS = {
   "Альфа Банк": {
     aliases: ["альфа", "альфабанк", "альфа банк"],
     add_percent: null, // клиент вводит сам
-    allow_discount_property: false, // запрещена
-    allow_discount_life: false      // запрещена
+    allow_discount_property: true,
+    allow_discount_life: true,
+    allow_discount_title: true
   },
 
   "Банк СПБ": {
