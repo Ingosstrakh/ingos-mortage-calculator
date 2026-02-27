@@ -833,6 +833,8 @@ const hasDiscount = bankConfig.allow_discount_life !== false &&
   } else if (bankConfig && bankConfig.bankName === "ВТБ") {
     // Для ВТБ tariffTable будет выбираться внутри цикла по borrower
     tariffTable = window.LIFE_TARIFF_BASE || LIFE_TARIFF_BASE; // значение по умолчанию
+  } else if (bankConfig && bankConfig.bankName === "Альфа Банк") {
+    tariffTable = window.LIFE_TARIFF_ALFABANK || LIFE_TARIFF_ALFABANK;
   } else {
     tariffTable = window.LIFE_TARIFF_BASE || LIFE_TARIFF_BASE;
   }
