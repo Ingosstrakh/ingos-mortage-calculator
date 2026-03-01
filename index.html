@@ -1304,52 +1304,53 @@
       });
 
       // Обработчик кнопки ВТБ +10%
-      vtbBtn.addEventListener('click', async function() {
-        // Получаем текущий текст из поля ввода
-        let message = clientInput.value.trim();
+      vtbBtn.addEventListener('click', function() {
+        const message = clientInput.value.trim();
         
-        // Если поле пустое, показываем ошибку
         if (!message) {
           showError('Введите остаток задолженности для расчета ВТБ +10%');
           return;
         }
         
-        // Проверяем, есть ли уже в тексте упоминание о банке
-        const hasBank = /(втб|сбер|альфа|дом\.рф|сбербанк|альфа банк|тинькофф|росбанк)/i.test(message);
-        
-        // Если банк не указан, добавляем ВТБ в начало
-        if (!hasBank) {
-          message = 'ВТБ ' + message;
-        } else {
-          // Если указан другой банк, заменяем на ВТБ
-          message = message.replace(/(сбер|альфа|дом\.рф|сбербанк|альфа банк|тинькофф|росбанк)/gi, 'ВТБ');
+        // Извлекаем сумму из текста
+        const sumMatch = message.match(/(\d+(?:[\s\d]*\d)?)/);
+        if (!sumMatch) {
+          showError('Не удалось найти сумму в тексте');
+          return;
         }
         
-        // Обновляем поле ввода
-        clientInput.value = message;
+        // Убираем пробелы из суммы и преобразуем в число
+        const sumStr = sumMatch[1].replace(/\s/g, '');
+        const osz = parseFloat(sumStr);
         
-        // Показываем индикатор загрузки
-        vtbBtn.disabled = true;
-        vtbBtn.innerHTML = '<span class="btn-icon">⏳</span><span>Рассчитываем...</span>';
-
-        try {
-          const result = await processClientRequest(message);
-
-          // Показываем результаты
-          resultsContent.innerHTML = result;
-          resultsSection.style.display = 'block';
-
-          // Прокручиваем к результатам
-          resultsSection.scrollIntoView({ behavior: 'smooth' });
-
-        } catch (error) {
-          console.error('Ошибка:', error);
-          showError('Произошла ошибка при расчете. Проверьте введенные данные.');
-        } finally {
-          // Возвращаем кнопку в исходное состояние
-          vtbBtn.disabled = false;
-          vtbBtn.innerHTML = '<span class="btn-icon">🏦</span><span>ВТБ +10%</span>';
+        if (isNaN(osz) || osz <= 0) {
+          showError('Неверная сумма');
+          return;
         }
+        
+        // Рассчитываем страховую сумму с надбавкой 10%
+        const markup = osz * 0.1;
+        const insuranceAmount = osz + markup;
+        
+        // Формируем результат
+        const result = `
+          <div style="background: linear-gradient(135deg, #e0f2fe, #f0f9ff); border: 1px solid #0ea5e9; border-radius: 12px; padding: 20px; margin: 20px 0;">
+            <h3 style="color: #0c4a6e; margin: 0 0 15px 0;">Расчет ВТБ +10%</h3>
+            <div style="display: grid; gap: 10px;">
+              <div><b>Банк:</b> ВТБ</div>
+              <div><b>Остаток долга:</b> ${osz.toFixed(2)} ₽</div>
+              <div><b>Надбавка 10%:</b> ${markup.toFixed(2)} ₽</div>
+              <div><b>Страховая сумма:</b> ${insuranceAmount.toFixed(2)} ₽</div>
+            </div>
+          </div>
+        `;
+        
+        // Показываем результаты
+        resultsContent.innerHTML = result;
+        resultsSection.style.display = 'block';
+        
+        // Прокручиваем к результатам
+        resultsSection.scrollIntoView({ behavior: 'smooth' });
       });
 
       // Обработчик кнопки очистки
