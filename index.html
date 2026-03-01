@@ -1338,9 +1338,9 @@
             <h3 style="color: #0c4a6e; margin: 0 0 15px 0;">Расчет ВТБ +10%</h3>
             <div style="display: grid; gap: 10px;">
               <div><b>Банк:</b> ВТБ</div>
-              <div><b>Остаток долга:</b> ${osz.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false})} ₽</div>
-              <div><b>Надбавка 10%:</b> ${markup.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false})} ₽</div>
-              <div><b>Страховая сумма:</b> ${insuranceAmount.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false})} ₽</div>
+              <div><b>Остаток долга:</b> ${osz.toFixed(2).replace('.', ',')} ₽</div>
+              <div><b>Надбавка 10%:</b> ${markup.toFixed(2).replace('.', ',')} ₽</div>
+              <div><b>Страховая сумма:</b> ${insuranceAmount.toFixed(2).replace('.', ',')} ₽</div>
             </div>
           </div>
         `;
