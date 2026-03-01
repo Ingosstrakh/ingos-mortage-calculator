@@ -823,6 +823,10 @@
                 <span class="btn-icon">⚡</span>
                 <span>Рассчитать стоимость</span>
               </button>
+              <button id="vtb-btn" class="btn-secondary">
+                <span class="btn-icon">🏦</span>
+                <span>ВТБ +10%</span>
+              </button>
               <button id="clear-btn" class="btn-secondary">
                 <span class="btn-icon">🗑️</span>
                 <span>Очистить</span>
@@ -1259,6 +1263,7 @@
     document.addEventListener('DOMContentLoaded', function() {
       const clientInput = document.getElementById('client-input');
       const calculateBtn = document.getElementById('calculate-btn');
+      const vtbBtn = document.getElementById('vtb-btn');
       const clearBtn = document.getElementById('clear-btn');
       const resultsSection = document.getElementById('results-section');
       const resultsContent = document.getElementById('results-content');
@@ -1295,6 +1300,55 @@
           // Возвращаем кнопку в исходное состояние
           calculateBtn.disabled = false;
           calculateBtn.innerHTML = '<span class="btn-icon">⚡</span><span>Рассчитать стоимость</span>';
+        }
+      });
+
+      // Обработчик кнопки ВТБ +10%
+      vtbBtn.addEventListener('click', async function() {
+        // Получаем текущий текст из поля ввода
+        let message = clientInput.value.trim();
+        
+        // Если поле пустое, показываем ошибку
+        if (!message) {
+          showError('Введите остаток задолженности для расчета ВТБ +10%');
+          return;
+        }
+        
+        // Проверяем, есть ли уже в тексте упоминание о банке
+        const hasBank = /(втб|сбер|альфа|дом\.рф|сбербанк|альфа банк|тинькофф|росбанк)/i.test(message);
+        
+        // Если банк не указан, добавляем ВТБ в начало
+        if (!hasBank) {
+          message = 'ВТБ ' + message;
+        } else {
+          // Если указан другой банк, заменяем на ВТБ
+          message = message.replace(/(сбер|альфа|дом\.рф|сбербанк|альфа банк|тинькофф|росбанк)/gi, 'ВТБ');
+        }
+        
+        // Обновляем поле ввода
+        clientInput.value = message;
+        
+        // Показываем индикатор загрузки
+        vtbBtn.disabled = true;
+        vtbBtn.innerHTML = '<span class="btn-icon">⏳</span><span>Рассчитываем...</span>';
+
+        try {
+          const result = await processClientRequest(message);
+
+          // Показываем результаты
+          resultsContent.innerHTML = result;
+          resultsSection.style.display = 'block';
+
+          // Прокручиваем к результатам
+          resultsSection.scrollIntoView({ behavior: 'smooth' });
+
+        } catch (error) {
+          console.error('Ошибка:', error);
+          showError('Произошла ошибка при расчете. Проверьте введенные данные.');
+        } finally {
+          // Возвращаем кнопку в исходное состояние
+          vtbBtn.disabled = false;
+          vtbBtn.innerHTML = '<span class="btn-icon">🏦</span><span>ВТБ +10%</span>';
         }
       });
 
@@ -1856,8 +1910,11 @@
     // ===== КЛАСС ДЛЯ РАБОТЫ С HouseScore API =====
 
     class HouseScoreAPI {
-      constructor(apiKey = '4qQr9LmOgd0ZXuoQr7wW71DdJ9bOeIDoSfaLvyi083de24c1') {
-        this.apiKey = apiKey;
+      constructor(apiKey) {
+        const configuredKey = apiKey || (typeof window !== 'undefined'
+          ? (window.HOUSESCORE_API_KEY || localStorage.getItem('HOUSESCORE_API_KEY') || '')
+          : '');
+        this.apiKey = configuredKey;
         this.baseUrl = 'https://api.housescore.ru';
         // Используем CORS прокси для обхода CORS ограничений
         this.corsProxy = 'https://cors-anywhere.herokuapp.com/';
@@ -2050,6 +2107,26 @@
 
       // Используем API HouseScore с предоставленным ключом
       const api = new HouseScoreAPI();
+      if (typeof window === 'undefined' || window.ALLOW_EXTERNAL !== true) {
+        showResult('wear-results', {
+          icon: 'ℹ️',
+          title: 'Функция отключена',
+          message: 'Внешние проверки отключены по умолчанию. Для включения установите window.ALLOW_EXTERNAL = true',
+          risk: 'warning',
+          riskLevel: 'risk-medium'
+        });
+        return;
+      }
+      if (!api.apiKey) {
+        showResult('wear-results', {
+          icon: '⚠️',
+          title: 'Требуется API ключ',
+          message: 'Установите ключ: window.HOUSESCORE_API_KEY = \"ВАШ_КЛЮЧ\" или сохраните его в localStorage под HOUSESCORE_API_KEY',
+          risk: 'warning',
+          riskLevel: 'risk-medium'
+        });
+        return;
+      }
       const result = await api.searchHouse(city, street, house);
 
       if (!result.success) {
@@ -3074,5 +3151,3 @@
   </script>
 </body>
 </html>
-
-
