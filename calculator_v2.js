@@ -359,7 +359,7 @@ function performCalculations(data) {
   data.bank = normalizedBank;
 
   let output = `<b>Банк:</b> ${data.bank}<br>`;
-  output += `<b>Остаток долга:</b> ${data.osz.toLocaleString('ru-RU')} ₽<br><br>`;
+  output += `<b>Остаток долга:</b> ${data.osz.toFixed(2)} ₽<br><br>`;
 
   // Расчет страховой суммы с надбавкой
   let insuranceAmount = data.osz;
@@ -367,20 +367,20 @@ function performCalculations(data) {
     // Фиксированная надбавка из конфигурации банка
     const markup = data.osz * (bankConfig.add_percent / 100);
     insuranceAmount = data.osz + markup;
-    output += `<b>Надбавка ${bankConfig.add_percent}%:</b> ${markup.toLocaleString('ru-RU')} ₽<br>`;
-    output += `<b>Страховая сумма:</b> ${insuranceAmount.toLocaleString('ru-RU')} ₽<br><br>`;
+    output += `<b>Надбавка ${bankConfig.add_percent}%:</b> ${markup.toFixed(2)} ₽<br>`;
+    output += `<b>Страховая сумма:</b> ${insuranceAmount.toFixed(2)} ₽<br><br>`;
   } else if (bankConfig.add_percent === null && data.markupPercent) {
     // Клиент сам указывает надбавку (для Альфа Банка и УБРИР)
     const markup = data.osz * (data.markupPercent / 100);
     insuranceAmount = data.osz + markup;
-    output += `<b>Надбавка ${data.markupPercent}% (клиент):</b> ${markup.toLocaleString('ru-RU')} ₽<br>`;
-    output += `<b>Страховая сумма:</b> ${insuranceAmount.toLocaleString('ru-RU')} ₽<br><br>`;
+    output += `<b>Надбавка ${data.markupPercent}% (клиент):</b> ${markup.toFixed(2)} ₽<br>`;
+    output += `<b>Страховая сумма:</b> ${insuranceAmount.toFixed(2)} ₽<br><br>`;
   } else if (bankConfig.add_percent === null) {
     // Надбавка не указана клиентом
     output += `<b>Внимание:</b> Для этого банка укажите надбавку в процентах (например: "15% надбавка")<br><br>`;
   } else {
     // add_percent = 0 - надбавки нет, используем остаток как страховую сумму
-    output += `<b>Страховая сумма:</b> ${insuranceAmount.toLocaleString('ru-RU')} ₽<br><br>`;
+    output += `<b>Страховая сумма:</b> ${insuranceAmount.toFixed(2)} ₽<br><br>`;
   }
 
   let totalPremium = 0;
@@ -458,14 +458,21 @@ function performCalculations(data) {
       if (isMultipleBorrowers && lifeResult.borrowers.length > 1) {
         // Несколько заемщиков - показываем каждого с его премией (уже с учетом минимума 600 руб)
         const isSovcombank = bankConfig && bankConfig.bankName === "Совкомбанк";
-        lifeResult.borrowers.forEach((borrower, index) => {
-          const borrowerLabel = `заемщик ${index + 1}`;
-          output += `жизнь ${borrowerLabel} ${borrower.premium.toLocaleString('ru-RU')}`;
-          
-          // Для Совкомбанка добавляем текст "без РИСКА СВО"
-          if (isSovcombank) {
-            output += ` <span style="color: #64748b; font-size: 0.9em;">(без РИСКА СВО)</span>`;
-          }
+          const isRsxb = bankConfig && bankConfig.bankName === "РСХБ";
+          const isAlfa = bankConfig && bankConfig.bankName === "Альфа Банк";
+          lifeResult.borrowers.forEach((borrower, index) => {
+            const borrowerLabel = `заемщик ${index + 1}`;
+            output += `жизнь ${borrowerLabel} ${borrower.premium.toLocaleString('ru-RU')}`;
+            
+            // Для Совкомбанка добавляем текст "без РИСКА СВО"
+            if (isSovcombank) {
+              output += ` <span style="color: #64748b; font-size: 0.9em;">(без РИСКА СВО)</span>`;
+            }
+            
+            // Для РСХБ и Альфа Банк добавляем фразу про ВУТ
+            if (isRsxb || isAlfa) {
+              output += ` <span style="color: #64748b; font-size: 0.9em;">(с ВУТ)</span>`;
+            }
           
           // Добавляем сообщение о медицинском андеррайтинге/лимитах сразу после премии жизни (только для первого заемщика)
           if (index === 0 && lifeResult.medicalUnderwritingMessage) {
@@ -485,11 +492,18 @@ function performCalculations(data) {
         const borrowerLabel = 'заемщик';
         const borrowerPremium = lifeResult.borrowers[0] ? lifeResult.borrowers[0].premium : lifeResult.total;
         const isSovcombank = bankConfig && bankConfig.bankName === "Совкомбанк";
+        const isRsxb = bankConfig && bankConfig.bankName === "РСХБ";
+        const isAlfa = bankConfig && bankConfig.bankName === "Альфа Банк";
         output += `жизнь ${borrowerLabel} ${borrowerPremium.toLocaleString('ru-RU')}`;
         
         // Для Совкомбанка добавляем текст "без РИСКА СВО"
         if (isSovcombank) {
           output += ` <span style="color: #64748b; font-size: 0.9em;">(без РИСКА СВО)</span>`;
+        }
+        
+        // Для РСХБ и Альфа Банк добавляем фразу про ВУТ
+        if (isRsxb || isAlfa) {
+          output += ` <span style="color: #64748b; font-size: 0.9em;">(с ВУТ)</span>`;
         }
         
         // Добавляем сообщение о медицинском андеррайтинге/лимитах
