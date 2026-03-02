@@ -381,8 +381,8 @@ function extractCreditDate(text) {
 function detectBank(text) {
   const t = toLower(normalizeText(text));
 
-  // Используем window.BANKS если он загружен, иначе BANK_SYNONYMS
-  const banksData = window.BANKS || BANK_SYNONYMS;
+  // Используем window.BANKS если он загружен (browser), иначе BANK_SYNONYMS
+  const banksData = (typeof window !== 'undefined' && window.BANKS) ? window.BANKS : BANK_SYNONYMS;
 
   // 1) прямое includes по синонимам
   for (const [canon, bankConfig] of Object.entries(banksData)) {
@@ -742,12 +742,15 @@ function parseTextToObject(rawText) {
   // 4.1) Дополнительная проверка на наличие слов, указывающих на заемщиков
   // Если есть слова "муж"/"жен"/"мужчина"/"женщина" без даты, создаем заемщика
   if (result.borrowers.length === 0) {
-    const genderWords = /\b(мужчина|женщина|муж|жен|он|она)\b/i;
+    // IMPORTANT: do not use \b with Cyrillic in JS (\b is ASCII-oriented).
+    // Use whitespace/line boundaries instead.
+    const genderWords = /(?:^|\s)(мужчина|женщина|муж|жен|он|она)(?=\s|$)/i;
     if (genderWords.test(text)) {
       // Определяем пол
       let gender = null;
-      if (/\b(мужчина|муж|он)\b/i.test(text)) gender = 'male';
-      else if (/\b(женщина|жен|она)\b/i.test(text)) gender = 'female';
+      // Важно: калькулятор ожидает 'm'/'f'
+      if (/(?:^|\s)(мужчина|муж|он)(?=\s|$)/i.test(text)) gender = 'm';
+      else if (/(?:^|\s)(женщина|жен|она)(?=\s|$)/i.test(text)) gender = 'f';
 
       // Создаем заемщика без даты рождения (она будет запрошена в валидации)
       result.borrowers.push({
