@@ -535,25 +535,23 @@ function computeVariant2BasePremiums(parsedData, bankConfig, insuranceAmount) {
         hasAgeRestrictionForSberbank = parsedData.borrowers.some(b => b.age >= 55);
       }
 
+      // IMPORTANT: for consistency with existing calculateVariant2() logic,
+      // do NOT re-apply 30% discount here. We reuse premiums from calculateLifeInsurance().
+      // calculateVariant2() uses borrower.premiumWithDiscount (or borrower.premium) when discounts are allowed.
       const canApplyV2LifeDiscount = bankConfig.allow_discount_life &&
         !lifeResult.requiresMedicalExam &&
         lifeResult.medicalUnderwritingFactor !== 1.25 &&
         !hasAgeRestrictionForSberbank;
 
       if (canApplyV2LifeDiscount) {
-        const numBorrowers = parsedData.borrowers ? parsedData.borrowers.length : 1;
-        let total = 0;
         if (lifeResult.borrowers && lifeResult.borrowers.length > 0) {
-          lifeResult.borrowers.forEach(b => {
-            const discounted = round2((b.premium || 0) * 0.7);
-            total += Math.max(discounted, MIN_PREMIUM_LIFE);
-          });
+          lifePremiumV2 = round2(lifeResult.borrowers.reduce((sum, b) => sum + (Number(b.premiumWithDiscount ?? b.premium) || 0), 0));
         } else {
-          total = round2((lifeResult.totalWithoutDiscount || lifeResult.total) * 0.7);
+          // Fallback: lifeResult.total should already include discount if allowed
+          lifePremiumV2 = round2(Number(lifeResult.total) || 0);
         }
-        lifePremiumV2 = Math.max(round2(total), MIN_PREMIUM_LIFE * numBorrowers);
       } else {
-        lifePremiumV2 = lifeResult.total || lifeResult.totalWithoutDiscount;
+        lifePremiumV2 = round2(Number(lifeResult.total || lifeResult.totalWithoutDiscount) || 0);
       }
     }
   }
@@ -581,7 +579,6 @@ function renderVariant2RisksHtml({ propertyPremiumV2, lifePremiumV2, titlePremiu
   let html = '';
   if (propertyPremiumV2 > 0) html += `имущество ${formatMoneyRuGrouped(propertyPremiumV2)}<br>`;
   if (lifePremiumV2 > 0) html += `жизнь заемщик ${formatMoneyRuGrouped(lifePremiumV2)}<br>`;
-  if (titlePremiumV2 > 0) html += `титул ${formatMoneyRuGrouped(titlePremiumV2)}<br>`;
 
   if (Array.isArray(risks)) {
     risks.forEach(r => {
@@ -590,6 +587,9 @@ function renderVariant2RisksHtml({ propertyPremiumV2, lifePremiumV2, titlePremiu
       html += `доп риск - ${r.name} (${r.objects}) на сумму ${Math.round(r.sum).toLocaleString('ru-RU')} ₽ премия ${premFmt}${formatKv35(prem)}<br>`;
     });
   }
+
+  // Keep the same ordering as calculateVariant2(): титул is printed after additional risks.
+  if (titlePremiumV2 > 0) html += `<br>титул ${formatMoneyRuGrouped(titlePremiumV2)}<br>`;
 
   return html;
 }
