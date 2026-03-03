@@ -350,6 +350,14 @@ function ensureVariant2ConstructorModal() {
         <button type="button" id="variant2-close-btn" style="border:0; background:#f3f4f6; border-radius:10px; padding:8px 10px; cursor:pointer;">Закрыть</button>
       </div>
       <div style="padding:18px 20px; display:grid; gap:14px;">
+        <div id="variant2-discount-section" style="display:none; gap:8px; padding:12px; border:1px solid #e5e7eb; border-radius:12px; background:#f8fafc;">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+            <div style="font-weight:600;">Скидка (вариант 2)</div>
+            <input id="variant2-discount" type="number" min="0" max="50" step="1" style="width:120px; padding:10px 12px; border:1px solid #d1d5db; border-radius:10px;">
+          </div>
+          <div style="font-size:12px; color:#6b7280;">Для Сбербанка можно выбрать скидку на базовые риски (имущество/жизнь/титул) до 50%.</div>
+        </div>
+
         <div style="display:grid; gap:8px; padding:12px; border:1px solid #e5e7eb; border-radius:12px; background:#fafafa;">
           <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
             <div style="font-weight:600;">Страховая сумма (для пересчета)</div>
@@ -505,7 +513,13 @@ function computeMoyaPremiums(insuranceAmount, { finishEnabled, finishSum, movabl
   return { risks, totalPremium: round2(totalPremium), warning };
 }
 
-function computeVariant2BasePremiums(parsedData, bankConfig, insuranceAmount) {
+function clampDiscountPercent(p) {
+  const n = Number(p);
+  if (!Number.isFinite(n)) return null;
+  return Math.max(0, Math.min(50, Math.round(n)));
+}
+
+function computeVariant2BasePremiums(parsedData, bankConfig, insuranceAmount, discountPercentOverride = null) {
   let propertyPremiumV2 = 0;
   let lifePremiumV2 = 0;
   let titlePremiumV2 = 0;
@@ -513,12 +527,15 @@ function computeVariant2BasePremiums(parsedData, bankConfig, insuranceAmount) {
   const MIN_PREMIUM_PROPERTY = 600;
   const MIN_PREMIUM_LIFE = 600;
 
+  const discountPercent = clampDiscountPercent(discountPercentOverride);
+  const discountMultiplier = discountPercent === null ? 0.7 : (1 - discountPercent / 100);
+
   if (parsedData.risks.property) {
     const propertyResult = calculatePropertyInsurance(parsedData, bankConfig, insuranceAmount);
     if (propertyResult) {
       if (bankConfig.allow_discount_property) {
         const basePremium = propertyResult.totalWithoutDiscount;
-        propertyPremiumV2 = round2(basePremium * 0.7);
+        propertyPremiumV2 = round2(basePremium * discountMultiplier);
         propertyPremiumV2 = Math.max(propertyPremiumV2, MIN_PREMIUM_PROPERTY);
       } else {
         propertyPremiumV2 = propertyResult.totalWithoutDiscount || propertyResult.total;
@@ -545,10 +562,26 @@ function computeVariant2BasePremiums(parsedData, bankConfig, insuranceAmount) {
 
       if (canApplyV2LifeDiscount) {
         if (lifeResult.borrowers && lifeResult.borrowers.length > 0) {
-          lifePremiumV2 = round2(lifeResult.borrowers.reduce((sum, b) => sum + (Number(b.premiumWithDiscount ?? b.premium) || 0), 0));
+          if (discountPercent === null) {
+            // Default behavior: reuse calculateLifeInsurance() discounted premiums
+            lifePremiumV2 = round2(lifeResult.borrowers.reduce((sum, b) => sum + (Number(b.premiumWithDiscount ?? b.premium) || 0), 0));
+          } else {
+            // Override discount percent (Sberbank use-case)
+            lifePremiumV2 = round2(lifeResult.borrowers.reduce((sum, b) => {
+              const prem = Number(b.premium) || 0;
+              const discounted = round2(prem * discountMultiplier);
+              return sum + Math.max(discounted, MIN_PREMIUM_LIFE);
+            }, 0));
+          }
         } else {
           // Fallback: lifeResult.total should already include discount if allowed
-          lifePremiumV2 = round2(Number(lifeResult.total) || 0);
+          if (discountPercent === null) {
+            lifePremiumV2 = round2(Number(lifeResult.total) || 0);
+          } else {
+            const baseTotal = Number(lifeResult.totalWithoutDiscount || lifeResult.total) || 0;
+            const numBorrowers = parsedData.borrowers ? parsedData.borrowers.length : 1;
+            lifePremiumV2 = Math.max(round2(baseTotal * discountMultiplier), MIN_PREMIUM_LIFE * numBorrowers);
+          }
         }
       } else {
         lifePremiumV2 = round2(Number(lifeResult.total || lifeResult.totalWithoutDiscount) || 0);
@@ -559,7 +592,16 @@ function computeVariant2BasePremiums(parsedData, bankConfig, insuranceAmount) {
   if (parsedData.risks.titul) {
     const withLifeInsurance = parsedData.risks.life || false;
     const titleResult = calculateTitleInsurance(parsedData, bankConfig, insuranceAmount, withLifeInsurance, parsedData.contractDate);
-    titlePremiumV2 = titleResult.total;
+    if (bankConfig.allow_discount_title) {
+      if (discountPercent === null) {
+        titlePremiumV2 = round2(Number(titleResult.total) || 0);
+      } else {
+        const baseTitle = Number(titleResult.totalWithoutDiscount || titleResult.total) || 0;
+        titlePremiumV2 = Math.max(round2(baseTitle * discountMultiplier), 600);
+      }
+    } else {
+      titlePremiumV2 = round2(Number(titleResult.totalWithoutDiscount || titleResult.total) || 0);
+    }
   }
 
   return {
@@ -606,7 +648,7 @@ window.openVariant2Constructor = function openVariant2Constructor() {
   }
 
   const insuranceAmount = Number(ctx.insuranceAmount) || 0;
-  const base = computeVariant2BasePremiums(ctx.parsedData, ctx.bankConfig, insuranceAmount);
+  const isSberbank = ctx.bankConfig && ctx.bankConfig.bankName === 'Сбербанк';
   const limits = getMoyaLimits(insuranceAmount);
 
   // Default values from meta.additionalRisks
@@ -617,6 +659,8 @@ window.openVariant2Constructor = function openVariant2Constructor() {
 
   const state = ctx.variant2CustomState || {
     insuranceAmount,
+    // Discount override is Sberbank-only feature (0-50). For other banks keep default 30%.
+    discountPercent: isSberbank ? 30 : null,
     finishEnabled: Boolean(byObjects['отделка и инженерное оборудование']),
     movableEnabled: Boolean(byObjects['движимое имущество']),
     goEnabled: Boolean(byObjects['гражданская ответственность']),
@@ -625,6 +669,17 @@ window.openVariant2Constructor = function openVariant2Constructor() {
     goSum: goDefault
   };
   ctx.variant2CustomState = state;
+
+  // Discount section visibility + value
+  const discountSection = modal.querySelector('#variant2-discount-section');
+  const discountInput = modal.querySelector('#variant2-discount');
+  if (isSberbank) {
+    discountSection.style.display = 'grid';
+    discountInput.value = String(clampDiscountPercent(state.discountPercent) ?? 30);
+  } else {
+    discountSection.style.display = 'none';
+    state.discountPercent = null;
+  }
 
   // Set limits texts
   modal.querySelector('#variant2-finish-limits').textContent = `лимит: ${limits.finish.min.toLocaleString('ru-RU')} - ${limits.finish.max.toLocaleString('ru-RU')} ₽`;
@@ -654,6 +709,15 @@ window.openVariant2Constructor = function openVariant2Constructor() {
   const refresh = () => {
     const ins = Number(modal.querySelector('#variant2-ins-amount').value) || 0;
     state.insuranceAmount = ins;
+
+    if (isSberbank) {
+      state.discountPercent = clampDiscountPercent(discountInput.value);
+      if (state.discountPercent === null) state.discountPercent = 30;
+      discountInput.value = String(state.discountPercent);
+    } else {
+      state.discountPercent = null;
+    }
+
     state.finishEnabled = modal.querySelector('#variant2-finish-enabled').checked;
     state.movableEnabled = modal.querySelector('#variant2-movable-enabled').checked;
     state.goEnabled = modal.querySelector('#variant2-go-enabled').checked;
@@ -661,7 +725,7 @@ window.openVariant2Constructor = function openVariant2Constructor() {
     state.movableSum = Number(modal.querySelector('#variant2-movable-sum').value) || 0;
     state.goSum = Number(modal.querySelector('#variant2-go-sum').value) || 0;
 
-    const baseNow = computeVariant2BasePremiums(ctx.parsedData, ctx.bankConfig, ins);
+    const baseNow = computeVariant2BasePremiums(ctx.parsedData, ctx.bankConfig, ins, state.discountPercent);
     const custom = computeMoyaPremiums(ins, state);
 
     // Update per-risk premiums preview
@@ -686,6 +750,7 @@ window.openVariant2Constructor = function openVariant2Constructor() {
     ctx.variant2Meta = {
       ...ctx.variant2Meta,
       insuranceAmount: ins,
+      discountPercent: state.discountPercent,
       base: baseNow,
       additionalRisks: custom.risks,
       total: total
@@ -696,6 +761,7 @@ window.openVariant2Constructor = function openVariant2Constructor() {
   if (!modal.__wired) {
     modal.__wired = true;
     const ids = [
+      '#variant2-discount',
       '#variant2-ins-amount',
       '#variant2-finish-enabled', '#variant2-finish-sum',
       '#variant2-movable-enabled', '#variant2-movable-sum',
@@ -720,7 +786,7 @@ window.openVariant2Constructor = function openVariant2Constructor() {
       }
 
       const meta = ctx.variant2Meta;
-      const baseNow = meta.base || computeVariant2BasePremiums(ctx.parsedData, ctx.bankConfig, meta.insuranceAmount);
+      const baseNow = meta.base || computeVariant2BasePremiums(ctx.parsedData, ctx.bankConfig, meta.insuranceAmount, meta.discountPercent);
       const html = renderVariant2RisksHtml(baseNow, meta.additionalRisks || []);
       const total = meta.total || round2(baseNow.propertyPremiumV2 + baseNow.lifePremiumV2 + baseNow.titlePremiumV2 + (meta.additionalRisks || []).reduce((s, r) => s + (Number(r.premium) || 0), 0));
 
