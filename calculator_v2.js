@@ -725,7 +725,7 @@ window.openVariant2Constructor = function openVariant2Constructor() {
     state.movableSum = Number(modal.querySelector('#variant2-movable-sum').value) || 0;
     state.goSum = Number(modal.querySelector('#variant2-go-sum').value) || 0;
 
-    const baseNow = computeVariant2BasePremiums(ctx.parsedData, ctx.bankConfig, ins, state.discountPercent);
+    const baseNow = ctx.variant2Meta.base || computeVariant2BasePremiums(ctx.parsedData, ctx.bankConfig, ins, state.discountPercent);
     const custom = computeMoyaPremiums(ins, state);
 
     // Update per-risk premiums preview
