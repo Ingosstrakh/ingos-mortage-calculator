@@ -737,11 +737,20 @@
   <script defer src="tariffs_property.js?v=12"></script>
   <script defer src="tariffs_ifl.js?v=12"></script>
 
-  <!-- Логика -->
+  <!-- Логика - НОВЫЕ МОДУЛИ -->
   <script defer src="parser.js?v=18"></script>
-  <script defer src="calculator_v2.js?v=21"></script>
   <script defer src="installment_calculator.js?v=4"></script>
-  <script src="openai.js?v=14"></script>
+  
+  <!-- Модульный калькулятор (замена calculator_v2.js) -->
+  <script defer src="calculator-utils.js?v=1"></script>
+  <script defer src="calculator-medical.js?v=1"></script>
+  <script defer src="calculator-validation.js?v=1"></script>
+  <script defer src="calculator-insurance-life.js?v=1"></script>
+  <script defer src="calculator-insurance-property.js?v=1"></script>
+  <script defer src="calculator-insurance-title.js?v=1"></script>
+  <script defer src="calculator-installment.js?v=1"></script>
+  <!-- Примечание: calculator_v2.js заменен на модули выше -->
+
 </head>
 
 <body>
@@ -853,6 +862,22 @@
               <div id="results-content" class="results-content">
                 <!-- Здесь будут отображаться результаты -->
               </div>
+
+              <!-- === НАЧАЛО: КОНСТРУКТОР ВАРИАНТА 2 === -->
+              <div id="variant-2-constructor-section" class="constructor-section" style="display: none; margin-top: 20px; padding: 20px; background: #f0f9ff; border: 1px solid #3b82f6; border-radius: 12px;">
+                <h4 style="color: #1e293b; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                  <span>⚙️ Конструктор Варианта 2</span>
+                  <button id="constructor-close-btn" style="background: none; border: none; font-size: 20px; cursor: pointer;">×</button>
+                </h4>
+                <div id="constructor-risks-container">
+                  <!-- Сюда будут динамически добавляться риски -->
+                </div>
+                <div style="text-align: right; margin-top: 15px; font-size: 1.2em; font-weight: bold; color: #1e293b;">
+                  <span >Итого в конструкторе:</span>
+                  <span id="constructor-total-premium">0</span> ₽
+                </div>
+              </div>
+              <!-- === КОНЕЦ: КОНСТРУКТОР ВАРИАНТА 2 === -->
               <div class="results-decoration">
                 <div class="decoration-line"></div>
                 <div class="decoration-dots"></div>
