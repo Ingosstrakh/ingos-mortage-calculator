@@ -235,22 +235,39 @@ function computeVariant2BasePremiums(parsedData, bankConfig, insuranceAmount, di
   const MIN_PREMIUM_PROPERTY = 600;
   const MIN_PREMIUM_LIFE = 600;
 
-  const discountPercent = clampDiscountPercent(discountPercentOverride);
+  // ВАЖНО: только для Сбербанка можно менять скидку (0-50%)
+  // Для всех остальных банков скидка фиксированная 30%
+  // НО: если банк запрещает скидки (allow_discount_* = false), то скидки не применяются вообще
+  const isSberbank = bankConfig && bankConfig.bankName === 'Сбербанк';
+  let discountPercent;
+  
+  if (isSberbank && discountPercentOverride !== null) {
+    // Для Сбербанка используем переданную скидку (0-50%)
+    discountPercent = clampDiscountPercent(discountPercentOverride);
+  } else {
+    // Для всех остальных банков фиксированная скидка 30%
+    discountPercent = null; // null означает использовать стандартную скидку 30%
+  }
+  
   const discountMultiplier = discountPercent === null ? 0.7 : (1 - discountPercent / 100);
 
+  // ИМУЩЕСТВО
   if (parsedData.risks.property) {
     const propertyResult = calculatePropertyInsurance(parsedData, bankConfig, insuranceAmount);
     if (propertyResult) {
       if (bankConfig.allow_discount_property) {
+        // Скидки разрешены - применяем
         const basePremium = propertyResult.totalWithoutDiscount;
         propertyPremiumV2 = round2(basePremium * discountMultiplier);
         propertyPremiumV2 = Math.max(propertyPremiumV2, MIN_PREMIUM_PROPERTY);
       } else {
+        // Скидки запрещены (например, ДомРФ) - используем полную цену
         propertyPremiumV2 = propertyResult.totalWithoutDiscount || propertyResult.total;
       }
     }
   }
 
+  // ЖИЗНЬ
   if (parsedData.risks.life) {
     const lifeResult = calculateLifeInsurance(parsedData, bankConfig, insuranceAmount);
     if (lifeResult) {
@@ -267,9 +284,10 @@ function computeVariant2BasePremiums(parsedData, bankConfig, insuranceAmount, di
       if (canApplyV2LifeDiscount) {
         if (lifeResult.borrowers && lifeResult.borrowers.length > 0) {
           if (discountPercent === null) {
+            // Используем стандартную скидку 30% (premiumWithDiscount)
             lifePremiumV2 = round2(lifeResult.borrowers.reduce((sum, b) => sum + (Number(b.premiumWithDiscount ?? b.premium) || 0), 0));
           } else {
-            // ВАЖНО: b.premium - это премия БЕЗ скидки, используем её для пересчета с новой скидкой
+            // Для Сбербанка: пересчитываем с кастомной скидкой
             lifePremiumV2 = round2(lifeResult.borrowers.reduce((sum, b) => {
               const basePrem = Number(b.premium) || 0;
               const discounted = round2(basePrem * discountMultiplier);
@@ -296,8 +314,10 @@ function computeVariant2BasePremiums(parsedData, bankConfig, insuranceAmount, di
     const titleResult = calculateTitleInsurance(parsedData, bankConfig, insuranceAmount, withLifeInsurance, parsedData.contractDate);
     if (bankConfig.allow_discount_title) {
       if (discountPercent === null) {
+        // Используем стандартную скидку (уже применена в calculateTitleInsurance)
         titlePremiumV2 = round2(Number(titleResult.total) || 0);
       } else {
+        // Для Сбербанка: пересчитываем с кастомной скидкой
         const baseTitle = Number(titleResult.totalWithoutDiscount || titleResult.total) || 0;
         titlePremiumV2 = Math.max(round2(baseTitle * discountMultiplier), 600);
       }
@@ -365,6 +385,8 @@ window.openVariant2Constructor = function openVariant2Constructor() {
 
   const state = ctx.variant2CustomState || {
     insuranceAmount,
+    // Только для Сбербанка можно менять скидку (0-50%)
+    // Для остальных банков скидка фиксированная 30% (null = использовать стандартную)
     discountPercent: isSberbank ? 30 : null,
     finishEnabled: Boolean(byObjects['отделка и инженерное оборудование']),
     movableEnabled: Boolean(byObjects['движимое имущество']),
@@ -413,10 +435,12 @@ window.openVariant2Constructor = function openVariant2Constructor() {
     state.insuranceAmount = ins;
 
     if (isSberbank) {
+      // Только для Сбербанка можно менять скидку
       state.discountPercent = clampDiscountPercent(discountInput.value);
       if (state.discountPercent === null) state.discountPercent = 30;
       discountInput.value = String(state.discountPercent);
     } else {
+      // Для всех остальных банков скидка фиксированная 30% (null)
       state.discountPercent = null;
     }
 
@@ -428,6 +452,7 @@ window.openVariant2Constructor = function openVariant2Constructor() {
     state.goSum = Number(modal.querySelector('#variant2-go-sum').value) || 0;
 
     // ВАЖНО: всегда пересчитываем базу, особенно при изменении скидки для Сбербанка
+    // Для не-Сбербанка передаем null, что означает использовать стандартную скидку 30%
     const baseNow = computeVariant2BasePremiums(ctx.parsedData, ctx.bankConfig, ins, state.discountPercent);
     const custom = computeMoyaPremiums(ins, state);
 
