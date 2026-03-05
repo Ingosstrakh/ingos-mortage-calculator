@@ -396,6 +396,13 @@ window.openVariant2Constructor = function openVariant2Constructor() {
     goSum: goDefault
   };
   ctx.variant2CustomState = state;
+  
+  // ВАЖНО: Инициализируем базу при первом открытии конструктора
+  // Это гарантирует, что база не будет пересчитываться при изменении только доп. рисков
+  if (!ctx.variant2Meta.base) {
+    const initialDiscount = isSberbank ? 30 : null;
+    ctx.variant2Meta.base = computeVariant2BasePremiums(ctx.parsedData, ctx.bankConfig, insuranceAmount, initialDiscount);
+  }
 
   const discountSection = modal.querySelector('#variant2-discount-section');
   const discountInput = modal.querySelector('#variant2-discount');
