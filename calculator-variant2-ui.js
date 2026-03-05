@@ -432,6 +432,9 @@ window.openVariant2Constructor = function openVariant2Constructor() {
 
   const refresh = () => {
     const ins = Number(modal.querySelector('#variant2-ins-amount').value) || 0;
+    const prevInsAmount = state.insuranceAmount;
+    const prevDiscountPercent = state.discountPercent;
+    
     state.insuranceAmount = ins;
 
     if (isSberbank) {
@@ -451,9 +454,21 @@ window.openVariant2Constructor = function openVariant2Constructor() {
     state.movableSum = Number(modal.querySelector('#variant2-movable-sum').value) || 0;
     state.goSum = Number(modal.querySelector('#variant2-go-sum').value) || 0;
 
-    // ВАЖНО: всегда пересчитываем базу, особенно при изменении скидки для Сбербанка
-    // Для не-Сбербанка передаем null, что означает использовать стандартную скидку 30%
-    const baseNow = computeVariant2BasePremiums(ctx.parsedData, ctx.bankConfig, ins, state.discountPercent);
+    // ВАЖНО: пересчитываем базу ТОЛЬКО если изменилась страховая сумма или скидка
+    // При изменении только галочек доп. рисков база НЕ должна меняться
+    let baseNow;
+    const needRecalcBase = (ins !== prevInsAmount) || (state.discountPercent !== prevDiscountPercent);
+    
+    if (needRecalcBase) {
+      // Пересчитываем базу при изменении страховой суммы или скидки
+      baseNow = computeVariant2BasePremiums(ctx.parsedData, ctx.bankConfig, ins, state.discountPercent);
+      // Сохраняем новую базу в контекст
+      ctx.variant2Meta.base = baseNow;
+    } else {
+      // Используем сохраненную базу (не пересчитываем)
+      baseNow = ctx.variant2Meta.base || computeVariant2BasePremiums(ctx.parsedData, ctx.bankConfig, ins, state.discountPercent);
+    }
+    
     const custom = computeMoyaPremiums(ins, state);
 
     const premByObj = Object.fromEntries(custom.risks.map(r => [r.objects, r.premium]));
