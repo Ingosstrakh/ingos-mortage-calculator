@@ -430,7 +430,12 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
   
   // КРИТИЧНО: Если передан forceContext, используем его
   // Иначе используем глобальный контекст (может быть старым!)
-  const ctx = forceContext || window.__LAST_VARIANT2_CONTEXT__;
+  let sourceContext = forceContext || window.__LAST_VARIANT2_CONTEXT__;
+  
+  // КРИТИЧНО: Делаем ГЛУБОКУЮ КОПИЮ контекста чтобы изменения не влияли на другие результаты
+  // Это предотвращает мутацию оригинального контекста при работе с конструктором
+  const ctx = JSON.parse(JSON.stringify(sourceContext));
+  
   const modal = document.getElementById('variant2-constructor-modal');
   if (!modal) return;
 
