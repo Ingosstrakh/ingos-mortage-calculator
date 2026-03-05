@@ -663,8 +663,14 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
     };
   };
 
-  if (!modal.__wired) {
-    modal.__wired = true;
+  // КРИТИЧНО: Сохраняем ctx в глобальной переменной для доступа из event listeners
+  // Это предотвращает проблемы с замыканиями когда listeners создаются один раз
+  window.__CURRENT_CONSTRUCTOR_CTX__ = ctx;
+
+  // КРИТИЧНО: Удаляем старые event listeners перед добавлением новых
+  // Это предотвращает накопление listeners от предыдущих открытий конструктора
+  if (modal.__wired) {
+    // Клонируем элементы чтобы удалить все event listeners
     const ids = [
       '#variant2-discount',
       '#variant2-ins-amount',
@@ -673,43 +679,74 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
       '#variant2-go-enabled', '#variant2-go-sum'
     ];
     ids.forEach(sel => {
-      modal.querySelector(sel).addEventListener('input', refresh);
-      modal.querySelector(sel).addEventListener('change', refresh);
+      const oldEl = modal.querySelector(sel);
+      const newEl = oldEl.cloneNode(true);
+      oldEl.parentNode.replaceChild(newEl, oldEl);
     });
-
-    modal.querySelector('#variant2-reset-btn').addEventListener('click', () => {
-      ctx.variant2CustomState = null;
-      window.openVariant2Constructor();
-    });
-
-    modal.querySelector('#variant2-clear-btn').addEventListener('click', () => {
-      if (confirm('Очистить все предыдущие результаты расчетов?\n\nОстанется только последний расчет.')) {
-        if (typeof window.clearPreviousResults === 'function') {
-          window.clearPreviousResults();
-        } else {
-          alert('Функция очистки недоступна');
-        }
-      }
-    });
-
-    modal.querySelector('#variant2-apply-btn').addEventListener('click', () => {
-      const block = document.getElementById('variant2-block');
-      if (!block) {
-        alert('Не найден блок варианта 2 в результатах');
-        return;
-      }
-
-      const meta = ctx.variant2Meta;
-      const baseNow = meta.base || computeVariant2BasePremiums(ctx.parsedData, ctx.bankConfig, meta.insuranceAmount, meta.discountPercent);
-      const html = renderVariant2RisksHtml(baseNow, meta.additionalRisks || []);
-      const total = meta.total || round2(baseNow.propertyPremiumV2 + baseNow.lifePremiumV2 + baseNow.titlePremiumV2 + (meta.additionalRisks || []).reduce((s, r) => s + (Number(r.premium) || 0), 0));
-
-      block.innerHTML = `${html}<br>Итого тариф взнос ${formatMoneyRuGrouped(total)}`;
-
-      ctx.insuranceAmount = meta.insuranceAmount;
-      window.closeVariant2Constructor();
+    
+    // Также клонируем кнопки
+    ['#variant2-reset-btn', '#variant2-clear-btn', '#variant2-apply-btn'].forEach(sel => {
+      const oldBtn = modal.querySelector(sel);
+      const newBtn = oldBtn.cloneNode(true);
+      oldBtn.parentNode.replaceChild(newBtn, oldBtn);
     });
   }
+  
+  modal.__wired = true;
+  
+  const ids = [
+    '#variant2-discount',
+    '#variant2-ins-amount',
+    '#variant2-finish-enabled', '#variant2-finish-sum',
+    '#variant2-movable-enabled', '#variant2-movable-sum',
+    '#variant2-go-enabled', '#variant2-go-sum'
+  ];
+  ids.forEach(sel => {
+    modal.querySelector(sel).addEventListener('input', refresh);
+    modal.querySelector(sel).addEventListener('change', refresh);
+  });
+
+  modal.querySelector('#variant2-reset-btn').addEventListener('click', () => {
+    const currentCtx = window.__CURRENT_CONSTRUCTOR_CTX__;
+    if (currentCtx) {
+      currentCtx.variant2CustomState = null;
+    }
+    window.openVariant2Constructor(window.__CURRENT_CONSTRUCTOR_CTX__);
+  });
+
+  modal.querySelector('#variant2-clear-btn').addEventListener('click', () => {
+    if (confirm('Очистить все предыдущие результаты расчетов?\n\nОстанется только последний расчет.')) {
+      if (typeof window.clearPreviousResults === 'function') {
+        window.clearPreviousResults();
+      } else {
+        alert('Функция очистки недоступна');
+      }
+    }
+  });
+
+  modal.querySelector('#variant2-apply-btn').addEventListener('click', () => {
+    const currentCtx = window.__CURRENT_CONSTRUCTOR_CTX__;
+    if (!currentCtx) {
+      alert('Контекст конструктора потерян');
+      return;
+    }
+    
+    const block = document.getElementById('variant2-block');
+    if (!block) {
+      alert('Не найден блок варианта 2 в результатах');
+      return;
+    }
+
+    const meta = currentCtx.variant2Meta;
+    const baseNow = meta.base || computeVariant2BasePremiums(currentCtx.parsedData, currentCtx.bankConfig, meta.insuranceAmount, meta.discountPercent);
+    const html = renderVariant2RisksHtml(baseNow, meta.additionalRisks || []);
+    const total = meta.total || round2(baseNow.propertyPremiumV2 + baseNow.lifePremiumV2 + baseNow.titlePremiumV2 + (meta.additionalRisks || []).reduce((s, r) => s + (Number(r.premium) || 0), 0));
+
+    block.innerHTML = `${html}<br>Итого тариф взнос ${formatMoneyRuGrouped(total)}`;
+
+    currentCtx.insuranceAmount = meta.insuranceAmount;
+    window.closeVariant2Constructor();
+  });
 
   refresh();
   modal.style.display = 'flex';
