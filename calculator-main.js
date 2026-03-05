@@ -373,8 +373,19 @@ function performCalculations(data) {
       // Wrap variant2 output to allow in-place updates from the constructor
       output += `<div id="variant2-block">${variant2Result.output}</div>`;
       if (variant2Result.meta && variant2Result.meta.constructorSupported) {
+        // КРИТИЧНО: Сохраняем контекст в data-атрибуте кнопки
+        // чтобы конструктор открывался с правильными данными
+        const contextId = 'ctx_' + Date.now();
+        window['__VARIANT2_CONTEXT_' + contextId] = {
+          parsedData: JSON.parse(JSON.stringify(data)),
+          bankConfig: JSON.parse(JSON.stringify(bankConfig)),
+          variant1Total: totalWithoutDiscount,
+          insuranceAmount: insuranceAmount,
+          variant2Meta: variant2Result.meta || null,
+          variant2CustomState: null
+        };
         output += `<div style="margin-top: 10px;">
-          <button type="button" class="btn-secondary" onclick="window.openVariant2Constructor()">
+          <button type="button" class="btn-secondary" onclick="window.openVariant2Constructor(window['__VARIANT2_CONTEXT_${contextId}'])">
             <span class="btn-icon">⚙️</span>
             <span>Конструктор варианта 2</span>
           </button>
