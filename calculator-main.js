@@ -125,6 +125,12 @@ function handleClientRequest(clientText) {
  * @returns {string} HTML-результат расчета
  */
 function performCalculations(data) {
+  // КРИТИЧНО: Очищаем старый контекст при новом расчете
+  // Это предотвращает использование настроек (особенно скидки) от предыдущего расчета
+  const oldContext = window.__LAST_VARIANT2_CONTEXT__;
+  const oldBankName = oldContext?.bankConfig?.bankName;
+  console.log('Новый расчет. Старый банк:', oldBankName, 'Новый банк:', data.bank);
+  
   // Нормализуем название банка
   let normalizedBank = data.bank;
   if (window.BANKS[data.bank]) {
