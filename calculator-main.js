@@ -58,38 +58,54 @@ function handleClientRequest(clientText) {
     // Выполняем расчеты
     const result = performCalculations(parsedData);
 
-    // Автоматически копируем только варианты расчета в буфер обмена
-    if (result && (result.includes('Вариант 1') || result.includes('Вариант 2'))) {
-      // Извлекаем только части с вариантами расчета
+    // Автоматически копируем только ВАРИАНТ 1 (базовые риски + итого) в буфер обмена
+    if (result && result.includes('Вариант 1')) {
+      // Извлекаем только вариант 1 БЕЗ заголовка "Вариант 1:"
       let textForClipboard = '';
 
       // Разбиваем результат на строки
       const lines = result.split('<br>');
-      let captureVariant = false;
-      let variantCount = 0;
+      let captureVariant1 = false;
+      let foundVariant1 = false;
 
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].replace(/<[^>]*>/g, '').trim(); // Убираем HTML теги
 
-        // Начинаем захватывать с "Вариант 1:" или "Вариант 2:"
-        if (line.includes('Вариант 1:') || line.includes('Вариант 2')) {
-          if (variantCount > 0) {
-            textForClipboard += '\n\n'; // Два переноса строки между вариантами
+        // Пропускаем пустые строки
+        if (!line) continue;
+
+        // Ищем строку "Вариант 1:" (точное совпадение)
+        if (line === 'Вариант 1:') {
+          foundVariant1 = true;
+          captureVariant1 = true;
+          console.log('Найден Вариант 1, начинаем захват');
+          continue; // Пропускаем саму строку "Вариант 1:"
+        }
+        
+        // Если нашли Вариант 1, начинаем захватывать
+        if (foundVariant1 && captureVariant1) {
+          // Останавливаемся если встретили Вариант 2 или 3
+          if (line.startsWith('Вариант 2') || line.startsWith('Вариант 3')) {
+            console.log('Встретили Вариант 2/3, останавливаемся');
+            break;
           }
-          captureVariant = true;
-          variantCount++;
+          
+          // Захватываем строку
+          console.log('Захватываем строку:', line);
           textForClipboard += line + '\n';
-        } else if (captureVariant && line) {
-          // Продолжаем захватывать строки варианта
-          textForClipboard += line + '\n';
-        } else if (captureVariant && !line && variantCount >= 2) {
-          // Прекращаем захват после второго варианта
-          break;
+          
+          // Останавливаемся после строки с "ИТОГО"
+          if (line.includes('ИТОГО тариф') || line.includes('ИТОГО')) {
+            console.log('Найдено ИТОГО, останавливаемся');
+            break;
+          }
         }
       }
 
       // Убираем лишние переносы в конце
       textForClipboard = textForClipboard.trim();
+      
+      console.log('Итоговый текст для копирования:', textForClipboard);
 
       if (textForClipboard) {
         copyToClipboard(textForClipboard);
