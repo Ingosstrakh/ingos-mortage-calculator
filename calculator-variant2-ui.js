@@ -528,13 +528,20 @@ window.openVariant2Constructor = function openVariant2Constructor() {
     const prevInsAmount = state.insuranceAmount;
     const prevDiscountPercent = state.discountPercent;
     
+    console.log('=== REFRESH START ===');
+    console.log('prevInsAmount:', prevInsAmount);
+    console.log('prevDiscountPercent:', prevDiscountPercent);
+    
     state.insuranceAmount = ins;
 
     if (isSberbank) {
       // Только для Сбербанка можно менять скидку
-      state.discountPercent = clampDiscountPercent(discountInput.value);
+      const inputValue = discountInput.value;
+      console.log('Сбербанк: значение из input:', inputValue);
+      state.discountPercent = clampDiscountPercent(inputValue);
       if (state.discountPercent === null) state.discountPercent = 30;
       discountInput.value = String(state.discountPercent);
+      console.log('Сбербанк: новая скидка после clamp:', state.discountPercent);
     } else {
       // Для всех остальных банков скидка фиксированная 30% (null)
       state.discountPercent = null;
@@ -559,7 +566,7 @@ window.openVariant2Constructor = function openVariant2Constructor() {
     
     const needRecalcBase = insChanged || discountChanged;
     
-    console.log('Refresh:', {
+    console.log('Проверка изменений:', {
       ins,
       prevInsAmount,
       insChanged,
