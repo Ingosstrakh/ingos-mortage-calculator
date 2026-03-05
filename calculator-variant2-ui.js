@@ -443,8 +443,12 @@ window.openVariant2Constructor = function openVariant2Constructor() {
   const savedBankName = ctx.variant2CustomState?.bankName;
   const currentBankName = ctx.bankConfig?.bankName;
   if (savedBankName && savedBankName !== currentBankName) {
-    console.log('Банк изменился с', savedBankName, 'на', currentBankName, '- сбрасываем состояние');
+    console.log('Банк изменился с', savedBankName, 'на', currentBankName, '- сбрасываем состояние и базу');
     ctx.variant2CustomState = null;
+    // КРИТИЧНО: также сбрасываем базу, т.к. она была рассчитана со скидкой старого банка
+    if (ctx.variant2Meta) {
+      ctx.variant2Meta.base = null;
+    }
   }
   
   // Определяем тип объекта: дом или квартира
