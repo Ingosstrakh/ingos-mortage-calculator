@@ -586,11 +586,13 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
     let newDiscountPercent;
     if (currentIsSberbank) {
       // Только для Сбербанка можно менять скидку
-      const inputValue = discountInput.value;
+      // КРИТИЧНО: Читаем из DOM каждый раз, а не из захваченной переменной
+      const discountInputElement = modal.querySelector('#variant2-discount');
+      const inputValue = discountInputElement.value;
       console.log('Сбербанк: значение из input:', inputValue);
       newDiscountPercent = clampDiscountPercent(inputValue);
       if (newDiscountPercent === null) newDiscountPercent = 30;
-      discountInput.value = String(newDiscountPercent);
+      discountInputElement.value = String(newDiscountPercent);
       console.log('Сбербанк: новая скидка после clamp:', newDiscountPercent);
     } else {
       // Для всех остальных банков скидка фиксированная 30% (null)
