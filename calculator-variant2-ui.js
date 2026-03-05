@@ -559,12 +559,24 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
   };
 
   const refresh = () => {
+    // КРИТИЧНО: Всегда читаем актуальный контекст из глобальной переменной
+    const currentCtx = window.__CURRENT_CONSTRUCTOR_CTX__;
+    if (!currentCtx) {
+      console.error('Контекст конструктора потерян!');
+      return;
+    }
+    
+    const currentIsSberbank = currentCtx.bankConfig && currentCtx.bankConfig.bankName === 'Сбербанк';
+    const currentIsHouse = currentCtx.parsedData.objectType === 'house_brick' || 
+                           currentCtx.parsedData.objectType === 'house_wood' || 
+                           currentCtx.parsedData.objectType === 'house';
+    
     const ins = Number(modal.querySelector('#variant2-ins-amount').value) || 0;
     const prevInsAmount = state.insuranceAmount;
     const prevDiscountPercent = state.discountPercent;
     
     console.log('=== REFRESH START ===');
-    console.log('isSberbank:', isSberbank);
+    console.log('isSberbank:', currentIsSberbank);
     console.log('prevInsAmount:', prevInsAmount);
     console.log('prevDiscountPercent:', prevDiscountPercent);
     
@@ -572,7 +584,7 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
 
     // Обновляем скидку
     let newDiscountPercent;
-    if (isSberbank) {
+    if (currentIsSberbank) {
       // Только для Сбербанка можно менять скидку
       const inputValue = discountInput.value;
       console.log('Сбербанк: значение из input:', inputValue);
@@ -621,24 +633,24 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
     if (needRecalcBase) {
       // Пересчитываем базу при изменении страховой суммы или скидки
       console.log('Пересчитываем базу');
-      baseNow = computeVariant2BasePremiums(ctx.parsedData, ctx.bankConfig, ins, state.discountPercent);
+      baseNow = computeVariant2BasePremiums(currentCtx.parsedData, currentCtx.bankConfig, ins, state.discountPercent);
       // Сохраняем новую базу в контекст
-      ctx.variant2Meta.base = baseNow;
+      currentCtx.variant2Meta.base = baseNow;
     } else {
       // Используем сохраненную базу (не пересчитываем)
       console.log('Используем сохраненную базу');
-      baseNow = ctx.variant2Meta.base || computeVariant2BasePremiums(ctx.parsedData, ctx.bankConfig, ins, state.discountPercent);
+      baseNow = currentCtx.variant2Meta.base || computeVariant2BasePremiums(currentCtx.parsedData, currentCtx.bankConfig, ins, state.discountPercent);
     }
     
     console.log('База:', baseNow);
     
-    const custom = computeMoyaPremiums(ins, state, isHouse);
+    const custom = computeMoyaPremiums(ins, state, currentIsHouse);
 
     const premByObj = Object.fromEntries(custom.risks.map(r => [r.objects, r.premium]));
     modal.querySelector('#variant2-finish-prem').textContent = state.finishEnabled ? formatMoneyRuGrouped(premByObj['отделка и инженерное оборудование'] || 0) : '0,00';
     
     // Для домов показываем "конструктивные элементы", для квартир "движимое имущество"
-    const movableKey = isHouse ? 'конструктивные элементы' : 'движимое имущество';
+    const movableKey = currentIsHouse ? 'конструктивные элементы' : 'движимое имущество';
     modal.querySelector('#variant2-movable-prem').textContent = state.movableEnabled ? formatMoneyRuGrouped(premByObj[movableKey] || 0) : '0,00';
     modal.querySelector('#variant2-go-prem').textContent = state.goEnabled ? formatMoneyRuGrouped(premByObj['гражданская ответственность'] || 0) : '0,00';
 
@@ -646,15 +658,15 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
     modal.querySelector('#variant2-total').textContent = `${formatMoneyRuGrouped(total)} ₽`;
     modal.querySelector('#variant2-base').textContent = `база (имущество + жизнь + титул): ${formatMoneyRuGrouped(baseNow.propertyPremiumV2 + baseNow.lifePremiumV2 + baseNow.titlePremiumV2)} ₽, доп. риски: ${formatMoneyRuGrouped(custom.totalPremium)} ₽`;
 
-    const diff = round2((ctx.variant1Total || 0) - total);
+    const diff = round2((currentCtx.variant1Total || 0) - total);
     if (Number.isFinite(diff) && diff <= 0) {
       setWarning('Внимание: после настройки вариант 2 стал дороже или равен варианту 1');
     } else {
       setWarning(custom.warning || '');
     }
 
-    ctx.variant2Meta = {
-      ...ctx.variant2Meta,
+    currentCtx.variant2Meta = {
+      ...currentCtx.variant2Meta,
       insuranceAmount: ins,
       discountPercent: state.discountPercent,
       base: baseNow,
