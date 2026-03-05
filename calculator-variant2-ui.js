@@ -104,6 +104,7 @@ function ensureVariant2ConstructorModal() {
         </div>
 
         <div style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; padding-top:4px;">
+          <button type="button" id="variant2-clear-btn" style="border:1px solid #dc3545; background:#fff; color:#dc3545; border-radius:10px; padding:10px 12px; cursor:pointer;">🗑️ Очистить предыдущие</button>
           <button type="button" id="variant2-reset-btn" style="border:1px solid #d1d5db; background:#fff; border-radius:10px; padding:10px 12px; cursor:pointer;">Сбросить</button>
           <button type="button" id="variant2-apply-btn" style="border:0; background:#2563eb; color:#fff; border-radius:10px; padding:10px 14px; cursor:pointer;">Применить к расчету</button>
         </div>
@@ -451,6 +452,8 @@ window.openVariant2Constructor = function openVariant2Constructor() {
     }
   }
   
+  console.log('Открываем конструктор для банка:', currentBankName, 'isSberbank:', isSberbank);
+  
   // Определяем тип объекта: дом или квартира
   const isHouse = ctx.parsedData.objectType === 'house_brick' || 
                   ctx.parsedData.objectType === 'house_wood' || 
@@ -669,6 +672,16 @@ window.openVariant2Constructor = function openVariant2Constructor() {
     modal.querySelector('#variant2-reset-btn').addEventListener('click', () => {
       ctx.variant2CustomState = null;
       window.openVariant2Constructor();
+    });
+
+    modal.querySelector('#variant2-clear-btn').addEventListener('click', () => {
+      if (confirm('Очистить все предыдущие результаты расчетов?\n\nОстанется только последний расчет.')) {
+        if (typeof window.clearPreviousResults === 'function') {
+          window.clearPreviousResults();
+        } else {
+          alert('Функция очистки недоступна');
+        }
+      }
     });
 
     modal.querySelector('#variant2-apply-btn').addEventListener('click', () => {
