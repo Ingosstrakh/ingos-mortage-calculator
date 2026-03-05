@@ -125,6 +125,12 @@ function handleClientRequest(clientText) {
  * @returns {string} HTML-результат расчета
  */
 function performCalculations(data) {
+  // КРИТИЧНО: Закрываем конструктор если он открыт
+  // Это предотвращает использование старого контекста при новом расчете
+  if (typeof window.closeVariant2Constructor === 'function') {
+    window.closeVariant2Constructor();
+  }
+  
   // КРИТИЧНО: Очищаем старый контекст при новом расчете
   // Это предотвращает использование настроек (особенно скидки) от предыдущего расчета
   const oldContext = window.__LAST_VARIANT2_CONTEXT__;
@@ -433,3 +439,41 @@ window.performCalculations = performCalculations;
 // Последний контекст варианта 2 для конструктора (UI-настройки доп. рисков)
 // Заполняется внутри performCalculations.
 window.__LAST_VARIANT2_CONTEXT__ = null;
+
+/**
+ * Очистка предыдущих результатов расчета
+ * Удаляет все результаты кроме последнего
+ */
+window.clearPreviousResults = function clearPreviousResults() {
+  // Для обычной страницы - очищаем div с результатами
+  const resultDiv = document.getElementById('result');
+  if (resultDiv) {
+    // Сохраняем последний результат
+    const lastResult = resultDiv.lastElementChild;
+    if (lastResult) {
+      resultDiv.innerHTML = '';
+      resultDiv.appendChild(lastResult);
+      console.log('Предыдущие результаты очищены (обычная страница)');
+    }
+  }
+  
+  // Для расширения - очищаем историю результатов
+  const historyContainer = document.getElementById('history-container');
+  if (historyContainer) {
+    const historyItems = historyContainer.querySelectorAll('.history-item');
+    if (historyItems.length > 1) {
+      // Удаляем все кроме последнего
+      for (let i = 0; i < historyItems.length - 1; i++) {
+        historyItems[i].remove();
+      }
+      console.log('Предыдущие результаты очищены (расширение)');
+    }
+  }
+  
+  // Закрываем конструктор если он открыт
+  if (typeof window.closeVariant2Constructor === 'function') {
+    window.closeVariant2Constructor();
+  }
+  
+  alert('✓ Предыдущие результаты очищены');
+};
