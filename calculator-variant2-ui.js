@@ -269,9 +269,10 @@ function computeVariant2BasePremiums(parsedData, bankConfig, insuranceAmount, di
           if (discountPercent === null) {
             lifePremiumV2 = round2(lifeResult.borrowers.reduce((sum, b) => sum + (Number(b.premiumWithDiscount ?? b.premium) || 0), 0));
           } else {
+            // ВАЖНО: b.premium - это премия БЕЗ скидки, используем её для пересчета с новой скидкой
             lifePremiumV2 = round2(lifeResult.borrowers.reduce((sum, b) => {
-              const prem = Number(b.premium) || 0;
-              const discounted = round2(prem * discountMultiplier);
+              const basePrem = Number(b.premium) || 0;
+              const discounted = round2(basePrem * discountMultiplier);
               return sum + Math.max(discounted, MIN_PREMIUM_LIFE);
             }, 0));
           }
@@ -426,7 +427,8 @@ window.openVariant2Constructor = function openVariant2Constructor() {
     state.movableSum = Number(modal.querySelector('#variant2-movable-sum').value) || 0;
     state.goSum = Number(modal.querySelector('#variant2-go-sum').value) || 0;
 
-    const baseNow = ctx.variant2Meta.base || computeVariant2BasePremiums(ctx.parsedData, ctx.bankConfig, ins, state.discountPercent);
+    // ВАЖНО: всегда пересчитываем базу, особенно при изменении скидки для Сбербанка
+    const baseNow = computeVariant2BasePremiums(ctx.parsedData, ctx.bankConfig, ins, state.discountPercent);
     const custom = computeMoyaPremiums(ins, state);
 
     const premByObj = Object.fromEntries(custom.risks.map(r => [r.objects, r.premium]));
