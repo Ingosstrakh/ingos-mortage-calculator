@@ -119,7 +119,9 @@ function ensureVariant2ConstructorModal() {
     }
   });
 
-  document.body.appendChild(overlay);
+  // Добавляем в контейнер (для sidepanel) или в body (для обычной страницы)
+  const container = document.getElementById('variant2-constructor-modal-container') || document.body;
+  container.appendChild(overlay);
 
   const closeBtn = overlay.querySelector('#variant2-close-btn');
   closeBtn.addEventListener('click', () => window.closeVariant2Constructor());
@@ -376,6 +378,12 @@ window.openVariant2Constructor = function openVariant2Constructor() {
 
   const insuranceAmount = Number(ctx.insuranceAmount) || 0;
   const isSberbank = ctx.bankConfig && ctx.bankConfig.bankName === 'Сбербанк';
+  
+  // Определяем тип объекта: дом или квартира
+  const isHouse = ctx.parsedData.objectType === 'house_brick' || 
+                  ctx.parsedData.objectType === 'house_wood' || 
+                  ctx.parsedData.objectType === 'house';
+  
   const limits = getMoyaLimits(insuranceAmount);
 
   const byObjects = Object.fromEntries((ctx.variant2Meta.additionalRisks || []).map(r => [r.objects, r]));
@@ -414,6 +422,15 @@ window.openVariant2Constructor = function openVariant2Constructor() {
     state.discountPercent = null;
   }
 
+  // Обновляем заголовки и лимиты в зависимости от типа объекта
+  const productName = isHouse ? 'Бастион' : 'Моя квартира';
+  modal.querySelector('#variant2-finish-enabled').nextElementSibling.querySelector('div').textContent = 
+    `${productName}: отделка и инженерное оборудование`;
+  modal.querySelector('#variant2-movable-enabled').nextElementSibling.querySelector('div').textContent = 
+    `${productName}: движимое имущество`;
+  modal.querySelector('#variant2-go-enabled').nextElementSibling.querySelector('div').textContent = 
+    `${productName}: гражданская ответственность`;
+  
   modal.querySelector('#variant2-finish-limits').textContent = `лимит: ${limits.finish.min.toLocaleString('ru-RU')} - ${limits.finish.max.toLocaleString('ru-RU')} ₽`;
   modal.querySelector('#variant2-movable-limits').textContent = `лимит: ${limits.movable.min.toLocaleString('ru-RU')} - ${limits.movable.max.toLocaleString('ru-RU')} ₽`;
   modal.querySelector('#variant2-go-limits').textContent = `лимит: ${limits.go.min.toLocaleString('ru-RU')} - ${limits.go.max.toLocaleString('ru-RU')} ₽`;
