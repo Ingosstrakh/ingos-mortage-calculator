@@ -425,9 +425,12 @@ function renderVariant2RisksHtml({ propertyPremiumV2, lifePremiumV2, titlePremiu
 /**
  * Открытие конструктора варианта 2
  */
-window.openVariant2Constructor = function openVariant2Constructor() {
+window.openVariant2Constructor = function openVariant2Constructor(forceContext = null) {
   ensureVariant2ConstructorModal();
-  const ctx = window.__LAST_VARIANT2_CONTEXT__;
+  
+  // КРИТИЧНО: Если передан forceContext, используем его
+  // Иначе используем глобальный контекст (может быть старым!)
+  const ctx = forceContext || window.__LAST_VARIANT2_CONTEXT__;
   const modal = document.getElementById('variant2-constructor-modal');
   if (!modal) return;
 
