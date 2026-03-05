@@ -438,6 +438,15 @@ window.openVariant2Constructor = function openVariant2Constructor() {
   const insuranceAmount = Number(ctx.insuranceAmount) || 0;
   const isSberbank = ctx.bankConfig && ctx.bankConfig.bankName === 'Сбербанк';
   
+  // ВАЖНО: Если банк изменился с момента последнего открытия конструктора,
+  // сбрасываем сохраненное состояние (особенно важно для скидки)
+  const savedBankName = ctx.variant2CustomState?.bankName;
+  const currentBankName = ctx.bankConfig?.bankName;
+  if (savedBankName && savedBankName !== currentBankName) {
+    console.log('Банк изменился с', savedBankName, 'на', currentBankName, '- сбрасываем состояние');
+    ctx.variant2CustomState = null;
+  }
+  
   // Определяем тип объекта: дом или квартира
   const isHouse = ctx.parsedData.objectType === 'house_brick' || 
                   ctx.parsedData.objectType === 'house_wood' || 
@@ -451,6 +460,7 @@ window.openVariant2Constructor = function openVariant2Constructor() {
   const goDefault = byObjects['гражданская ответственность']?.sum ?? limits.go.min;
 
   const state = ctx.variant2CustomState || {
+    bankName: currentBankName, // Сохраняем имя банка для проверки при следующем открытии
     insuranceAmount,
     // Только для Сбербанка можно менять скидку (0-50%)
     // Для остальных банков скидка фиксированная 30% (null = использовать стандартную)
@@ -462,6 +472,9 @@ window.openVariant2Constructor = function openVariant2Constructor() {
     movableSum: movableDefault,
     goSum: goDefault
   };
+  
+  // Обновляем имя банка в state (на случай если использовали сохраненный state)
+  state.bankName = currentBankName;
   
   // ВАЖНО: Для не-Сбербанка всегда устанавливаем discountPercent = null
   // Это нужно на случай если state был сохранен от предыдущего расчета с другим банком
