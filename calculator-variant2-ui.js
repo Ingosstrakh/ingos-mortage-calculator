@@ -462,6 +462,13 @@ window.openVariant2Constructor = function openVariant2Constructor() {
     movableSum: movableDefault,
     goSum: goDefault
   };
+  
+  // ВАЖНО: Для не-Сбербанка всегда устанавливаем discountPercent = null
+  // Это нужно на случай если state был сохранен от предыдущего расчета с другим банком
+  if (!isSberbank) {
+    state.discountPercent = null;
+  }
+  
   ctx.variant2CustomState = state;
   
   // ВАЖНО: Инициализируем базу при первом открытии конструктора
@@ -529,23 +536,29 @@ window.openVariant2Constructor = function openVariant2Constructor() {
     const prevDiscountPercent = state.discountPercent;
     
     console.log('=== REFRESH START ===');
+    console.log('isSberbank:', isSberbank);
     console.log('prevInsAmount:', prevInsAmount);
     console.log('prevDiscountPercent:', prevDiscountPercent);
     
     state.insuranceAmount = ins;
 
+    // Обновляем скидку
+    let newDiscountPercent;
     if (isSberbank) {
       // Только для Сбербанка можно менять скидку
       const inputValue = discountInput.value;
       console.log('Сбербанк: значение из input:', inputValue);
-      state.discountPercent = clampDiscountPercent(inputValue);
-      if (state.discountPercent === null) state.discountPercent = 30;
-      discountInput.value = String(state.discountPercent);
-      console.log('Сбербанк: новая скидка после clamp:', state.discountPercent);
+      newDiscountPercent = clampDiscountPercent(inputValue);
+      if (newDiscountPercent === null) newDiscountPercent = 30;
+      discountInput.value = String(newDiscountPercent);
+      console.log('Сбербанк: новая скидка после clamp:', newDiscountPercent);
     } else {
       // Для всех остальных банков скидка фиксированная 30% (null)
-      state.discountPercent = null;
+      newDiscountPercent = null;
+      console.log('Не Сбербанк: скидка всегда null');
     }
+    
+    state.discountPercent = newDiscountPercent;
 
     state.finishEnabled = modal.querySelector('#variant2-finish-enabled').checked;
     state.movableEnabled = modal.querySelector('#variant2-movable-enabled').checked;
@@ -561,8 +574,9 @@ window.openVariant2Constructor = function openVariant2Constructor() {
     // Проверяем изменение страховой суммы (с учетом округления)
     const insChanged = Math.abs(ins - (prevInsAmount || ins)) > 0.01;
     
-    // Проверяем изменение скидки (для не-Сбербанка оба null, поэтому не изменилось)
-    const discountChanged = prevDiscountPercent !== state.discountPercent;
+    // Проверяем изменение скидки
+    // ВАЖНО: для не-Сбербанка оба значения должны быть null, поэтому изменения нет
+    const discountChanged = prevDiscountPercent !== newDiscountPercent;
     
     const needRecalcBase = insChanged || discountChanged;
     
@@ -571,7 +585,7 @@ window.openVariant2Constructor = function openVariant2Constructor() {
       prevInsAmount,
       insChanged,
       prevDiscountPercent,
-      currentDiscountPercent: state.discountPercent,
+      newDiscountPercent,
       discountChanged,
       needRecalcBase
     });
