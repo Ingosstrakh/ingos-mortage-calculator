@@ -14,17 +14,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      // Отправляем запрос к GPT-Neo и получаем ответ
-      const gptResponse = await handleClientRequest(raw);
-
-      // Выводим ответ от GPT-Neo в интерфейс
-      displayPremiumOutput(gptResponse);
+      const result = await handleClientRequest(raw);
+      displayPremiumOutput(result);
     } catch (e) {
       displayPremiumOutput("<b>Ошибка:</b><br>" + e.message);
     }
   });
-
-  console.log("UI адаптер успешно инициализирован");
 });
 
 // Функция для отображения результата
