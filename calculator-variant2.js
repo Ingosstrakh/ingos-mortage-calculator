@@ -19,11 +19,9 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
   const hasLifeOnlyData = isLifeOnly && window.LICHNIE_VESHCHI_PACKS;
   const hasPropertyData = window.T_MOYA && window.EXPRESS_PACKS && window.EXPRESS_GO_PACKS && window.T_BASTION;
   const hasFullData = hasLifeOnlyData || hasPropertyData;
-  console.log('Полные данные загружены:', hasFullData, '(lifeOnly:', hasLifeOnlyData, ', property:', hasPropertyData, ')');
 
   // Проверяем, является ли устройство мобильным
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  console.log('isMobile:', isMobile);
 
   // Для мобильных устройств или при проблемах с загрузкой создаем упрощенный вариант
   if (!hasFullData) {
@@ -61,7 +59,6 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
 
   // Проверяем, что вариант 2 действительно дешевле варианта 1
   if (optimizedResult.currentTotal >= variant1Total) {
-    console.log('Вариант 2 получился дороже или равен варианту 1, не показываем');
     return null;
   }
 
