@@ -21,12 +21,7 @@ function handleClientRequest(clientText) {
     
     if (isInstallmentRequest) {
       // Это запрос на расчет рассрочки
-      console.log("Обнаружен запрос на расчет рассрочки");
-      console.log("hasInstallmentWord:", hasInstallmentWord);
-      console.log("hasFullNamePattern:", hasFullNamePattern);
-      
       const parsedData = window.parseInstallmentData(clientText);
-      console.log("Разобранные данные рассрочки:", parsedData);
       
       if (!parsedData.isValid) {
         return `<div style="color: #dc3545; padding: 15px; border: 1px solid #dc3545; border-radius: 8px; margin: 15px 0; background-color: #f8d7da;">
@@ -45,8 +40,6 @@ function handleClientRequest(clientText) {
     
     // Парсим текст с помощью parseTextToObject
     const parsedData = parseTextToObject(clientText);
-
-    console.log("Разобранные данные:", parsedData);
 
     // Детальная валидация всех данных
     const validationErrors = validateParsedData(parsedData);
@@ -78,34 +71,23 @@ function handleClientRequest(clientText) {
         if (line === 'Вариант 1:') {
           foundVariant1 = true;
           captureVariant1 = true;
-          console.log('Найден Вариант 1, начинаем захват');
           continue; // Пропускаем саму строку "Вариант 1:"
         }
         
-        // Если нашли Вариант 1, начинаем захватывать
         if (foundVariant1 && captureVariant1) {
-          // Останавливаемся если встретили Вариант 2 или 3
           if (line.startsWith('Вариант 2') || line.startsWith('Вариант 3')) {
-            console.log('Встретили Вариант 2/3, останавливаемся');
             break;
           }
           
-          // Захватываем строку
-          console.log('Захватываем строку:', line);
           textForClipboard += line + '\n';
           
-          // Останавливаемся после строки с "ИТОГО"
           if (line.includes('ИТОГО тариф') || line.includes('ИТОГО')) {
-            console.log('Найдено ИТОГО, останавливаемся');
             break;
           }
         }
       }
 
-      // Убираем лишние переносы в конце
       textForClipboard = textForClipboard.trim();
-      
-      console.log('Итоговый текст для копирования:', textForClipboard);
 
       if (textForClipboard) {
         copyToClipboard(textForClipboard);
@@ -114,7 +96,6 @@ function handleClientRequest(clientText) {
 
     return result;
   } catch (error) {
-    console.error("Ошибка в handleClientRequest:", error);
     return "Произошла ошибка при обработке запроса: " + error.message;
   }
 }
@@ -135,7 +116,6 @@ function performCalculations(data) {
   // Это предотвращает использование настроек (особенно скидки) от предыдущего расчета
   const oldContext = window.__LAST_VARIANT2_CONTEXT__;
   const oldBankName = oldContext?.bankConfig?.bankName;
-  console.log('Новый расчет. Старый банк:', oldBankName, 'Новый банк:', data.bank);
   
   // Нормализуем название банка
   let normalizedBank = data.bank;
@@ -363,12 +343,9 @@ function performCalculations(data) {
   output += `ИТОГО тариф/ взнос ${totalWithoutDiscount.toLocaleString('ru-RU', {useGrouping: false})}<br><br>`;
 
   // Расчет варианта 2 (повышенные скидки + доп. риски)
-  console.log('Начинаем расчет варианта 2...');
   try {
     const variant2Result = calculateVariant2(data, bankConfig, insuranceAmount, totalWithoutDiscount);
-    console.log('Результат расчета варианта 2:', variant2Result);
     if (variant2Result && variant2Result.output) {
-      console.log('Добавляем вариант 2 в вывод');
       output += `<b>Вариант 2 (повышенные скидки + доп. риски):</b><br>`;
       // Wrap variant2 output to allow in-place updates from the constructor
       output += `<div id="variant2-block">${variant2Result.output}</div>`;
@@ -414,28 +391,21 @@ function performCalculations(data) {
         };
       }
     } else {
-      console.log('Вариант 2 не будет показан - нет результата или пустой output');
+      // вариант 2 не показываем
     }
   } catch (error) {
-    console.error('Ошибка расчета варианта 2:', error);
     // Не показываем ошибку пользователю, просто пропускаем вариант
   }
 
   // Расчет варианта 3 (указанная скидка)
   if (data.variant3Discount) {
-    console.log('Начинаем расчет варианта 3 со скидкой', data.variant3Discount + '%...');
     try {
       const variant3Result = calculateVariant3(data, bankConfig, insuranceAmount, data.variant3Discount);
-      console.log('Результат расчета варианта 3:', variant3Result);
       if (variant3Result && variant3Result.output) {
-        console.log('Добавляем вариант 3 в вывод');
         output += `<b>Вариант 3 (скидка ${data.variant3Discount}%):</b><br>`;
         output += variant3Result.output;
-      } else {
-        console.log('Вариант 3 не будет показан - нет результата или пустой output');
       }
     } catch (error) {
-      console.error('Ошибка расчета варианта 3:', error);
       // Не показываем ошибку пользователю, просто пропускаем вариант
     }
   }
@@ -459,32 +429,24 @@ window.clearPreviousResults = function clearPreviousResults() {
   // Для обычной страницы - очищаем div с результатами
   const resultDiv = document.getElementById('result');
   if (resultDiv) {
-    // Сохраняем последний результат
     const lastResult = resultDiv.lastElementChild;
     if (lastResult) {
       resultDiv.innerHTML = '';
       resultDiv.appendChild(lastResult);
-      console.log('Предыдущие результаты очищены (обычная страница)');
     }
   }
   
-  // Для расширения - очищаем историю результатов
   const historyContainer = document.getElementById('history-container');
   if (historyContainer) {
     const historyItems = historyContainer.querySelectorAll('.history-item');
     if (historyItems.length > 1) {
-      // Удаляем все кроме последнего
       for (let i = 0; i < historyItems.length - 1; i++) {
         historyItems[i].remove();
       }
-      console.log('Предыдущие результаты очищены (расширение)');
     }
   }
   
-  // Закрываем конструктор если он открыт
   if (typeof window.closeVariant2Constructor === 'function') {
     window.closeVariant2Constructor();
   }
-  
-  alert('✓ Предыдущие результаты очищены');
 };
