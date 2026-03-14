@@ -55,11 +55,9 @@
       const script = document.createElement('script');
       script.src = src;
       script.onload = () => {
-        console.log(`✓ Загружен модуль: ${src}`);
         resolve();
       };
       script.onerror = () => {
-        console.error(`✗ Ошибка загрузки модуля: ${src}`);
         reject(new Error(`Failed to load ${src}`));
       };
       document.head.appendChild(script);
@@ -70,16 +68,11 @@
    * Последовательная загрузка всех модулей
    */
   async function loadAllModules() {
-    console.log('🚀 Начало загрузки модулей калькулятора...');
-    
     try {
       for (const module of modules) {
         await loadScript(module);
       }
       
-      console.log('✅ Все модули калькулятора успешно загружены!');
-      
-      // Проверяем доступность основных функций
       const requiredFunctions = [
         'validateParsedData',
         'formatMoneyRu',
@@ -92,22 +85,13 @@
       
       const missing = requiredFunctions.filter(fn => typeof window[fn] !== 'function');
       
-      if (missing.length > 0) {
-        console.warn('⚠️ Некоторые функции не найдены:', missing);
-      } else {
-        console.log('✓ Все основные функции доступны');
-      }
-      
-      // Уведомляем о готовности
       if (typeof window.onCalculatorReady === 'function') {
         window.onCalculatorReady();
       }
       
-      // Создаем событие для других скриптов
       window.dispatchEvent(new Event('calculatorReady'));
       
     } catch (error) {
-      console.error('❌ Ошибка при загрузке модулей калькулятора:', error);
       throw error;
     }
   }
