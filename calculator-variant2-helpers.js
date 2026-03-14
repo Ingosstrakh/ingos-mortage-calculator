@@ -144,12 +144,6 @@ function increaseMoyaKvartiraSumsForDifference(data, insuranceAmount, currentDif
   const targetTotalPremium = variant1Total - targetDifference - (propertyPremiumV2 + lifePremiumV2 + titlePremiumV2);
   const neededAdditionalPremium = Math.max(0, targetTotalPremium);
 
-  console.log('increaseMoyaKvartiraSumsForDifference:');
-  console.log('- variant1Total:', variant1Total);
-  console.log('- базовый вариант 2 (property + life + title):', propertyPremiumV2 + lifePremiumV2 + titlePremiumV2);
-  console.log('- targetDifference:', targetDifference);
-  console.log('- neededAdditionalPremium:', neededAdditionalPremium);
-
   if (neededAdditionalPremium <= 0) {
     return null;
   }
