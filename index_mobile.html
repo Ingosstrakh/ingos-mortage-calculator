@@ -12,7 +12,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
   <link rel="stylesheet" href="ingosstrax_mobile.css">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 
   <style>
     /* Базовые стили для корректного отображения */
@@ -461,7 +460,7 @@
           window.switchTab('health');
         }
       } else {
-        console.error('Modal element not found');
+        // modal not found
       }
     };
 
@@ -539,22 +538,14 @@
       // Обработчики для кнопки андеррайтинга
       const underwritingBtn = document.getElementById('underwriting-btn');
       if (underwritingBtn) {
-        console.log('Underwriting button found, setting up handlers');
-        
-        // Функция для открытия модального окна
         function openModal() {
-          console.log('openModal called');
           const modal = document.getElementById('underwriting-modal');
-          console.log('Modal element:', modal);
           if (modal) {
             modal.style.display = 'flex';
             document.body.style.overflow = 'hidden';
-            console.log('Modal opened');
-            // Активируем первую вкладку
             if (typeof window.switchTab === 'function') {
               window.switchTab('health');
             } else {
-              // Fallback: активируем вкладку напрямую
               const healthTab = document.querySelector('[data-tab="health"]');
               const healthContent = document.getElementById('health-content');
               if (healthTab && healthContent) {
@@ -564,18 +555,13 @@
                 healthContent.classList.add('active');
               }
             }
-          } else {
-            console.error('Modal not found!');
           }
         }
 
-        // Удаляем все старые обработчики
         const newBtn = underwritingBtn.cloneNode(true);
         underwritingBtn.parentNode.replaceChild(newBtn, underwritingBtn);
 
-        // Touch-обработчики
         newBtn.addEventListener('touchstart', function(e) {
-          console.log('Touch start on underwriting button');
           e.preventDefault();
           e.stopPropagation();
           this.style.transform = 'scale(0.95)';
@@ -583,7 +569,6 @@
         }, { passive: false });
 
         newBtn.addEventListener('touchend', function(e) {
-          console.log('Touch end on underwriting button');
           e.preventDefault();
           e.stopPropagation();
           this.style.transform = 'scale(1)';
@@ -596,20 +581,15 @@
           this.style.opacity = '1';
         });
 
-        // Click-обработчик для десктопов
         newBtn.addEventListener('click', function(e) {
-          console.log('Click on underwriting button');
           e.preventDefault();
           e.stopPropagation();
           openModal();
         });
 
-        // Также добавляем обработчик mousedown для надежности
         newBtn.addEventListener('mousedown', function(e) {
           e.preventDefault();
         });
-      } else {
-        console.error('Underwriting button not found!');
       }
 
       // Клик для десктопов
@@ -675,7 +655,6 @@
           }, 100);
 
         } catch (error) {
-          console.error('Ошибка:', error);
           showError('Произошла ошибка при расчете. Проверьте введенные данные.');
         } finally {
           calculateBtn.disabled = false;
@@ -712,15 +691,8 @@
       const hasCalculator = typeof performCalculations !== 'undefined';
       
       if (hasProcessFunction && hasParser && hasCalculator) {
-        console.log('All scripts loaded, initializing calculator');
         initMobileCalculator();
       } else {
-        console.log('Waiting for scripts...', {
-          processClientRequest: typeof processClientRequest,
-          handleClientRequest: typeof handleClientRequest,
-          parseTextToObject: typeof parseTextToObject,
-          performCalculations: typeof performCalculations
-        });
         setTimeout(checkScriptsLoaded, 100);
       }
     }
@@ -761,7 +733,7 @@
   <script src="calculator-variant2-ui.js?v=1"></script>
   
   <script src="installment_calculator.js?v=5"></script>
-  <script src="openai.js?v=17"></script>
+  <script src="request-handler.js?v=18"></script>
 
   <!-- JavaScript для андеррайтинга -->
   <script>
@@ -885,7 +857,6 @@
       if (window.parseDateDMY) {
         const birth = window.parseDateDMY(birthDate);
         if (!birth || isNaN(birth.getTime())) {
-          console.warn('Failed to parse birth date:', birthDate);
           return null;
         }
         const today = new Date();
