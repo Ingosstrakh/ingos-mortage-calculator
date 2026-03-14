@@ -33,10 +33,8 @@ function copyToClipboard(text) {
   if (navigator.clipboard && window.isSecureContext) {
     // Используем новый Clipboard API если доступно
     return navigator.clipboard.writeText(text).then(() => {
-      console.log('Результат скопирован в буфер обмена');
       return true;
     }).catch(err => {
-      console.error('Ошибка копирования в буфер обмена:', err);
       return false;
     });
   } else {
@@ -55,14 +53,11 @@ function copyToClipboard(text) {
       textArea.remove();
 
       if (successful) {
-        console.log('Результат скопирован в буфер обмена (fallback)');
         return true;
       } else {
-        console.error('Не удалось скопировать в буфер обмена (fallback)');
         return false;
       }
     } catch (err) {
-      console.error('Ошибка копирования в буфер обмена (fallback):', err);
       return false;
     }
   }
