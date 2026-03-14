@@ -180,7 +180,6 @@ function parseDateDMY(dateStr) {
     
     // Проверяем, что парсинг прошел успешно (не NaN)
     if (isNaN(day) || isNaN(month) || isNaN(year)) {
-      console.warn('Failed to parse date parts:', {dayStr, monthStr, yearStr, day, month, year});
       return null;
     }
     
@@ -193,7 +192,6 @@ function parseDateDMY(dateStr) {
       
       // Проверяем, что дата валидна (не Invalid Date)
       if (isNaN(d.getTime())) {
-        console.warn('Invalid date created:', {year, month, day, dateStr});
         return null;
       }
       
@@ -202,15 +200,9 @@ function parseDateDMY(dateStr) {
       if (d.getFullYear() === year && d.getMonth() === month - 1 && d.getDate() === day) {
         return d;
       } else {
-        console.warn('Date validation failed:', {
-          input: dateStr,
-          parsed: {day, month, year},
-          created: {year: d.getFullYear(), month: d.getMonth() + 1, day: d.getDate()}
-        });
         return null;
       }
     } else {
-      console.warn('Date parts out of range:', {day, month, year, dateStr});
       return null;
     }
   }
@@ -236,7 +228,6 @@ function calculateAge(dobStr, asOfDateStr = null) {
   const dob = parseDateDMY(dobStr);
   // Проверяем, что дата валидна (не null и не Invalid Date)
   if (!dob || isNaN(dob.getTime())) {
-    console.warn('Failed to parse date of birth:', dobStr, 'parsed as:', dob);
     return null;
   }
   
@@ -265,7 +256,6 @@ function calculateAge(dobStr, asOfDateStr = null) {
   
   // Проверяем, что возраст получился разумным
   if (isNaN(age) || age < 0 || age > 150) {
-    console.warn('Invalid age calculated:', age, 'for date:', dobStr);
     return null;
   }
   
@@ -381,8 +371,8 @@ function extractCreditDate(text) {
 function detectBank(text) {
   const t = toLower(normalizeText(text));
 
-  // Используем window.BANKS если он загружен (browser), иначе BANK_SYNONYMS
-  const banksData = (typeof window !== 'undefined' && window.BANKS) ? window.BANKS : BANK_SYNONYMS;
+  // Используем window.BANKS если он загружен, иначе BANK_SYNONYMS
+  const banksData = window.BANKS || BANK_SYNONYMS;
 
   // 1) прямое includes по синонимам
   for (const [canon, bankConfig] of Object.entries(banksData)) {
@@ -742,15 +732,12 @@ function parseTextToObject(rawText) {
   // 4.1) Дополнительная проверка на наличие слов, указывающих на заемщиков
   // Если есть слова "муж"/"жен"/"мужчина"/"женщина" без даты, создаем заемщика
   if (result.borrowers.length === 0) {
-    // IMPORTANT: do not use \b with Cyrillic in JS (\b is ASCII-oriented).
-    // Use whitespace/line boundaries instead.
-    const genderWords = /(?:^|\s)(мужчина|женщина|муж|жен|он|она)(?=\s|$)/i;
+    const genderWords = /\b(мужчина|женщина|муж|жен|он|она)\b/i;
     if (genderWords.test(text)) {
       // Определяем пол
       let gender = null;
-      // Важно: калькулятор ожидает 'm'/'f'
-      if (/(?:^|\s)(мужчина|муж|он)(?=\s|$)/i.test(text)) gender = 'm';
-      else if (/(?:^|\s)(женщина|жен|она)(?=\s|$)/i.test(text)) gender = 'f';
+      if (/\b(мужчина|муж|он)\b/i.test(text)) gender = 'male';
+      else if (/\b(женщина|жен|она)\b/i.test(text)) gender = 'female';
 
       // Создаем заемщика без даты рождения (она будет запрошена в валидации)
       result.borrowers.push({
