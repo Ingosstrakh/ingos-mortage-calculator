@@ -4,7 +4,6 @@
  * Упрощенный расчет варианта 2 (без доп. рисков, только скидки 30%)
  */
 function calculateSimplifiedVariant2(data, bankConfig, insuranceAmount) {
-  console.log('Используем упрощенный вариант - данные не загружены');
 
   let propertyPremiumV2 = 0;
   let lifePremiumV2 = 0;
