@@ -440,7 +440,6 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
   if (!modal) return;
 
   if (!ctx || !ctx.variant2Meta || !ctx.variant2Meta.constructorSupported) {
-    alert('Конструктор варианта 2 недоступен для текущего расчета');
     return;
   }
 
@@ -452,15 +451,11 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
   const savedBankName = ctx.variant2CustomState?.bankName;
   const currentBankName = ctx.bankConfig?.bankName;
   if (savedBankName && savedBankName !== currentBankName) {
-    console.log('Банк изменился с', savedBankName, 'на', currentBankName, '- сбрасываем состояние и базу');
     ctx.variant2CustomState = null;
-    // КРИТИЧНО: также сбрасываем базу, т.к. она была рассчитана со скидкой старого банка
     if (ctx.variant2Meta) {
       ctx.variant2Meta.base = null;
     }
   }
-  
-  console.log('Открываем конструктор для банка:', currentBankName, 'isSberbank:', isSberbank);
   
   // Определяем тип объекта: дом или квартира
   const isHouse = ctx.parsedData.objectType === 'house_brick' || 
@@ -562,7 +557,6 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
     // КРИТИЧНО: Всегда читаем актуальный контекст из глобальной переменной
     const currentCtx = window.__CURRENT_CONSTRUCTOR_CTX__;
     if (!currentCtx) {
-      console.error('Контекст конструктора потерян!');
       return;
     }
     
@@ -575,29 +569,17 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
     const prevInsAmount = state.insuranceAmount;
     const prevDiscountPercent = state.discountPercent;
     
-    console.log('=== REFRESH START ===');
-    console.log('isSberbank:', currentIsSberbank);
-    console.log('prevInsAmount:', prevInsAmount);
-    console.log('prevDiscountPercent:', prevDiscountPercent);
-    
     state.insuranceAmount = ins;
 
-    // Обновляем скидку
     let newDiscountPercent;
     if (currentIsSberbank) {
-      // Только для Сбербанка можно менять скидку
-      // КРИТИЧНО: Читаем из DOM каждый раз, а не из захваченной переменной
       const discountInputElement = modal.querySelector('#variant2-discount');
       const inputValue = discountInputElement.value;
-      console.log('Сбербанк: значение из input:', inputValue);
       newDiscountPercent = clampDiscountPercent(inputValue);
       if (newDiscountPercent === null) newDiscountPercent = 30;
       discountInputElement.value = String(newDiscountPercent);
-      console.log('Сбербанк: новая скидка после clamp:', newDiscountPercent);
     } else {
-      // Для всех остальных банков скидка фиксированная 30% (null)
       newDiscountPercent = null;
-      console.log('Не Сбербанк: скидка всегда null');
     }
     
     state.discountPercent = newDiscountPercent;
@@ -622,29 +604,12 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
     
     const needRecalcBase = insChanged || discountChanged;
     
-    console.log('Проверка изменений:', {
-      ins,
-      prevInsAmount,
-      insChanged,
-      prevDiscountPercent,
-      newDiscountPercent,
-      discountChanged,
-      needRecalcBase
-    });
-    
     if (needRecalcBase) {
-      // Пересчитываем базу при изменении страховой суммы или скидки
-      console.log('Пересчитываем базу');
       baseNow = computeVariant2BasePremiums(currentCtx.parsedData, currentCtx.bankConfig, ins, state.discountPercent);
-      // Сохраняем новую базу в контекст
       currentCtx.variant2Meta.base = baseNow;
     } else {
-      // Используем сохраненную базу (не пересчитываем)
-      console.log('Используем сохраненную базу');
       baseNow = currentCtx.variant2Meta.base || computeVariant2BasePremiums(currentCtx.parsedData, currentCtx.bankConfig, ins, state.discountPercent);
     }
-    
-    console.log('База:', baseNow);
     
     const custom = computeMoyaPremiums(ins, state, currentIsHouse);
 
@@ -729,25 +694,19 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
   });
 
   modal.querySelector('#variant2-clear-btn').addEventListener('click', () => {
-    if (confirm('Очистить все предыдущие результаты расчетов?\n\nОстанется только последний расчет.')) {
-      if (typeof window.clearPreviousResults === 'function') {
-        window.clearPreviousResults();
-      } else {
-        alert('Функция очистки недоступна');
-      }
+    if (typeof window.clearPreviousResults === 'function') {
+      window.clearPreviousResults();
     }
   });
 
   modal.querySelector('#variant2-apply-btn').addEventListener('click', () => {
     const currentCtx = window.__CURRENT_CONSTRUCTOR_CTX__;
     if (!currentCtx) {
-      alert('Контекст конструктора потерян');
       return;
     }
     
     const block = document.getElementById('variant2-block');
     if (!block) {
-      alert('Не найден блок варианта 2 в результатах');
       return;
     }
 
