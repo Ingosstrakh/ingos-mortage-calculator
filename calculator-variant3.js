@@ -9,8 +9,6 @@
  * @returns {Object} Результат с output и total
  */
 function calculateVariant3(data, bankConfig, insuranceAmount, discountPercent) {
-  console.log('calculateVariant3: скидка =', discountPercent + '%');
-
   const discountRate = discountPercent / 100;
   let output = '';
   let totalV3 = 0;
