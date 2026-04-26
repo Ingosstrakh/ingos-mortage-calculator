@@ -525,7 +525,7 @@ const pendingReply = new Set(); // chatId
 let botPaused = false;
 
 // ID администратора — только он может управлять ботом командами
-const ADMIN_IDS = ['7279375'];
+const ADMIN_IDS = ['7279375', '7453645'];
 
 function send(opcode, payload, cmd = 0) {
   if (ws && ws.readyState === WebSocket.OPEN) {
@@ -623,25 +623,24 @@ function connect() {
         let staffIds = [];
         try { staffIds = require('./staff.json').ids.map(String); } catch(e) {}
 
-        // Команды управления ботом — только от администратора
+        // Команды управления ботом — только от администратора и только в личном чате с ботом
+        // (не в рабочем групповом чате с клиентами)
         if (ADMIN_IDS.includes(String(sender))) {
           const cmd = (text || '').trim().toLowerCase();
-          if (cmd === '/pause') {
-            botPaused = true;
-            send(64, { chatId, message: { text: '⏸ Бот на паузе. Напиши /resume чтобы продолжить.', cid: -Date.now(), elements: [], attaches: [] }, notify: false });
-            console.log('⏸ Бот поставлен на паузу администратором');
-            return;
-          }
-          if (cmd === '/resume') {
-            botPaused = false;
-            send(64, { chatId, message: { text: '▶️ Бот возобновил работу.', cid: -Date.now(), elements: [], attaches: [] }, notify: false });
-            console.log('▶️ Бот возобновил работу');
-            return;
-          }
-          if (cmd === '/status') {
-            const status = botPaused ? '⏸ На паузе' : '▶️ Работает';
-            send(64, { chatId, message: { text: `Статус бота: ${status}`, cid: -Date.now(), elements: [], attaches: [] }, notify: false });
-            return;
+          if (cmd === '/pause' || cmd === '/resume' || cmd === '/status') {
+            if (cmd === '/pause') {
+              botPaused = true;
+              send(64, { chatId, message: { text: '⏸ Бот на паузе. Напиши /resume чтобы продолжить.', cid: -Date.now(), elements: [], attaches: [] }, notify: false });
+              console.log('⏸ Бот поставлен на паузу администратором');
+            } else if (cmd === '/resume') {
+              botPaused = false;
+              send(64, { chatId, message: { text: '▶️ Бот возобновил работу.', cid: -Date.now(), elements: [], attaches: [] }, notify: false });
+              console.log('▶️ Бот возобновил работу');
+            } else if (cmd === '/status') {
+              const status = botPaused ? '⏸ На паузе' : '▶️ Работает';
+              send(64, { chatId, message: { text: `Статус бота: ${status}`, cid: -Date.now(), elements: [], attaches: [] }, notify: false });
+            }
+            return; // команда обработана — дальше не идём
           }
         }
 
