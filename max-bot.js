@@ -619,30 +619,32 @@ function connect() {
           return; // не обрабатываем это сообщение дальше
         }
 
+        // ── КОМАНДЫ АДМИНИСТРАТОРА — обрабатываем первыми, до всего остального ──
+        // Работает из избранного (пишешь себе) или любого чата
+        if (ADMIN_IDS.includes(String(sender))) {
+          const cmd = (text || '').trim().toLowerCase();
+          if (cmd === '/pause') {
+            botPaused = true;
+            send(64, { chatId, message: { text: '⏸ Бот на паузе. Напиши /resume чтобы продолжить.', cid: -Date.now(), elements: [], attaches: [] }, notify: false });
+            console.log('⏸ Бот поставлен на паузу');
+            return;
+          }
+          if (cmd === '/resume') {
+            botPaused = false;
+            send(64, { chatId, message: { text: '▶️ Бот возобновил работу.', cid: -Date.now(), elements: [], attaches: [] }, notify: false });
+            console.log('▶️ Бот возобновил работу');
+            return;
+          }
+          if (cmd === '/status') {
+            const status = botPaused ? '⏸ На паузе' : '▶️ Работает';
+            send(64, { chatId, message: { text: `Статус бота: ${status}`, cid: -Date.now(), elements: [], attaches: [] }, notify: false });
+            return;
+          }
+        }
+
         // Игнорируем сообщения от сотрудников (список в staff.json)
         let staffIds = [];
         try { staffIds = require('./staff.json').ids.map(String); } catch(e) {}
-
-        // Команды управления ботом — только от администратора и только в личном чате с ботом
-        // (не в рабочем групповом чате с клиентами)
-        if (ADMIN_IDS.includes(String(sender))) {
-          const cmd = (text || '').trim().toLowerCase();
-          if (cmd === '/pause' || cmd === '/resume' || cmd === '/status') {
-            if (cmd === '/pause') {
-              botPaused = true;
-              send(64, { chatId, message: { text: '⏸ Бот на паузе. Напиши /resume чтобы продолжить.', cid: -Date.now(), elements: [], attaches: [] }, notify: false });
-              console.log('⏸ Бот поставлен на паузу администратором');
-            } else if (cmd === '/resume') {
-              botPaused = false;
-              send(64, { chatId, message: { text: '▶️ Бот возобновил работу.', cid: -Date.now(), elements: [], attaches: [] }, notify: false });
-              console.log('▶️ Бот возобновил работу');
-            } else if (cmd === '/status') {
-              const status = botPaused ? '⏸ На паузе' : '▶️ Работает';
-              send(64, { chatId, message: { text: `Статус бота: ${status}`, cid: -Date.now(), elements: [], attaches: [] }, notify: false });
-            }
-            return; // команда обработана — дальше не идём
-          }
-        }
 
         if (staffIds.includes(String(sender))) {
           console.log(`⏭ Сообщение от сотрудника (${sender}), пропускаю`);
