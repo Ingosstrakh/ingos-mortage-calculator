@@ -420,6 +420,7 @@ function runCalculation(text) {
     }
 
     // 7. Формируем ответ
+    recordCalc(data);
     return formatResult(data, bankConfig, lifeResult, propertyResult, titleResult, insuranceAmount);
 
   } catch (e) {
@@ -520,6 +521,87 @@ const lastClientMessage = new Map(); // chatId -> messageId
 
 // Флаг — уже запланирован ответ в этот чат (чтобы не отвечать дважды)
 const pendingReply = new Set(); // chatId
+
+// ============================================================
+// АНАЛИТИКА
+// ============================================================
+const fs = require('fs');
+const STATS_FILE = './stats.json';
+
+function loadStats() {
+  try {
+    if (fs.existsSync(STATS_FILE)) return JSON.parse(fs.readFileSync(STATS_FILE, 'utf8'));
+  } catch(e) {}
+  return { total: 0, today: 0, todayDate: '', byHour: {}, byBank: {}, byRisk: {}, lastDate: '' };
+}
+
+function saveStats(s) {
+  try { fs.writeFileSync(STATS_FILE, JSON.stringify(s, null, 2), 'utf8'); } catch(e) {}
+}
+
+function recordCalc(data) {
+  const s = loadStats();
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('ru-RU');
+  const hour = now.getHours();
+
+  s.total = (s.total || 0) + 1;
+
+  // Сброс дневного счётчика
+  if (s.todayDate !== dateStr) { s.today = 0; s.todayDate = dateStr; }
+  s.today = (s.today || 0) + 1;
+
+  // По часам (пиковые часы)
+  const hKey = String(hour).padStart(2, '0') + ':00';
+  s.byHour[hKey] = (s.byHour[hKey] || 0) + 1;
+
+  // По банкам
+  if (data && data.bank) {
+    s.byBank[data.bank] = (s.byBank[data.bank] || 0) + 1;
+  }
+
+  // По рискам
+  if (data && data.risks) {
+    const riskKey = [
+      data.risks.life ? 'жизнь' : '',
+      data.risks.property ? 'имущ' : '',
+      data.risks.titul ? 'титул' : '',
+    ].filter(Boolean).join('+') || 'неизвестно';
+    s.byRisk[riskKey] = (s.byRisk[riskKey] || 0) + 1;
+  }
+
+  saveStats(s);
+}
+
+function formatStats() {
+  const s = loadStats();
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('ru-RU');
+  if (s.todayDate !== dateStr) s.today = 0;
+
+  // Топ-5 банков
+  const topBanks = Object.entries(s.byBank || {})
+    .sort((a, b) => b[1] - a[1]).slice(0, 5)
+    .map(([k, v]) => `  ${k}: ${v}`).join('\n') || '  нет данных';
+
+  // Пиковые часы — топ-3
+  const topHours = Object.entries(s.byHour || {})
+    .sort((a, b) => b[1] - a[1]).slice(0, 3)
+    .map(([k, v]) => `  ${k} — ${v} расч.`).join('\n') || '  нет данных';
+
+  // Риски
+  const risks = Object.entries(s.byRisk || {})
+    .sort((a, b) => b[1] - a[1])
+    .map(([k, v]) => `  ${k}: ${v}`).join('\n') || '  нет данных';
+
+  return `📊 Статистика бота\n` +
+    `━━━━━━━━━━━━━━━━━━━━\n` +
+    `📅 Сегодня (${dateStr}): ${s.today || 0} расчётов\n` +
+    `📈 Всего за всё время: ${s.total || 0}\n\n` +
+    `🏦 Топ банков:\n${topBanks}\n\n` +
+    `⏰ Пиковые часы:\n${topHours}\n\n` +
+    `🛡 По рискам:\n${risks}`;
+}
 
 // Флаг паузы — управляется командами /pause и /resume
 let botPaused = false;
@@ -638,6 +720,10 @@ function connect() {
           if (cmd === '/status') {
             const status = botPaused ? '⏸ На паузе' : '▶️ Работает';
             send(64, { chatId, message: { text: `Статус бота: ${status}`, cid: -Date.now(), elements: [], attaches: [] }, notify: false });
+            return;
+          }
+          if (cmd === '/stats') {
+            send(64, { chatId, message: { text: formatStats(), cid: -Date.now(), elements: [], attaches: [] }, notify: false });
             return;
           }
         }
@@ -780,6 +866,9 @@ function connect() {
             .replace(/(^|\s)МО(\s|$)/gi, ' ') // убираем МО (надбавка Ак Барс)
             .replace(/(^|\s)РТ(\s|$)/g, ' ') // убираем РТ (надбавка ВТБ)
             .replace(/(\d{4,})\.(\d{2})\b/g, '$1,$2') // 6716409.39 → 6716409,39
+            // "ст.8", "ст 8", "ставка 12" без % → добавляем "ставка X%"
+            .replace(/\bст\.?\s*(\d+(?:[.,]\d+)?)\s*(?!%)/gi, 'ставка $1%')
+            .replace(/\bставка\s+(\d+(?:[.,]\d+)?)\s*(?!%)/gi, 'ставка $1%')
             // "кирп/дер", "кирпич/дерево" и т.п. — наружные стены кирпич, перегородки дерево → кирпич
             .replace(/кирп(?:ич)?\s*[\/\\]\s*(?:дер(?:ево)?|дерев\w*)/gi, 'кирпич')
             // "дер/кирп" — тоже кирпич (наружные стены первые)
