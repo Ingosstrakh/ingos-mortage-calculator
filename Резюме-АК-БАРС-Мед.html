@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Резюме — Маликов Тимур Рушанович</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 13px; color: #222; background: #f4f6fa; }
+  .page { max-width: 900px; margin: 24px auto; background: #fff; padding: 36px 40px; box-shadow: 0 2px 12px rgba(0,0,0,0.10); }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #1a3a6b; padding-bottom: 18px; margin-bottom: 20px; }
+  .name { font-size: 26px; font-weight: bold; color: #1a3a6b; }
+  .title { font-size: 15px; color: #444; margin-top: 4px; }
+  .contacts { text-align: right; font-size: 12px; color: #555; line-height: 1.8; }
+  .contacts a { color: #1a3a6b; text-decoration: none; }
+  .section { margin-bottom: 22px; }
+  .section-title { font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #fff; background: #1a3a6b; padding: 5px 10px; margin-bottom: 10px; }
+  .job { margin-bottom: 14px; }
+  .job-header { display: flex; justify-content: space-between; align-items: baseline; }
+  .company { font-size: 14px; font-weight: bold; color: #1a3a6b; }
+  .period { font-size: 11px; color: #888; }
+  .position { font-size: 13px; font-weight: bold; color: #333; margin: 2px 0; }
+  .location { font-size: 11px; color: #888; margin-bottom: 5px; }
+  ul { padding-left: 18px; }
+  li { margin-bottom: 3px; line-height: 1.5; }
+  .skills-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; }
+  .skill-row { display: flex; align-items: center; gap: 8px; }
+  .skill-name { min-width: 160px; font-size: 12px; }
+  .skill-bar { flex: 1; height: 7px; background: #e0e6f0; border-radius: 4px; overflow: hidden; }
+  .skill-fill { height: 100%; background: #1a3a6b; border-radius: 4px; }
+  .tag { display: inline-block; background: #dce6f1; color: #1a3a6b; border-radius: 3px; padding: 2px 8px; font-size: 11px; margin: 2px 3px 2px 0; }
+  .tag.highlight { background: #1a3a6b; color: #fff; }
+  .edu-row { display: flex; justify-content: space-between; }
+  .note { background: #fffde7; border-left: 4px solid #f0c040; padding: 8px 12px; font-size: 12px; margin-top: 10px; }
+  @media print { body { background: #fff; } .page { box-shadow: none; margin: 0; padding: 20px; } }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ШАПКА -->
+  <div class="header">
+    <div>
+      <div class="name">Маликов Тимур Рушанович</div>
+      <div class="title">Программист-разработчик / Системный аналитик</div>
+      <div style="margin-top:8px; font-size:12px; color:#555;">
+        29 лет &nbsp;·&nbsp; Казань &nbsp;·&nbsp; Готов к работе на месте работодателя
+      </div>
+    </div>
+    <div class="contacts">
+      <div>+7 (917) 295-62-96</div>
+      <div><a href="mailto:[email]">[email]</a></div>
+      <div>Казань</div>
+      <div>Гражданство: Россия</div>
+    </div>
+  </div>
+
+  <!-- О СЕБЕ -->
+  <div class="section">
+    <div class="section-title">О себе</div>
+    <p style="line-height:1.6;">
+      Специалист с опытом в страховой отрасли и практическими навыками разработки. Самостоятельно разработал веб-калькулятор комплексного ипотечного страхования (JavaScript, HTML/CSS) — автоматизировал расчёты страховых премий, сократил время одной операции с 45 до 4 секунд и устранил необходимость в ручном переключении между несколькими системами. Имею базовые знания Java и опыт работы с PostgreSQL, прошёл курс по тестированию ПО. Стремлюсь развиваться в направлении разработки WEB-приложений.
+    </p>
+  </div>
+
+  <!-- КЛЮЧЕВЫЕ НАВЫКИ -->
+  <div class="section">
+    <div class="section-title">Ключевые навыки</div>
+    <div style="margin-bottom:10px;">
+      <span class="tag highlight">JavaScript</span>
+      <span class="tag highlight">HTML / CSS</span>
+      <span class="tag highlight">SQL / MS SQL</span>
+      <span class="tag highlight">Java (базовый)</span>
+      <span class="tag highlight">PostgreSQL</span>
+      <span class="tag">Angular (изучаю)</span>
+      <span class="tag">PHP (базовый)</span>
+      <span class="tag">GitHub</span>
+      <span class="tag">Agile / Scrum</span>
+      <span class="tag">Бизнес-анализ</span>
+      <span class="tag">Ручное тестирование</span>
+      <span class="tag">Windows Server</span>
+      <span class="tag">Английский технический</span>
+    </div>
+    <div class="skills-grid">
+      <div class="skill-row"><span class="skill-name">JavaScript / HTML / CSS</span><div class="skill-bar"><div class="skill-fill" style="width:80%"></div></div></div>
+      <div class="skill-row"><span class="skill-name">SQL / MS SQL</span><div class="skill-bar"><div class="skill-fill" style="width:65%"></div></div></div>
+      <div class="skill-row"><span class="skill-name">Java (базовый)</span><div class="skill-bar"><div class="skill-fill" style="width:40%"></div></div></div>
+      <div class="skill-row"><span class="skill-name">PostgreSQL</span><div class="skill-bar"><div class="skill-fill" style="width:50%"></div></div></div>
+      <div class="skill-row"><span class="skill-name">Бизнес-анализ / требования</span><div class="skill-bar"><div class="skill-fill" style="width:85%"></div></div></div>
+      <div class="skill-row"><span class="skill-name">Ручное тестирование</span><div class="skill-bar"><div class="skill-fill" style="width:60%"></div></div></div>
+    </div>
+  </div>
+
+  <!-- ОПЫТ РАБОТЫ -->
+  <div class="section">
+    <div class="section-title">Опыт работы — 5 лет 8 месяцев</div>
+
+    <div class="job">
+      <div class="job-header">
+        <div class="company">ПАО «Ингосстрах»</div>
+        <div class="period">Сентябрь 2024 — настоящее время · 1 год 7 мес.</div>
+      </div>
+      <div class="position">Ведущий специалист по ипотечному страхованию</div>
+      <div class="location">Казань · Финансовый сектор / Страхование</div>
+      <ul>
+        <li>Самостоятельно разработал веб-калькулятор КИС (JavaScript, HTML/CSS) — автоматизация расчётов страховых премий по жизни, имуществу и титулу</li>
+        <li>Реализовал логику автоматического предложения кросс-продукта ИФЛ в связке с КИС — без повторного ввода данных клиента</li>
+        <li>Сократил время расчёта с 45 до 4 секунд (−91%), устранил необходимость в отдельной системе INGOGATE</li>
+        <li>Написал алгоритмы расчёта тарифов, надбавок и скидок; реализовал валидацию входных данных</li>
+        <li>Работа с заявками на страхование от банков, брокеров, агентов и застройщиков; котировка объектов</li>
+        <li>Взаимодействие с сотрудниками банков по вопросам ипотечного страхования; первичный андеррайтинг рисков</li>
+      </ul>
+    </div>
+
+    <div class="job">
+      <div class="job-header">
+        <div class="company">ООО «Совкомбанк Страхование Жизни»</div>
+        <div class="period">Июнь 2023 — Сентябрь 2024 · 1 год 4 мес.</div>
+      </div>
+      <div class="position">Менеджер агентской группы</div>
+      <div class="location">Казань · Финансовый сектор / Страхование</div>
+      <ul>
+        <li>Руководство группой страховых агентов; подбор, наставничество, контроль KPI</li>
+        <li>Анализ финансовых показателей и формирование отчётности</li>
+        <li>Оформление договоров страхования с клиентами; сопровождение входящего потока</li>
+        <li>Пролонгация договоров страхования; кросс-продажи</li>
+      </ul>
+    </div>
+
+    <div class="job">
+      <div class="job-header">
+        <div class="company">АО СК «ПАРИ»</div>
+        <div class="period">Февраль 2022 — Июнь 2023 · 1 год 5 мес.</div>
+      </div>
+      <div class="position">Специалист по ипотечному страхованию</div>
+      <div class="location">Набережные Челны · Финансовый сектор / Страхование</div>
+      <ul>
+        <li>Заключение и оформление полисов страхования имущества, НС и ипотечного страхования</li>
+        <li>Заключение договоров ипотечного страхования (НС и Б, добровольного страхования титула)</li>
+        <li>Производство расчётов по тарифам страховой компании</li>
+        <li>Согласование с банком условий страхового полиса по ипотеке</li>
+      </ul>
+    </div>
+
+    <div class="job">
+      <div class="job-header">
+        <div class="company">ООО «Норматех»</div>
+        <div class="period">Август 2020 — Январь 2022 · 1 год 6 мес.</div>
+      </div>
+      <div class="position">Бизнес-аналитик</div>
+      <div class="location">Казань</div>
+      <ul>
+        <li>Поиск, сбор и структурирование информации из открытых источников, специализированных баз данных и архивов электронных документов Заказчика</li>
+        <li>Разработка алгоритмов, формул, макросов для обработки данных и расчётов</li>
+        <li>Подготовка пользовательских документов: инструкции, методики, презентации</li>
+        <li>Выявление ключевых бизнес-процессов и потребностей; взаимодействие с заказчиками и заинтересованными сторонами</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ОБРАЗОВАНИЕ -->
+  <div class="section">
+    <div class="section-title">Образование</div>
+    <div class="edu-row">
+      <div>
+        <strong>Казанский (Приволжский) федеральный университет</strong><br>
+        <span style="font-size:12px; color:#555;">Юриспруденция, Гражданско-правовая · Высшее</span>
+      </div>
+      <div style="font-size:12px; color:#888;">2018</div>
+    </div>
+  </div>
+
+  <!-- КУРСЫ -->
+  <div class="section">
+    <div class="section-title">Повышение квалификации</div>
+    <div class="edu-row" style="margin-bottom:6px;">
+      <div>
+        <strong>Инженер по ручному тестированию</strong><br>
+        <span style="font-size:12px; color:#555;">Университет Иннополис · Тестировщик ПО</span>
+      </div>
+      <div style="font-size:12px; color:#888;">2024</div>
+    </div>
+    <div class="note">
+      В процессе самообучения: Angular 2+, PHP, основы Spring Framework — в соответствии с требованиями вакансии.
+    </div>
+  </div>
+
+  <!-- ДОПОЛНИТЕЛЬНО -->
+  <div class="section">
+    <div class="section-title">Дополнительная информация</div>
+    <ul>
+      <li>Базовые знания языка программирования Java и работа с базой данных PostgreSQL</li>
+      <li>Опыт автоматизации процессов с использованием GitHub</li>
+      <li>Навыки системного администрирования Windows Server</li>
+      <li>Владение техническим английским языком</li>
+      <li>Способность собирать, анализировать и документировать требования заказчиков и заинтересованных сторон</li>
+      <li>Решение проблем и аналитическое мышление; взаимодействие с заказчиками и командой разработки</li>
+      <li>Способность быстро обучаться</li>
+    </ul>
+  </div>
+
+</div>
+</body>
+</html>

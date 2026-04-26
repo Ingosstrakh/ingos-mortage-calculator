@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ингосстрах - Калькулятор</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <div class="sidepanel-container">
+    <!-- Заголовок -->
+    <header class="sidepanel-header">
+      <div class="header-logo">
+        <span class="logo-icon">🏛️</span>
+        <h1>ИНГОССТРАХ</h1>
+      </div>
+      <p class="header-subtitle">Калькулятор страхования</p>
+    </header>
+
+    <!-- Вкладки -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="calculator">
+        <span>📊</span> Калькулятор
+      </button>
+      <button class="tab-btn" data-tab="history">
+        <span>📜</span> История
+      </button>
+      <button class="tab-btn" data-tab="settings">
+        <span>⚙️</span> Настройки
+      </button>
+    </div>
+
+    <!-- Контент вкладок -->
+    <div class="tab-content">
+      <!-- Вкладка: Калькулятор -->
+      <div id="calculator-tab" class="tab-pane active">
+        <div class="calculator-section">
+          <!-- Кнопки быстрых действий -->
+          <div class="quick-actions">
+            <button id="extract-btn" class="btn btn-secondary btn-sm">
+              <span>🔍</span> Извлечь со страницы
+            </button>
+            <button id="paste-btn" class="btn btn-secondary btn-sm">
+              <span>📋</span> Вставить
+            </button>
+          </div>
+
+          <!-- Поле ввода -->
+          <div class="input-group">
+            <label for="client-input">Данные клиента</label>
+            <textarea
+              id="client-input"
+              placeholder="Пример: ВТБ ост 3000000 муж 15.08.1985 дом кирпич"
+              rows="4"
+            ></textarea>
+            <div class="input-hint">
+              💡 Укажите: банк, ОСЗ, данные заемщика, тип объекта
+            </div>
+          </div>
+
+          <!-- Кнопки расчета -->
+          <div class="button-group">
+            <button id="calculate-btn" class="btn btn-primary">
+              <span>⚡</span> Рассчитать
+            </button>
+            <button id="clear-btn" class="btn btn-secondary">
+              <span>🗑️</span> Очистить
+            </button>
+          </div>
+
+          <!-- Результаты -->
+          <div id="results-section" class="results-section" style="display: none;">
+            <div class="results-header">
+              <h3>💰 Результаты расчета</h3>
+              <button id="copy-result-btn" class="btn btn-sm btn-secondary">
+                <span>📋</span> Копировать
+              </button>
+            </div>
+            <div id="results-content" class="results-content">
+              <!-- Здесь будут результаты -->
+            </div>
+            <div class="results-actions">
+              <button id="insert-result-btn" class="btn btn-secondary">
+                <span>📝</span> Вставить на страницу
+              </button>
+              <button id="save-result-btn" class="btn btn-secondary">
+                <span>💾</span> Сохранить в историю
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Вкладка: История -->
+      <div id="history-tab" class="tab-pane">
+        <div class="history-section">
+          <div class="history-header">
+            <h3>📜 История расчетов</h3>
+            <button id="clear-history-btn" class="btn btn-sm btn-secondary">
+              <span>🗑️</span> Очистить
+            </button>
+          </div>
+          <div id="history-list" class="history-list">
+            <!-- Здесь будет список истории -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Вкладка: Настройки -->
+      <div id="settings-tab" class="tab-pane">
+        <div class="settings-section">
+          <h3>⚙️ Настройки</h3>
+          
+          <div class="setting-item">
+            <label>
+              <input type="checkbox" id="auto-extract" checked>
+              <span>Автоматически извлекать данные со страницы</span>
+            </label>
+          </div>
+
+          <div class="setting-item">
+            <label>
+              <input type="checkbox" id="auto-copy" checked>
+              <span>Автоматически копировать результат</span>
+            </label>
+          </div>
+
+          <div class="setting-item">
+            <label>
+              <input type="checkbox" id="show-floating-btn" checked>
+              <span>Показывать плавающую кнопку на странице</span>
+            </label>
+          </div>
+
+          <div class="setting-item">
+            <label>
+              <input type="checkbox" id="save-to-history" checked>
+              <span>Сохранять расчеты в историю</span>
+            </label>
+          </div>
+
+          <div class="setting-group">
+            <h4>Горячие клавиши</h4>
+            <div class="hotkey-list">
+              <div class="hotkey-item">
+                <span class="hotkey-label">Рассчитать из выделенного:</span>
+                <kbd>Alt+Shift+C</kbd>
+              </div>
+              <div class="hotkey-item">
+                <span class="hotkey-label">Открыть калькулятор:</span>
+                <kbd>Alt+Shift+I</kbd>
+              </div>
+            </div>
+          </div>
+
+          <div class="setting-group">
+            <h4>О расширении</h4>
+            <p class="about-text">
+              <strong>Ингосстрах - Калькулятор страхования</strong><br>
+              Версия 1.0.0<br>
+              Автоматический расчет ипотечного страхования
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Подключаем все модули калькулятора -->
+  <script src="../config_banks.js"></script>
+  <script src="../tariffs_life.js"></script>
+  <script src="../tariffs_property.js"></script>
+  <script src="../tariffs_ifl.js"></script>
+  <script src="../parser.js"></script>
+  <script src="../installment_calculator.js"></script>
+  <script src="../calculator-utils.js"></script>
+  <script src="../calculator-medical.js"></script>
+  <script src="../calculator-validation.js"></script>
+  <script src="../calculator-insurance-life.js"></script>
+  <script src="../calculator-insurance-property.js"></script>
+  <script src="../calculator-insurance-title.js"></script>
+  <script src="../calculator-installment.js"></script>
+  <script src="../calculator-main.js"></script>
+  <script src="../calculator-variant2-helpers.js"></script>
+  <script src="../calculator-variant2-constructor.js"></script>
+  <script src="../calculator-variant2.js"></script>
+  <script src="../calculator-variant3.js"></script>
+  <script src="../calculator-variant2-ui.js"></script>
+  
+  <!-- Логика sidepanel -->
+  <script src="sidepanel.js"></script>
+  
+  <!-- Контейнер для модального окна конструктора варианта 2 -->
+  <div id="variant2-constructor-modal-container"></div>
+</body>
+</html>

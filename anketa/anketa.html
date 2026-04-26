@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Анкета клиента — НСЖ</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; background: #f0f4fa; color: #222; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 24px 16px 48px; }
+  .logo { text-align: center; margin-bottom: 20px; }
+  .logo img { height: 48px; }
+  .card { background: #fff; border-radius: 12px; padding: 28px 24px; box-shadow: 0 2px 16px rgba(0,0,0,0.09); }
+  h1 { font-size: 18px; color: #1a3a6b; text-align: center; margin-bottom: 8px; }
+  .subtitle { font-size: 13px; color: #555; text-align: center; margin-bottom: 24px; line-height: 1.6; }
+  .greeting { background: #eef4ff; border-left: 4px solid #1a3a6b; padding: 14px 16px; border-radius: 6px; font-size: 13px; color: #333; line-height: 1.7; margin-bottom: 28px; }
+  .field { margin-bottom: 20px; }
+  label { display: block; font-size: 13px; font-weight: bold; color: #1a3a6b; margin-bottom: 6px; }
+  .q-num { color: #888; font-weight: normal; margin-right: 4px; }
+  input[type="text"], input[type="date"], input[type="tel"], input[type="number"], textarea, select {
+    width: 100%; padding: 10px 12px; border: 1px solid #c8d6e8; border-radius: 7px;
+    font-size: 13px; font-family: Arial, sans-serif; color: #222; background: #fafcff;
+    transition: border 0.2s;
+  }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: #1a3a6b; background: #fff; }
+  textarea { resize: vertical; min-height: 70px; }
+  .hint { font-size: 11px; color: #888; margin-top: 4px; }
+  .btn { width: 100%; padding: 14px; background: #1a3a6b; color: #fff; border: none;
+    border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+  .btn:hover { background: #14305a; }
+  .success { display: none; text-align: center; padding: 32px 16px; }
+  .success .icon { font-size: 56px; margin-bottom: 12px; }
+  .success h2 { color: #1a3a6b; margin-bottom: 8px; }
+  .success p { color: #555; font-size: 13px; }
+  .required { color: #c00; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card" id="form-card">
+    <h1>Анкета клиента</h1>
+    <div class="subtitle">для подбора программы НСЖ</div>
+
+    <div class="greeting">
+      Добрый день! Мы заботимся о том, чтобы наши страховые продукты стали персональными под Ваши индивидуальные потребности.<br><br>
+      Нам важно узнать о Вас немного больше — ответьте, пожалуйста, на несколько вопросов:
+    </div>
+
+    <form id="anketa-form">
+
+      <div class="field">
+        <label><span class="q-num">1.</span> ФИО <span class="required">*</span></label>
+        <input type="text" id="fio" placeholder="Фамилия Имя Отчество" required>
+      </div>
+
+      <div class="field">
+        <label><span class="q-num">2.</span> Дата рождения <span class="required">*</span></label>
+        <input type="date" id="dob" required>
+      </div>
+
+      <div class="field">
+        <label><span class="q-num">3.</span> Семейное положение, дети и их возраст</label>
+        <select id="family-status">
+          <option value="">— выберите —</option>
+          <option>Холост / Не замужем</option>
+          <option>Женат / Замужем</option>
+          <option>Разведён / Разведена</option>
+          <option>Вдовец / Вдова</option>
+        </select>
+        <textarea id="children" placeholder="Дети и их возраст (например: сын 7 лет, дочь 12 лет)" style="margin-top:8px;"></textarea>
+      </div>
+
+      <div class="field">
+        <label><span class="q-num">4.</span> Кто от Вас финансово зависит?</label>
+        <textarea id="dependents" placeholder="Пожилые родители, неработающая супруг/супруга, дети до 18 лет..."></textarea>
+      </div>
+
+      <div class="field">
+        <label><span class="q-num">5.</span> Ваша профессия. Есть ли риск для жизни/здоровья на работе?</label>
+        <input type="text" id="profession" placeholder="Например: инженер, офисный сотрудник, водитель...">
+        <select id="risk" style="margin-top:8px;">
+          <option value="">— риск на работе —</option>
+          <option>Нет риска</option>
+          <option>Умеренный риск</option>
+          <option>Высокий риск</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label><span class="q-num">6.</span> Крупные финансовые цели через 5–15 лет</label>
+        <textarea id="goals" placeholder="Накопить на квартиру, образование детей, свадьба, авто, отдых..."></textarea>
+      </div>
+
+      <div class="field">
+        <label><span class="q-num">7.</span> Есть ли кредиты?</label>
+        <textarea id="credits" placeholder="Ипотека, автокредит, потребительский кредит — укажите примерный остаток"></textarea>
+      </div>
+
+      <div class="field">
+        <label><span class="q-num">8.</span> Сумма в месяц, которую готовы откладывать <span class="required">*</span></label>
+        <input type="number" id="monthly" placeholder="Минимум 2000 ₽" min="2000" required>
+        <div class="hint">Укажите сумму в рублях (от 2 000 ₽)</div>
+      </div>
+
+      <div class="field">
+        <label><span class="q-num">9.</span> Есть ли автомобиль?</label>
+        <select id="car">
+          <option value="">— выберите —</option>
+          <option>Да</option>
+          <option>Нет</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label><span class="q-num">10.</span> Удобный номер телефона для связи <span class="required">*</span></label>
+        <input type="tel" id="phone" placeholder="+7 (___) ___-__-__" required>
+      </div>
+
+      <button type="submit" class="btn">Отправить анкету</button>
+    </form>
+  </div>
+
+  <div class="success" id="success-block">
+    <div class="icon">✅</div>
+    <h2>Спасибо!</h2>
+    <p>Ваша анкета сохранена.<br>Мы свяжемся с Вами в ближайшее время.</p>
+  </div>
+</div>
+
+<script>
+document.getElementById('anketa-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+
+  const fio = document.getElementById('fio').value.trim();
+  if (!fio) { alert('Пожалуйста, укажите ФИО'); return; }
+
+  const monthly = parseInt(document.getElementById('monthly').value);
+  if (monthly < 2000) { alert('Минимальная сумма — 2 000 ₽'); return; }
+
+  const data = {
+    savedAt: new Date().toLocaleString('ru-RU'),
+    fio: fio,
+    dob: document.getElementById('dob').value,
+    familyStatus: document.getElementById('family-status').value,
+    children: document.getElementById('children').value.trim(),
+    dependents: document.getElementById('dependents').value.trim(),
+    profession: document.getElementById('profession').value.trim(),
+    risk: document.getElementById('risk').value,
+    goals: document.getElementById('goals').value.trim(),
+    credits: document.getElementById('credits').value.trim(),
+    monthly: document.getElementById('monthly').value,
+    car: document.getElementById('car').value,
+    phone: document.getElementById('phone').value.trim()
+  };
+
+  // Сохраняем в localStorage по ФИО
+  const key = 'anketa_' + fio.replace(/\s+/g, '_');
+  const all = JSON.parse(localStorage.getItem('ankety') || '[]');
+  // Обновляем если уже есть, иначе добавляем
+  const idx = all.findIndex(a => a.fio === fio);
+  if (idx >= 0) all[idx] = data; else all.push(data);
+  localStorage.setItem('ankety', JSON.stringify(all));
+  localStorage.setItem(key, JSON.stringify(data));
+
+  document.getElementById('form-card').style.display = 'none';
+  document.getElementById('success-block').style.display = 'block';
+});
+</script>
+</body>
+</html>

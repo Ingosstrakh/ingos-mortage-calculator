@@ -1,0 +1,8 @@
+node_modules/
+бот/
+*.pdf
+*.doc
+*.docx
+*.xlsx
+docx_text.txt
+.env

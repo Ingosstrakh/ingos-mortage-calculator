@@ -1,0 +1,15 @@
+{
+  "name": "ingos-mortgage-bot",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "node max-bot.js"
+  },
+  "dependencies": {
+    "pdf-parse": "^2.4.5",
+    "pdf2json": "^4.0.3",
+    "ws": "^8.20.0"
+  },
+  "devDependencies": {
+    "exceljs": "^4.4.0"
+  }
+}

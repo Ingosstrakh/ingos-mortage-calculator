@@ -1,0 +1,246 @@
+/* Стили для Content Script */
+
+/* Всплывающее окно с результатом */
+.ingos-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  z-index: 999999;
+  font-family: 'Roboto', Arial, sans-serif;
+  overflow: hidden;
+  animation: ingosPopupFadeIn 0.3s ease-out;
+}
+
+@keyframes ingosPopupFadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.ingos-popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+}
+
+.ingos-popup-header h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.ingos-popup-close {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  font-size: 24px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.ingos-popup-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: rotate(90deg);
+}
+
+.ingos-popup-body {
+  padding: 24px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.ingos-result-content {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #1e293b;
+}
+
+.ingos-result-content b,
+.ingos-result-content strong {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.ingos-popup-footer {
+  display: flex;
+  gap: 12px;
+  padding: 20px 24px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+}
+
+.ingos-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.ingos-btn-primary {
+  background: #3b82f6;
+  color: white;
+}
+
+.ingos-btn-primary:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.ingos-btn-secondary {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.ingos-btn-secondary:hover {
+  background: #cbd5e1;
+}
+
+/* Toast уведомления */
+.ingos-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 16px 24px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  z-index: 1000000;
+  font-family: 'Roboto', Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s ease;
+  max-width: 400px;
+}
+
+.ingos-toast-show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.ingos-toast-info {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+}
+
+.ingos-toast-success {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+}
+
+.ingos-toast-warning {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+}
+
+.ingos-toast-error {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+}
+
+/* Плавающая кнопка */
+.ingos-floating-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
+  z-index: 999998;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ingos-floating-btn:hover {
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: 0 12px 32px rgba(59, 130, 246, 0.5);
+}
+
+.ingos-floating-btn:active {
+  transform: scale(0.95);
+}
+
+/* Адаптация для мобильных */
+@media (max-width: 768px) {
+  .ingos-popup {
+    width: 95%;
+    max-height: 90vh;
+  }
+  
+  .ingos-popup-footer {
+    flex-direction: column;
+  }
+  
+  .ingos-btn {
+    width: 100%;
+  }
+  
+  .ingos-floating-btn {
+    bottom: 16px;
+    right: 16px;
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+  }
+  
+  .ingos-toast {
+    bottom: 16px;
+    right: 16px;
+    left: 16px;
+    max-width: none;
+  }
+}
+
+/* Скроллбар для popup */
+.ingos-popup-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.ingos-popup-body::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.ingos-popup-body::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.ingos-popup-body::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

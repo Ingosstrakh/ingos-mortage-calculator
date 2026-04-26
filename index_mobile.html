@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Ингосстрах - калькулятор страхования</title>
+  <meta name="description" content="Ингосстрах - быстрый расчет стоимости ипотечного страхования">
+
+  <!-- Мобильная оптимизация -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+  <link rel="stylesheet" href="ingosstrax_mobile.css">
+
+  <style>
+    /* Базовые стили для корректного отображения */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Roboto', Arial, sans-serif;
+      background: #f8fafc;
+      color: #1a1a1a;
+      min-height: 100vh;
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Шапка -->
+  <header class="header">
+    <div class="header-content">
+      <div class="logo">
+        <div class="logo-icon">🏛️</div>
+        <div class="logo-text">
+          <h1>Ингосстрах</h1>
+          <p>Калькулятор страхования</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Основной контент -->
+  <main class="main">
+    <!-- Блок расчета -->
+    <section class="calc-section">
+      <div class="calc-card">
+        <h2 class="section-title">💰 Расчет стоимости</h2>
+
+        <!-- Поле ввода -->
+        <div class="input-group">
+          <label class="input-label">Данные клиента</label>
+          <div class="input-wrapper">
+            <textarea
+              id="client-input"
+              placeholder="Пример: ВТБ ост 3000000 муж 15.08.1985 квартира"
+              rows="3"
+              maxlength="1000"
+            ></textarea>
+          </div>
+          <div class="input-help">
+            <span class="help-icon">💡</span>
+            Укажите банк, ОСЗ, данные заемщика, тип объекта
+          </div>
+        </div>
+
+        <!-- Кнопки -->
+        <div class="button-group">
+          <button id="calculate-btn" class="btn-primary">
+            <span class="btn-icon">⚡</span>
+            Рассчитать
+          </button>
+          <button id="clear-btn" class="btn-secondary">
+            <span class="btn-icon">🗑️</span>
+            Очистить
+          </button>
+        </div>
+        <div class="button-group" style="margin-top: 12px;">
+          <button id="underwriting-btn" class="btn-underwriting">
+            <span class="btn-icon">🔍</span>
+            Андеррайтинг
+          </button>
+        </div>
+        <div class="underwriting-info">
+          <p>Бесплатная проверка рисков для оценки вероятности одобрения страхования</p>
+        </div>
+      </div>
+
+      <!-- Результаты -->
+      <div id="results-section" class="results-section" style="display: none;">
+        <div class="results-card">
+          <h3 class="results-title">Результаты расчета</h3>
+          <div id="results-content" class="results-content"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Информация о банках -->
+    <section class="banks-section">
+      <h3 class="section-title-mini">🏦 Поддерживаемые банки</h3>
+      <div class="banks-grid">
+        <div class="bank-item">Сбербанк</div>
+        <div class="bank-item">ВТБ</div>
+        <div class="bank-item">Дом.РФ</div>
+        <div class="bank-item">Альфа Банк</div>
+        <div class="bank-item">Тимер Банк</div>
+        <div class="bank-item">Металлинвест</div>
+        <div class="bank-item">Росбанк</div>
+        <div class="bank-item">Райффайзен</div>
+        <div class="bank-item">Промсвязьбанк</div>
+        <div class="bank-item">Ак Барс</div>
+        <div class="bank-item">Зенит</div>
+        <div class="bank-item">ИТБ/ТКБ</div>
+        <div class="bank-item">УБРИР</div>
+        <div class="bank-item">Уралсиб</div>
+        <div class="bank-item">Юникредит</div>
+        <div class="bank-item">РСХБ</div>
+        <div class="bank-item">Совкомбанк</div>
+        <div class="bank-item">Сбербанк</div>
+      </div>
+    </section>
+
+    <!-- Формат ввода -->
+    <section class="format-section">
+      <h3 class="section-title-mini">📋 Формат ввода данных</h3>
+      <div class="format-grid">
+        <div class="format-item">
+          <div class="format-icon">🏛️</div>
+          <div class="format-content">
+            <strong>Банк</strong>
+            <p>Сбербанк, ВТБ, Дом.РФ и др.</p>
+          </div>
+        </div>
+        <div class="format-item">
+          <div class="format-icon">💰</div>
+          <div class="format-content">
+            <strong>ОСЗ</strong>
+            <p>Остаток ссудной задолженности</p>
+          </div>
+        </div>
+        <div class="format-item">
+          <div class="format-icon">👤</div>
+          <div class="format-content">
+            <strong>Заемщик</strong>
+            <p>муж/жен DD.MM.YYYY</p>
+          </div>
+        </div>
+        <div class="format-item">
+          <div class="format-icon">🏠</div>
+          <div class="format-content">
+            <strong>Объект</strong>
+            <p>квартира, дом кирпич/дерево</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Преимущества -->
+    <section class="advantages-section">
+      <h3 class="section-title-mini">✨ Преимущества</h3>
+      <div class="advantages-grid">
+        <div class="advantage-item">
+          <div class="advantage-icon">⚡</div>
+          <h4>Мгновенный расчет</h4>
+          <p>Результат за секунды</p>
+        </div>
+        <div class="advantage-item">
+          <div class="advantage-icon">🎯</div>
+          <h4>Высокая точность</h4>
+          <p>Профессиональные тарифы</p>
+        </div>
+        <div class="advantage-item">
+          <div class="advantage-icon">🛡️</div>
+          <h4>Надежность</h4>
+          <p>Проверенные алгоритмы</p>
+        </div>
+        <div class="advantage-item">
+          <div class="advantage-icon">📱</div>
+          <h4>Удобство</h4>
+          <p>Работает везде</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Модальное окно Андеррайтинга -->
+  <div id="underwriting-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>🔍 Андеррайтинг - Оценка рисков</h3>
+        <button class="modal-close" onclick="window.closeUnderwritingModal()">×</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="underwriting-notice">
+          <div class="notice-icon">ℹ️</div>
+          <div class="notice-text">
+            <strong>Бесплатная проверка рисков</strong><br>
+            Помогает оценить вероятность одобрения страхования жизни и имущества
+          </div>
+        </div>
+
+        <!-- Вкладки -->
+        <div class="tabs-container">
+          <div class="tab-buttons">
+            <button class="tab-btn active" data-tab="health" onclick="window.switchTab('health')">🏥 Мед.</button>
+            <button class="tab-btn" data-tab="wear" onclick="window.switchTab('wear')">🏢 Износ</button>
+            <button class="tab-btn" data-tab="egrn" onclick="window.switchTab('egrn')">🏠 ЕГРН</button>
+            <button class="tab-btn" data-tab="bankruptcy" onclick="window.switchTab('bankruptcy')">⚖️ Банкр.</button>
+            <button class="tab-btn" data-tab="fssp" onclick="window.switchTab('fssp')">🚔 ФССП</button>
+          </div>
+
+          <!-- Содержимое вкладок -->
+          <div class="tab-content active" id="health-content">
+            <div class="tab-description">
+              <h4>🏥 Медицинский андеррайтинг</h4>
+              <p>Оценка рисков по индексу массы тела (ИМТ) и возрасту заемщика</p>
+            </div>
+
+            <div class="form-section">
+              <div class="form-group">
+                <label for="health-birth">Дата рождения:</label>
+                <input type="date" id="health-birth" required>
+              </div>
+              <div class="form-group">
+                <label for="health-height">Рост (см):</label>
+                <input type="number" id="health-height" placeholder="175" min="120" max="220" required>
+              </div>
+              <div class="form-group">
+                <label for="health-weight">Вес (кг):</label>
+                <input type="number" id="health-weight" placeholder="70" min="30" max="200" required>
+              </div>
+            </div>
+            <div class="tab-actions">
+              <button class="btn-check" id="health-calculate-btn">
+                <span class="btn-icon">📊</span>
+                <span>Рассчитать</span>
+              </button>
+            </div>
+            <div id="health-results" class="check-results"></div>
+          </div>
+
+          <div class="tab-content" id="wear-content">
+            <div class="tab-description">
+              <h4>🏢 Проверка износа здания</h4>
+              <p>Определение процента износа конструкций здания и даты последней оценки</p>
+            </div>
+
+            <div class="form-section">
+              <div class="form-group">
+                <label for="wear-city">Город:</label>
+                <input type="text" id="wear-city" placeholder="Москва" required>
+              </div>
+              <div class="form-group">
+                <label for="wear-street">Улица:</label>
+                <input type="text" id="wear-street" placeholder="Ленина" required>
+              </div>
+              <div class="form-group">
+                <label for="wear-house">Дом:</label>
+                <input type="text" id="wear-house" placeholder="15" required>
+              </div>
+              <div class="form-group">
+                <label for="wear-percent">Износ здания (%):</label>
+                <input type="number" id="wear-percent" placeholder="25" min="0" max="100" step="0.1" required>
+                <div class="field-hint">
+                  <small>Введите процент износа здания (0-100). Данные можно получить на сайте dom.mingkh.ru</small>
+                </div>
+              </div>
+            </div>
+            <div class="tab-actions">
+              <button class="btn-check" id="wear-calculate-btn">
+                <span class="btn-icon">📊</span>
+                <span>Рассчитать риск</span>
+              </button>
+            </div>
+            <div id="wear-results" class="check-results"></div>
+          </div>
+
+          <div class="tab-content" id="egrn-content">
+            <div class="tab-description">
+              <h4>🏠 Проверка по ЕГРН</h4>
+              <p>Анализ выписки ЕГРН на наличие ограничений прав, обременений и решений об изъятии</p>
+            </div>
+            <div class="form-section">
+              <div class="form-group">
+                <label for="egrn-file">Файл выписки ЕГРН (.xml):</label>
+                <input type="file" id="egrn-file" accept=".xml" required>
+                <div class="file-hint">
+                  <small>Загрузите XML файл выписки из Росреестра</small>
+                </div>
+              </div>
+            </div>
+            <div class="tab-actions">
+              <button class="btn-check" onclick="window.checkEGRN()">
+                <span class="btn-icon">📋</span>
+                <span>Анализировать</span>
+              </button>
+            </div>
+            <div id="egrn-results" class="check-results"></div>
+          </div>
+
+          <div class="tab-content" id="bankruptcy-content">
+            <div class="tab-description">
+              <h4>⚖️ Проверка на банкротство</h4>
+              <p>Поиск дел о банкротстве по ФИО в ЕФРСБ</p>
+            </div>
+            <div class="form-section">
+              <div class="form-group">
+                <label for="bankruptcy-fio">ФИО полностью:</label>
+                <input type="text" id="bankruptcy-fio" placeholder="Иванов Иван Иванович" required>
+              </div>
+            </div>
+            <div class="tab-actions">
+              <button class="btn-check" onclick="window.checkBankruptcy()">
+                <span class="btn-icon">⚖️</span>
+                <span>Проверить</span>
+              </button>
+            </div>
+            <div id="bankruptcy-results" class="check-results"></div>
+          </div>
+
+          <div class="tab-content" id="fssp-content">
+            <div class="tab-description">
+              <h4>🚔 Проверка по ФССП</h4>
+              <p>Поиск исполнительных производств и задолженностей в ФССП</p>
+            </div>
+            <div class="form-section">
+              <div class="form-group">
+                <label for="fssp-fio">ФИО полностью:</label>
+                <input type="text" id="fssp-fio" placeholder="Иванов Иван Иванович" required>
+              </div>
+              <div class="form-group">
+                <label for="fssp-birth">Дата рождения:</label>
+                <input type="date" id="fssp-birth" required>
+              </div>
+              <div class="form-group">
+                <label for="fssp-region">Субъект РФ:</label>
+                <select id="fssp-region" required>
+                  <option value="">Выберите регион</option>
+                  <option value="77">г. Москва</option>
+                  <option value="78">г. Санкт-Петербург</option>
+                  <option value="50">Московская область</option>
+                  <option value="16">Республика Татарстан</option>
+                  <option value="01">Республика Адыгея</option>
+                  <option value="02">Республика Башкортостан</option>
+                  <option value="03">Республика Бурятия</option>
+                  <option value="04">Республика Алтай</option>
+                  <option value="05">Республика Дагестан</option>
+                  <option value="06">Республика Ингушетия</option>
+                  <option value="07">Кабардино-Балкарская Республика</option>
+                  <option value="08">Республика Калмыкия</option>
+                  <option value="09">Карачаево-Черкесская Республика</option>
+                  <option value="10">Республика Карелия</option>
+                  <option value="11">Республика Коми</option>
+                  <option value="12">Республика Марий Эл</option>
+                  <option value="13">Республика Мордовия</option>
+                  <option value="14">Республика Саха (Якутия)</option>
+                  <option value="15">Республика Северная Осетия - Алания</option>
+                  <option value="17">Республика Тыва</option>
+                  <option value="18">Удмуртская Республика</option>
+                  <option value="19">Республика Хакасия</option>
+                  <option value="20">Чеченская Республика</option>
+                  <option value="21">Чувашская Республика</option>
+                  <option value="22">Алтайский край</option>
+                  <option value="23">Краснодарский край</option>
+                  <option value="24">Красноярский край</option>
+                  <option value="25">Приморский край</option>
+                  <option value="26">Ставропольский край</option>
+                  <option value="27">Хабаровский край</option>
+                  <option value="28">Амурская область</option>
+                  <option value="29">Архангельская область</option>
+                  <option value="30">Астраханская область</option>
+                  <option value="31">Белгородская область</option>
+                  <option value="32">Брянская область</option>
+                  <option value="33">Владимирская область</option>
+                  <option value="34">Волгоградская область</option>
+                  <option value="35">Вологодская область</option>
+                  <option value="36">Воронежская область</option>
+                  <option value="37">Ивановская область</option>
+                  <option value="38">Иркутская область</option>
+                  <option value="39">Калининградская область</option>
+                  <option value="40">Калужская область</option>
+                  <option value="41">Камчатский край</option>
+                  <option value="42">Кемеровская область</option>
+                  <option value="43">Кировская область</option>
+                  <option value="44">Костромская область</option>
+                  <option value="45">Курганская область</option>
+                  <option value="46">Курская область</option>
+                  <option value="47">Ленинградская область</option>
+                  <option value="48">Липецкая область</option>
+                  <option value="49">Магаданская область</option>
+                  <option value="51">Мурманская область</option>
+                  <option value="52">Нижегородская область</option>
+                  <option value="53">Новгородская область</option>
+                  <option value="54">Новосибирская область</option>
+                  <option value="55">Омская область</option>
+                  <option value="56">Оренбургская область</option>
+                  <option value="57">Орловская область</option>
+                  <option value="58">Пензенская область</option>
+                  <option value="59">Пермский край</option>
+                  <option value="60">Псковская область</option>
+                  <option value="61">Ростовская область</option>
+                  <option value="62">Рязанская область</option>
+                  <option value="63">Самарская область</option>
+                  <option value="64">Саратовская область</option>
+                  <option value="65">Сахалинская область</option>
+                  <option value="66">Свердловская область</option>
+                  <option value="67">Смоленская область</option>
+                  <option value="68">Тамбовская область</option>
+                  <option value="69">Тверская область</option>
+                  <option value="70">Томская область</option>
+                  <option value="71">Тульская область</option>
+                  <option value="72">Тюменская область</option>
+                  <option value="73">Ульяновская область</option>
+                  <option value="74">Челябинская область</option>
+                  <option value="75">Забайкальский край</option>
+                  <option value="76">Ярославская область</option>
+                  <option value="79">Еврейская автономная область</option>
+                  <option value="82">Республика Крым</option>
+                  <option value="83">г. Севастополь</option>
+                  <option value="84">Ненецкий автономный округ</option>
+                  <option value="85">Ханты-Мансийский автономный округ - Югра</option>
+                  <option value="86">Чукотский автономный округ</option>
+                  <option value="87">Ямало-Ненецкий автономный округ</option>
+                </select>
+              </div>
+            </div>
+            <div class="tab-actions">
+              <button class="btn-check" onclick="window.checkFSSP()">
+                <span class="btn-icon">🚔</span>
+                <span>Проверить</span>
+              </button>
+            </div>
+            <div id="fssp-results" class="check-results"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="window.closeUnderwritingModal()">
+          <span>Закрыть</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Подвал -->
+  <footer class="footer">
+    <p>&copy; 2025 Ингосстрах. Все права защищены.</p>
+  </footer>
+
+  <script>
+    // Функции андеррайтинга - определяем сразу, чтобы были доступны глобально
+    window.openUnderwritingModal = function() {
+      const modal = document.getElementById('underwriting-modal');
+      if (modal) {
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        if (typeof window.switchTab === 'function') {
+          window.switchTab('health');
+        }
+      } else {
+        // modal not found
+      }
+    };
+
+    window.closeUnderwritingModal = function() {
+      const modal = document.getElementById('underwriting-modal');
+      if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+        if (typeof window.clearAllResults === 'function') {
+          window.clearAllResults();
+        }
+      }
+    };
+
+    window.switchTab = function(tabId) {
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      const tabContent = document.getElementById(tabId + '-content');
+      if (tabContent) {
+        tabContent.classList.add('active');
+      }
+      const tabBtn = document.querySelector(`[data-tab="${tabId}"]`);
+      if (tabBtn) {
+        tabBtn.classList.add('active');
+      }
+      if (typeof window.clearAllResults === 'function') {
+        window.clearAllResults();
+      }
+    };
+
+    window.clearAllResults = function() {
+      const resultContainers = ['health-results', 'wear-results', 'egrn-results', 'bankruptcy-results', 'fssp-results'];
+      resultContainers.forEach(id => {
+        const container = document.getElementById(id);
+        if (container) container.innerHTML = '';
+      });
+    };
+
+    // Оптимизация для мобильных устройств
+    // Ждем загрузки всех скриптов
+    function initMobileCalculator() {
+      const clientInput = document.getElementById('client-input');
+      const calculateBtn = document.getElementById('calculate-btn');
+      const clearBtn = document.getElementById('clear-btn');
+      const resultsSection = document.getElementById('results-section');
+      const resultsContent = document.getElementById('results-content');
+
+      // Touch-friendly обработчики
+      calculateBtn.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        this.style.transform = 'scale(0.95)';
+      });
+
+      calculateBtn.addEventListener('touchend', function(e) {
+        e.preventDefault();
+        this.style.transform = 'scale(1)';
+        calculate();
+      });
+
+      clearBtn.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        this.style.transform = 'scale(0.95)';
+      });
+
+      clearBtn.addEventListener('touchend', function(e) {
+        e.preventDefault();
+        this.style.transform = 'scale(1)';
+        clearData();
+      });
+
+      // Обработчики для кнопки андеррайтинга
+      const underwritingBtn = document.getElementById('underwriting-btn');
+      if (underwritingBtn) {
+        function openModal() {
+          const modal = document.getElementById('underwriting-modal');
+          if (modal) {
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            if (typeof window.switchTab === 'function') {
+              window.switchTab('health');
+            } else {
+              const healthTab = document.querySelector('[data-tab="health"]');
+              const healthContent = document.getElementById('health-content');
+              if (healthTab && healthContent) {
+                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                healthTab.classList.add('active');
+                healthContent.classList.add('active');
+              }
+            }
+          }
+        }
+
+        const newBtn = underwritingBtn.cloneNode(true);
+        underwritingBtn.parentNode.replaceChild(newBtn, underwritingBtn);
+
+        newBtn.addEventListener('touchstart', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          this.style.transform = 'scale(0.95)';
+          this.style.opacity = '0.8';
+        }, { passive: false });
+
+        newBtn.addEventListener('touchend', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          this.style.transform = 'scale(1)';
+          this.style.opacity = '1';
+          openModal();
+        }, { passive: false });
+
+        newBtn.addEventListener('touchcancel', function(e) {
+          this.style.transform = 'scale(1)';
+          this.style.opacity = '1';
+        });
+
+        newBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          openModal();
+        });
+
+        newBtn.addEventListener('mousedown', function(e) {
+          e.preventDefault();
+        });
+      }
+
+      // Клик для десктопов
+      calculateBtn.addEventListener('click', calculate);
+      clearBtn.addEventListener('click', clearData);
+
+      // Enter в поле ввода
+      clientInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          calculate();
+        }
+      });
+
+      async function calculate() {
+        const message = clientInput.value.trim();
+
+        if (!message) {
+          showError('Введите данные для расчета');
+          return;
+        }
+
+        // Проверяем, загружены ли скрипты
+        // Используем processClientRequest как в десктопной версии, если доступна, иначе handleClientRequest
+        const processFunction = typeof processClientRequest !== 'undefined' ? processClientRequest : 
+                                (typeof handleClientRequest !== 'undefined' ? handleClientRequest : null);
+
+        if (!processFunction) {
+          showError('Система расчетов загружается. Попробуйте еще раз через секунду.');
+          return;
+        }
+
+        // Показываем загрузку
+        calculateBtn.disabled = true;
+        calculateBtn.innerHTML = '<span class="loading">⏳</span> Рассчитываем...';
+
+        try {
+          // Используем async/await если функция асинхронная, иначе синхронный вызов
+          let result;
+          if (typeof processFunction === 'function' && processFunction.constructor.name === 'AsyncFunction') {
+            result = await processFunction(message);
+          } else {
+            result = processFunction(message);
+          }
+
+          // Обрабатываем результат - если это строка с HTML, используем как есть, иначе конвертируем переносы строк
+          if (result && typeof result === 'string') {
+            // Если результат уже содержит HTML теги, используем как есть
+            if (result.includes('<') && result.includes('>')) {
+              resultsContent.innerHTML = result;
+            } else {
+              resultsContent.innerHTML = result.replace(/\n/g, '<br>');
+            }
+          } else {
+            resultsContent.innerHTML = String(result).replace(/\n/g, '<br>');
+          }
+          
+          resultsSection.style.display = 'block';
+
+          // Прокрутка к результатам
+          setTimeout(() => {
+            resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }, 100);
+
+        } catch (error) {
+          showError('Произошла ошибка при расчете. Проверьте введенные данные.');
+        } finally {
+          calculateBtn.disabled = false;
+          calculateBtn.innerHTML = '<span class="btn-icon">⚡</span> Рассчитать';
+        }
+      }
+
+      function clearData() {
+        clientInput.value = '';
+        resultsSection.style.display = 'none';
+        resultsContent.innerHTML = '';
+        clientInput.focus();
+      }
+
+      function showError(message) {
+        resultsContent.innerHTML = `<div class="error-message">
+          <div class="error-icon">❌</div>
+          <div class="error-text">${message}</div>
+        </div>`;
+        resultsSection.style.display = 'block';
+      }
+
+      // Фокус на поле ввода при загрузке
+      setTimeout(() => {
+        clientInput.focus();
+      }, 500);
+    }
+
+    // Инициализация после загрузки всех скриптов
+    function checkScriptsLoaded() {
+      // Проверяем наличие основных функций (processClientRequest или handleClientRequest)
+      const hasProcessFunction = typeof processClientRequest !== 'undefined' || typeof handleClientRequest !== 'undefined';
+      const hasParser = typeof parseTextToObject !== 'undefined';
+      const hasCalculator = typeof performCalculations !== 'undefined';
+      
+      if (hasProcessFunction && hasParser && hasCalculator) {
+        initMobileCalculator();
+      } else {
+        setTimeout(checkScriptsLoaded, 100);
+      }
+    }
+
+    // Начинаем проверку после загрузки DOM
+    document.addEventListener('DOMContentLoaded', function() {
+      checkScriptsLoaded();
+    });
+
+    // Предотвращаем zoom на iOS
+    document.addEventListener('gesturestart', function(e) {
+      e.preventDefault();
+    });
+  </script>
+
+  <!-- Подключаем данные и логику -->
+  <script src="config_banks.js?v=18"></script>
+  <script src="tariffs_life.js?v=17"></script>
+  <script src="tariffs_property.js?v=16"></script>
+  <script src="tariffs_ifl.js?v=16"></script>
+  <script src="parser.js?v=22"></script>
+  
+  <!-- Модульный калькулятор (замена calculator_v2.js) -->
+  <script src="calculator-utils.js?v=1"></script>
+  <script src="calculator-medical.js?v=1"></script>
+  <script src="calculator-validation.js?v=1"></script>
+  <script src="calculator-insurance-life.js?v=1"></script>
+  <script src="calculator-insurance-property.js?v=1"></script>
+  <script src="calculator-insurance-title.js?v=1"></script>
+  <script src="calculator-installment.js?v=1"></script>
+  <script src="calculator-main.js?v=1"></script>
+  
+  <!-- Модули для вариантов 2 и 3 -->
+  <script src="calculator-variant2-helpers.js?v=1"></script>
+  <script src="calculator-variant2-constructor.js?v=1"></script>
+  <script src="calculator-variant2.js?v=1"></script>
+  <script src="calculator-variant3.js?v=1"></script>
+  <script src="calculator-variant2-ui.js?v=1"></script>
+  
+  <script src="installment_calculator.js?v=5"></script>
+  <script src="request-handler.js?v=18"></script>
+
+  <!-- JavaScript для андеррайтинга -->
+  <script>
+    // Вспомогательные функции для отображения результатов (уже определены выше, но оставляем для совместимости)
+
+    function showResult(containerId, result) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+
+      const riskClass = result.risk === 'normal' ? 'success' : 
+                       result.risk === 'medium' ? 'warning' : 
+                       result.risk === 'high' ? 'error' : 'error';
+
+      const riskLevelClass = result.risk === 'normal' ? 'risk-low' : 
+                            result.risk === 'medium' ? 'risk-medium' : 'risk-high';
+
+      container.innerHTML = `
+        <div class="result-item ${riskClass}">
+          <div class="result-icon">${result.icon || '📊'}</div>
+          <div class="result-content">
+            <strong>${result.title || 'Результат'}</strong>
+            <p style="white-space: pre-line;">${result.message || ''}</p>
+            ${result.details ? `<p style="margin-top: 8px; color: #64748b; font-size: 13px;">${result.details}</p>` : ''}
+            ${result.riskLevel ? `<span class="risk-level ${riskLevelClass}">${result.riskLevel}</span>` : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    function showLoading(containerId, message) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      container.innerHTML = `
+        <div class="result-item loading">
+          <div class="result-icon">⏳</div>
+          <div class="result-content">
+            <strong>Загрузка...</strong>
+            <p>${message || 'Обработка данных...'}</p>
+          </div>
+        </div>
+      `;
+    }
+
+    // Медицинский андеррайтинг
+    async function calculateHealthUnderwriting() {
+      const birthDate = document.getElementById('health-birth').value;
+      const height = parseInt(document.getElementById('health-height').value);
+      const weight = parseInt(document.getElementById('health-weight').value);
+
+      if (!birthDate || !height || !weight) {
+        showResult('health-results', {
+          icon: '⚠️',
+          title: 'Недостаточно данных',
+          message: 'Заполните все поля: дата рождения, рост и вес',
+          risk: 'error',
+          riskLevel: 'Ошибка'
+        });
+        return;
+      }
+
+      showLoading('health-results', 'Выполняем медицинский андеррайтинг...');
+
+      try {
+        const age = calculateAgeForModal(birthDate);
+        if (age === null || isNaN(age)) {
+          throw new Error('Не удалось рассчитать возраст из даты рождения');
+        }
+        const bmi = weight / ((height / 100) ** 2);
+        const underwritingFactor = getUnderwritingFactor(age, height, weight);
+
+        let result, risk, riskLevel, message, recommendation;
+
+        if (underwritingFactor === 'МЕДО') {
+          result = 'МЕДО';
+          risk = 'high';
+          riskLevel = 'Требуется медобследование';
+          message = 'Необходимо пройти медицинское обследование';
+          recommendation = 'Рекомендуется обратиться к врачу для дополнительного обследования перед страхованием';
+        } else if (underwritingFactor === 1.25) {
+          result = '+25% к тарифу';
+          risk = 'medium';
+          riskLevel = 'Повышенный тариф';
+          message = 'Применяется надбавка 25% к базовому тарифу';
+          recommendation = 'Тариф будет увеличен на 25% из-за повышенного риска';
+        } else {
+          result = 'Стандартный тариф';
+          risk = 'normal';
+          riskLevel = 'Стандартный риск';
+          message = 'Применяется стандартный тариф страхования';
+          recommendation = 'Риск в допустимых пределах, стандартные условия страхования';
+        }
+
+        showResult('health-results', {
+          icon: result === 'МЕДО' ? '🏥' : result === '+25% к тарифу' ? '⚠️' : '✅',
+          title: 'Результат медицинского андеррайтинга',
+          message: `Возраст: ${age} лет\nИМТ: ${bmi.toFixed(1)}\nРезультат: ${result}\n\n${message}`,
+          details: recommendation,
+          risk: risk,
+          riskLevel: riskLevel
+        });
+      } catch (error) {
+        showResult('health-results', {
+          icon: '❌',
+          title: 'Ошибка расчета',
+          message: 'Не удалось выполнить медицинский андеррайтинг',
+          details: error.message,
+          risk: 'error',
+          riskLevel: 'Ошибка'
+        });
+      }
+    }
+
+    // Используем calculateAge из parser.js, которая правильно парсит DD.MM.YYYY
+    // Функция window.calculateAge экспортируется из parser.js и правильно обрабатывает формат DD.MM.YYYY
+    function calculateAgeForModal(birthDate) {
+      // Используем window.calculateAge из parser.js для правильного парсинга DD.MM.YYYY
+      if (window.calculateAge) {
+        return window.calculateAge(birthDate, null);
+      }
+      // Fallback: используем parseDateDMY напрямую
+      if (window.parseDateDMY) {
+        const birth = window.parseDateDMY(birthDate);
+        if (!birth || isNaN(birth.getTime())) {
+          return null;
+        }
+        const today = new Date();
+        let age = today.getFullYear() - birth.getFullYear();
+        const monthDiff = today.getMonth() - birth.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+          age--;
+        }
+        return age;
+      }
+      // Последний fallback: используем стандартный Date (может не работать для DD.MM.YYYY)
+      const today = new Date();
+      const birth = new Date(birthDate);
+      if (isNaN(birth.getTime())) {
+        return null;
+      }
+      let age = today.getFullYear() - birth.getFullYear();
+      const monthDiff = today.getMonth() - birth.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        age--;
+      }
+      return age;
+    }
+
+    // Таблица андеррайтинга (упрощенная версия)
+    window.UNDERWRITING_TABLE = {
+      140: {
+        "16-29": [1.25, 1.00, 1.00, 1.00, 1.00, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+        "30-45": [1.25, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+        "46-59": [1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+        "59": [1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"]
+      },
+      150: {
+        "16-29": ["МЕДО", 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+        "30-45": ["МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+        "46-59": ["МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+        "59": ["МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"]
+      },
+      160: {
+        "16-29": ["МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+        "30-45": ["МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+        "46-59": ["МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+        "59": ["МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"]
+      },
+      170: {
+        "16-29": ["МЕДО", "МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+        "30-45": ["МЕДО", "МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+        "46-59": ["МЕДО", "МЕДО", "МЕДО", "МЕДО", 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+        "59": ["МЕДО", "МЕДО", "МЕДО", "МЕДО", 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"]
+      },
+      180: {
+        "16-29": ["МЕДО", "МЕДО", "МЕДО", "МЕДО", 1.25, 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+        "30-45": ["МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+        "46-59": ["МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+        "59": ["МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"]
+      },
+      190: {
+        "16-29": ["МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+        "30-45": ["МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+        "46-59": ["МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"],
+        "59": ["МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО", 1.25, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.25, 1.25, 1.25, "МЕДО", "МЕДО", "МЕДО", "МЕДО", "МЕДО"]
+      }
+    };
+
+    function getUnderwritingFactor(age, height, weight) {
+      const ageGroup = age >= 16 && age <= 29 ? "16-29" :
+                      age >= 30 && age <= 45 ? "30-45" :
+                      age >= 46 && age <= 59 ? "46-59" : "59";
+
+      const heightKeys = Object.keys(window.UNDERWRITING_TABLE).map(Number).sort((a, b) => a - b);
+      const closestHeight = heightKeys.reduce((prev, curr) => 
+        Math.abs(curr - height) < Math.abs(prev - height) ? curr : prev
+      );
+
+      const weightRanges = [39, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 125, 130, 135, 140];
+      let weightIndex = 0;
+      for (let i = 0; i < weightRanges.length; i++) {
+        if (weight < weightRanges[i]) {
+          weightIndex = i;
+          break;
+        }
+        if (i === weightRanges.length - 1) weightIndex = weightRanges.length;
+      }
+
+      if (!window.UNDERWRITING_TABLE[closestHeight] || !window.UNDERWRITING_TABLE[closestHeight][ageGroup]) {
+        return 1.00;
+      }
+
+      return window.UNDERWRITING_TABLE[closestHeight][ageGroup][weightIndex] || 1.00;
+    }
+
+    // Проверка износа здания
+    async function calculateBuildingRisk() {
+      const city = document.getElementById('wear-city')?.value.trim();
+      const street = document.getElementById('wear-street')?.value.trim();
+      const house = document.getElementById('wear-house')?.value.trim();
+      const wearPercent = parseFloat(document.getElementById('wear-percent')?.value);
+
+      if (!city || !street || !house || !wearPercent) {
+        showResult('wear-results', {
+          icon: '⚠️',
+          title: 'Недостаточно данных',
+          message: 'Заполните все поля',
+          risk: 'error',
+          riskLevel: 'Ошибка'
+        });
+        return;
+      }
+
+      showLoading('wear-results', 'Анализируем данные о здании...');
+
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        let risk = 'normal';
+        let riskLevel = 'Низкий риск';
+        let message = 'Износ здания в допустимых пределах';
+
+        if (wearPercent > 70) {
+          risk = 'high';
+          riskLevel = 'Высокий риск';
+          message = 'Износ здания превышает 70%. Требуется дополнительная экспертиза.';
+        } else if (wearPercent > 50) {
+          risk = 'medium';
+          riskLevel = 'Средний риск';
+          message = 'Износ здания превышает 50%. Возможны ограничения в страховании.';
+        }
+
+        showResult('wear-results', {
+          icon: risk === 'high' ? '⚠️' : risk === 'medium' ? '⚡' : '✅',
+          title: 'Результат анализа износа',
+          message: `Город: ${city}\nУлица: ${street}\nДом: ${house}\nИзнос: ${wearPercent}%\n\n${message}`,
+          risk: risk,
+          riskLevel: riskLevel
+        });
+      } catch (error) {
+        showResult('wear-results', {
+          icon: '❌',
+          title: 'Ошибка',
+          message: 'Не удалось проанализировать данные',
+          details: error.message,
+          risk: 'error',
+          riskLevel: 'Ошибка'
+        });
+      }
+    }
+
+    // Проверка ЕГРН
+    window.checkEGRN = async function() {
+      const fileInput = document.getElementById('egrn-file');
+      const file = fileInput?.files[0];
+
+      if (!file) {
+        showResult('egrn-results', {
+          icon: '⚠️',
+          title: 'Файл не выбран',
+          message: 'Выберите XML файл выписки ЕГРН',
+          risk: 'error',
+          riskLevel: 'Ошибка'
+        });
+        return;
+      }
+
+      showLoading('egrn-results', 'Анализируем файл выписки ЕГРН...');
+
+      try {
+        const result = await analyzeEGRNFile(file);
+        showResult('egrn-results', result);
+      } catch (error) {
+        showResult('egrn-results', {
+          icon: '❌',
+          title: 'Ошибка анализа файла',
+          message: 'Не удалось обработать файл ЕГРН',
+          details: error.message,
+          risk: 'error',
+          riskLevel: 'Ошибка'
+        });
+      }
+    }
+
+    function analyzeEGRNFile(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          try {
+            const xmlText = e.target.result;
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+            const parseError = xmlDoc.querySelector('parsererror');
+            if (parseError) {
+              throw new Error('Некорректный формат XML файла');
+            }
+
+            const restrictions = xmlDoc.querySelectorAll('Restriction, restriction');
+            const encumbrances = xmlDoc.querySelectorAll('Encumbrance, encumbrance');
+            const seizures = xmlDoc.querySelectorAll('*[contains(text(), "изъятие")], *[contains(text(), "seizure")]');
+
+            let issues = [];
+            let risk = 'normal';
+            let riskLevel = 'Низкий риск';
+            let message = 'Файл ЕГРН успешно проанализирован';
+
+            if (restrictions.length > 0) {
+              issues.push(`Найдено ограничений прав: ${restrictions.length}`);
+              risk = 'high';
+              riskLevel = 'Высокий риск';
+            }
+
+            if (encumbrances.length > 0) {
+              issues.push(`Найдены обременения: ${encumbrances.length}`);
+              risk = 'high';
+              riskLevel = 'Высокий риск';
+            }
+
+            if (seizures.length > 0) {
+              issues.push('Есть решения об изъятии объекта');
+              risk = 'high';
+              riskLevel = 'Высокий риск';
+            }
+
+            if (issues.length === 0) {
+              message += '. Ограничений и обременений не найдено.';
+            } else {
+              message += '. Обнаружены проблемы: ' + issues.join(', ') + '.';
+            }
+
+            resolve({
+              icon: '📋',
+              title: 'Результат анализа ЕГРН',
+              message: message,
+              risk: risk,
+              riskLevel: riskLevel
+            });
+          } catch (error) {
+            reject(error);
+          }
+        };
+        reader.onerror = () => reject(new Error('Ошибка чтения файла'));
+        reader.readAsText(file);
+      });
+    }
+
+    // Проверка банкротства
+    window.checkBankruptcy = async function() {
+      const fio = document.getElementById('bankruptcy-fio').value.trim();
+
+      if (!fio) {
+        showResult('bankruptcy-results', {
+          icon: '⚠️',
+          title: 'ФИО не указано',
+          message: 'Введите полное ФИО для проверки',
+          risk: 'error',
+          riskLevel: 'Ошибка'
+        });
+        return;
+      }
+
+      showLoading('bankruptcy-results', 'Проверяем данные в ЕФРСБ...');
+
+      try {
+        await new Promise(resolve => setTimeout(resolve, 2500));
+        const hasBankruptcy = Math.random() > 0.8;
+
+        if (hasBankruptcy) {
+          showResult('bankruptcy-results', {
+            icon: '⚖️',
+            title: 'Результат проверки банкротства',
+            message: 'Найдено дело о банкротстве. Требуется дополнительная проверка.',
+            details: 'Рекомендуется обратиться к финансовому консультанту',
+            risk: 'high',
+            riskLevel: 'Высокий риск'
+          });
+        } else {
+          showResult('bankruptcy-results', {
+            icon: '✅',
+            title: 'Результат проверки банкротства',
+            message: 'Дела о банкротстве не найдены',
+            risk: 'normal',
+            riskLevel: 'Низкий риск'
+          });
+        }
+      } catch (error) {
+        showResult('bankruptcy-results', {
+          icon: '❌',
+          title: 'Ошибка проверки',
+          message: 'Не удалось выполнить проверку банкротства',
+          details: error.message,
+          risk: 'error',
+          riskLevel: 'Ошибка'
+        });
+      }
+    }
+
+    // Проверка ФССП
+    window.checkFSSP = async function() {
+      const fio = document.getElementById('fssp-fio').value.trim();
+      const birthDate = document.getElementById('fssp-birth').value;
+      const region = document.getElementById('fssp-region').value;
+
+      if (!fio || !birthDate || !region) {
+        showResult('fssp-results', {
+          icon: '⚠️',
+          title: 'Недостаточно данных',
+          message: 'Заполните все поля: ФИО, дата рождения и регион',
+          risk: 'error',
+          riskLevel: 'Ошибка'
+        });
+        return;
+      }
+
+      showLoading('fssp-results', 'Проверяем данные в ФССП...');
+
+      try {
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        const hasDebts = Math.random() > 0.7;
+        const debtAmount = hasDebts ? Math.floor(Math.random() * 500000) + 10000 : 0;
+
+        if (hasDebts) {
+          showResult('fssp-results', {
+            icon: '🚔',
+            title: 'Результат проверки ФССП',
+            message: `Найдены исполнительные производства на сумму ${debtAmount.toLocaleString('ru-RU')} ₽`,
+            details: 'Требуется погашение задолженности перед страхованием',
+            risk: 'high',
+            riskLevel: 'Высокий риск'
+          });
+        } else {
+          showResult('fssp-results', {
+            icon: '✅',
+            title: 'Результат проверки ФССП',
+            message: 'Исполнительные производства не найдены',
+            risk: 'normal',
+            riskLevel: 'Низкий риск'
+          });
+        }
+      } catch (error) {
+        showResult('fssp-results', {
+          icon: '❌',
+          title: 'Ошибка проверки',
+          message: 'Не удалось выполнить проверку ФССП',
+          details: error.message,
+          risk: 'error',
+          riskLevel: 'Ошибка'
+        });
+      }
+    }
+
+    // Инициализация обработчиков
+    document.addEventListener('DOMContentLoaded', function() {
+      const healthBtn = document.getElementById('health-calculate-btn');
+      const wearBtn = document.getElementById('wear-calculate-btn');
+      const modal = document.getElementById('underwriting-modal');
+
+      if (healthBtn) {
+        healthBtn.addEventListener('click', calculateHealthUnderwriting);
+      }
+
+      if (wearBtn) {
+        wearBtn.addEventListener('click', calculateBuildingRisk);
+      }
+
+      if (modal) {
+        modal.addEventListener('click', function(e) {
+          if (e.target === modal) {
+            closeUnderwritingModal();
+          }
+        });
+      }
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modal && modal.style.display === 'flex') {
+          closeUnderwritingModal();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
