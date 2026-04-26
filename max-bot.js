@@ -521,6 +521,12 @@ const lastClientMessage = new Map(); // chatId -> messageId
 // Флаг — уже запланирован ответ в этот чат (чтобы не отвечать дважды)
 const pendingReply = new Set(); // chatId
 
+// Флаг паузы — управляется командами /pause и /resume
+let botPaused = false;
+
+// ID администратора — только он может управлять ботом командами
+const ADMIN_IDS = ['7279375'];
+
 function send(opcode, payload, cmd = 0) {
   if (ws && ws.readyState === WebSocket.OPEN) {
     const msg = JSON.stringify({ ver: 11, cmd, seq: seq++, opcode, payload });
@@ -616,6 +622,29 @@ function connect() {
         // Игнорируем сообщения от сотрудников (список в staff.json)
         let staffIds = [];
         try { staffIds = require('./staff.json').ids.map(String); } catch(e) {}
+
+        // Команды управления ботом — только от администратора
+        if (ADMIN_IDS.includes(String(sender))) {
+          const cmd = (text || '').trim().toLowerCase();
+          if (cmd === '/pause') {
+            botPaused = true;
+            send(64, { chatId, message: { text: '⏸ Бот на паузе. Напиши /resume чтобы продолжить.', cid: -Date.now(), elements: [], attaches: [] }, notify: false });
+            console.log('⏸ Бот поставлен на паузу администратором');
+            return;
+          }
+          if (cmd === '/resume') {
+            botPaused = false;
+            send(64, { chatId, message: { text: '▶️ Бот возобновил работу.', cid: -Date.now(), elements: [], attaches: [] }, notify: false });
+            console.log('▶️ Бот возобновил работу');
+            return;
+          }
+          if (cmd === '/status') {
+            const status = botPaused ? '⏸ На паузе' : '▶️ Работает';
+            send(64, { chatId, message: { text: `Статус бота: ${status}`, cid: -Date.now(), elements: [], attaches: [] }, notify: false });
+            return;
+          }
+        }
+
         if (staffIds.includes(String(sender))) {
           console.log(`⏭ Сообщение от сотрудника (${sender}), пропускаю`);
           // Если сотрудник написал — значит он берёт этот чат, добавляем последнее сообщение клиента
@@ -654,6 +683,11 @@ function connect() {
 
         if (pdfAttach) {
           console.log(`📎 PDF файл: ${pdfAttach.name}`);
+          // Проверяем паузу
+          if (botPaused) {
+            console.log('⏸ БОТ НА ПАУЗЕ — PDF пропускаю');
+            return;
+          }
           // Если в этом чате уже запланирован ответ (на текстовое сообщение) — не отвечаем на PDF
           if (pendingReply.has(chatId)) {
             console.log(`⏭ Уже запланирован ответ в чат ${chatId}, PDF пропускаю`);
@@ -773,6 +807,12 @@ function connect() {
 
         // Сохраняем текст в кэш для последующей связки с PDF
         chatTextCache.set(chatId, { text: normalizedText, time: Date.now() });
+
+        // Проверяем паузу — если botPaused, бот молчит
+        if (botPaused) {
+          console.log('⏸ БОТ НА ПАУЗЕ (напиши /resume чтобы продолжить)');
+          return;
+        }
 
         const response = runCalculation(normalizedText);
         if (!response) { console.log('⏭ Не запрос расчёта, пропускаю'); return; }
