@@ -1,0 +1,12 @@
+{
+  "name": "ingos-mortgage-calculator",
+  "version": "1.0.0",
+  "private": true,
+  "main": "max-bot.js",
+  "scripts": {
+    "start": "node max-bot.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
