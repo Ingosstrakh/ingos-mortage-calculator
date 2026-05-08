@@ -106,6 +106,11 @@ function connect() {
         console.log('📨 Автоответчик активен. Жду сообщений...');
       }
 
+      // Логируем все входящие opcodes для отладки
+      if (opcode !== 1 && opcode !== 19) {
+        console.log(`📡 opcode=${opcode} cmd=${cmd}`);
+      }
+
       // Входящее сообщение
       if (opcode === 128 && payload?.message) {
         const message = payload.message;
@@ -114,17 +119,23 @@ function connect() {
         const text = message.text || '';
         const messageId = message.id;
 
+        console.log(`📩 opcode=128 chatId=${chatId} sender=${sender} botUserId=${botUserId} text="${text.substring(0,40)}"`);
+
         // Игнорируем свои сообщения
-        if (botUserId && sender === botUserId) return;
+        if (botUserId && sender === botUserId) {
+          console.log(`⏭ Своё сообщение, пропускаю`);
+          return;
+        }
 
         // Игнорируем пустые сообщения
-        if (!text && (!message.attaches || message.attaches.length === 0)) return;
+        if (!text && (!message.attaches || message.attaches.length === 0)) {
+          console.log(`⏭ Пустое сообщение, пропускаю`);
+          return;
+        }
 
         // Определяем тип чата
-        // В Max личный чат — chatId совпадает с userId собеседника
-        // или chatId < 0 (личный) vs chatId > 0 (групповой/канал)
-        // Дополнительно проверяем по структуре payload
         const isPersonal = isPersonalChat(chatId, sender);
+        console.log(`🔍 isPersonal=${isPersonal} (chatId=${chatId})`);
 
         if (!isPersonal) {
           console.log(`⏭ Групповой чат ${chatId}, пропускаю`);
@@ -174,34 +185,18 @@ function connect() {
 
 // ============================================================
 // ОПРЕДЕЛЕНИЕ ЛИЧНОГО ЧАТА
-// В Max личные чаты имеют отрицательный или маленький chatId
-// Групповые чаты — большие положительные числа
+// В Max мессенджере:
+//   Личный чат  — chatId ПОЛОЖИТЕЛЬНЫЙ (равен userId собеседника)
+//   Групповой   — chatId ОТРИЦАТЕЛЬНЫЙ (большое отрицательное число)
 // ============================================================
 function isPersonalChat(chatId, senderId) {
-  // Если chatId совпадает с senderId — это личный чат
-  if (String(chatId) === String(senderId)) return true;
-
-  // Личные чаты в Max обычно имеют chatId равный userId собеседника
-  // Групповые чаты имеют отдельный большой ID
-  // Простая эвристика: если chatId < 100000000 — скорее всего личный
-  // Но это ненадёжно, поэтому используем другой признак:
-  // В групповом чате sender != chatId всегда
-  // В личном чате chatId == userId одного из участников
-
   const chatIdNum = Number(chatId);
-  const senderIdNum = Number(senderId);
 
-  // Если chatId отрицательный — это точно не личный (группа/канал)
+  // Отрицательный chatId — всегда группа/канал
   if (chatIdNum < 0) return false;
 
-  // Если chatId совпадает с senderId — личный
-  if (chatIdNum === senderIdNum) return true;
-
-  // Если chatId совпадает с botUserId — личный (бот пишет себе)
-  if (botUserId && chatIdNum === Number(botUserId)) return true;
-
-  // Иначе считаем групповым (безопаснее)
-  return false;
+  // Положительный chatId — личный чат
+  return true;
 }
 
 // ============================================================
