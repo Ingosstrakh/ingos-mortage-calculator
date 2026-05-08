@@ -12,7 +12,7 @@ const WebSocket = require('ws');
 // ============================================================
 const CONFIG = {
   // Токен бота (вставь свой)
-  token: process.env.MAX_TOKEN || 'An_Sx6HQ9HDinL1hF1fpktLNK_inxrJQ4A00_0k4IjymndOaj1i3bBH-rxUs5De9McFbWdJ0odCchV_D6eiN5wj57gwjfA9QM81alzB0dYDP2XZqocytgdHbA36WYZzL4loQdgQEWvf15XmrOzf2-ZMXU_LjLBHaBMTJ2Vo5clpXm5kbKk0abz1FaWK8W2uucbypciZYETE_hK2t6yKaV_OOCcGxwCGUJnBBQgkz0YuLW1JCsieufAdfWDEZknP9YPck5XOM6mRdRY2Nj5N1Je3Zl5oFKqQHDhbzIIdAdKqvflfh30-hSK9rvmq_oBuyp0EsL80w-kIg2Wt1ONiGqJ0hAinQdtdB7PqJCeOug2p_WoTzs_kZD9i_IZwJrsQnTLkCz5hgttENC2hF4bpJnXdOToVD6usli4vD55nY0wB5IoOyvV4USx1FECtkQbvY87oFNboiGrBqD9YUDVd-af9aDbXVaC3aAL-rqL18oi3if13vLdzZBiyEakxIa23Z-rSNZh2ina4RJnIh3HGNg5KpDhjrUrPPnjspl-e1C555J9gSAo3S-1PwDZbt33div9qqnEByKDmV8AtYAHabzEqdcLuFgoWI1f1wvS97KQ1cc9RCjYRkqwwbScTPvMIf-E4REXY1aKJc99oTAx2aT4LaylSM3bjlQPC0mhopxD6hx8XqeJh-fSHOY5HQiNOUAraQQEc',
+  token: process.env.MAX_TOKEN || 'An_Sx6HQ9HDiMax3GKgBOSuhNSv2hymdkDqyqA-7E9v6_oJpklIMBp_MBiRLtYs5xMhlK3ZUEkEYL_CnnKaeFrfyjXGlECl8HkRrR84UDZq9XE2ZTWLAY8hncELWhwWQwKA2hMObozLsbehDRYFwvo9dqN57CwUY10wbZrjaLv8BBST0MdSoy5Vg1A_o5Qo2nKyglZN314LDLISKNRl7wPG0I2Uwj7carLoLtjv5s1-6iKs_YTrHmChV8mXGt1dRqExNSOhP0hY3mwIiza-j5rJcfAK1b1HBF4BSIqWB6nonc-jynic1f51DbPO2fAxphMSwMb5kcQ5Fj3Kv1Qm6kE2UuUqppKFSuZj1oLQHDxo1Qk-hKGG1btp3pO2PwdTC7Ykfwtqvg2H9a1tQwKi-4lwa1gQ9at01HLx3u40-bQY0xwNBQ6ALy-o_pWOMrRG3AZ1kgSyM069GAwNbZdoVDYQ4T6NT6lc1OzwEd85QvIuBc8Zhob9VLlkrwQbCSbJTj1dUcbxkkvLTw8livly02XXcqwpft2WjW2h5TqA70cR-VR0bkfcp6HzpC0GHtpx5n0KE0jxQfvVvrz5tN2rApw9s5YL16P3QumqYUIP3kgavcRCZfgaVQXr0dz_2nZH-nvklSx4yQ3XqZTv1bfsB_gG5SikEY9gQ5Tx0L9fm-2BcAmkq-I_J-WTFmdBQ1LyoSOAL9jI',
 
   // Текст автоответа
   replyText: `Добрый день, нахожусь не в офисе
@@ -85,13 +85,14 @@ function connect() {
 
     // авторизация
     setTimeout(() => {
+      console.log('⏱ Отправляю opcode=19 с токеном...');
       send(19, {
         token: CONFIG.token,
         chatsCount: 40, chatsSync: 0, contactsSync: 0,
         draftsSync: 0, interactive: true, presenceSync: -1,
       });
       console.log('🔑 Авторизация отправлена');
-    }, 500);
+    }, 1000);
   });
 
   ws.on('message', (raw) => {
@@ -104,10 +105,12 @@ function connect() {
         botUserId = String(payload.userId);
         console.log(`🤖 Bot userId: ${botUserId}`);
         console.log('📨 Автоответчик активен. Жду сообщений...');
+      } else if (opcode === 19) {
+        console.log(`📡 opcode=19 cmd=${cmd} payload=${JSON.stringify(payload).substring(0, 100)}`);
       }
 
       // Логируем все входящие opcodes для отладки
-      if (opcode !== 1 && opcode !== 19) {
+      if (opcode !== 1 && opcode !== 19 && opcode !== 6) {
         console.log(`📡 opcode=${opcode} cmd=${cmd}`);
       }
 
