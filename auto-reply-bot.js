@@ -12,7 +12,7 @@ const WebSocket = require('ws');
 // ============================================================
 const CONFIG = {
   // Токен бота (вставь свой)
-  token: process.env.MAX_TOKEN || 'An_Sx6HQ9HDiMax3GKgBOSuhNSv2hymdkDqyqA-7E9v6_oJpklIMBp_MBiRLtYs5xMhlK3ZUEkEYL_CnnKaeFrfyjXGlECl8HkRrR84UDZq9XE2ZTWLAY8hncELWhwWQwKA2hMObozLsbehDRYFwvo9dqN57CwUY10wbZrjaLv8BBST0MdSoy5Vg1A_o5Qo2nKyglZN314LDLISKNRl7wPG0I2Uwj7carLoLtjv5s1-6iKs_YTrHmChV8mXGt1dRqExNSOhP0hY3mwIiza-j5rJcfAK1b1HBF4BSIqWB6nonc-jynic1f51DbPO2fAxphMSwMb5kcQ5Fj3Kv1Qm6kE2UuUqppKFSuZj1oLQHDxo1Qk-hKGG1btp3pO2PwdTC7Ykfwtqvg2H9a1tQwKi-4lwa1gQ9at01HLx3u40-bQY0xwNBQ6ALy-o_pWOMrRG3AZ1kgSyM069GAwNbZdoVDYQ4T6NT6lc1OzwEd85QvIuBc8Zhob9VLlkrwQbCSbJTj1dUcbxkkvLTw8livly02XXcqwpft2WjW2h5TqA70cR-VR0bkfcp6HzpC0GHtpx5n0KE0jxQfvVvrz5tN2rApw9s5YL16P3QumqYUIP3kgavcRCZfgaVQXr0dz_2nZH-nvklSx4yQ3XqZTv1bfsB_gG5SikEY9gQ5Tx0L9fm-2BcAmkq-I_J-WTFmdBQ1LyoSOAL9jI',
+  token: process.env.MAX_TOKEN || 'An_Sx6HQ9HDidhSR_xPXv87TFe56Ar-vmsVidqrLUxPHtVRTK6UCG3Px0y5zMEY91jBN7jSN0GBOioOqbOxaLjJ8SOxCUzOlgszNwWPG0_AYtYY9fL2DKsnzj6NGAbJfyPGOebjnltFV0tWtwxTySkMUFCpmO2NrrZ-Z7EjBIoVEI-YYMzNMOwM7eEnZVIHCdZt38Rg2RhU1xxCf2GBEQJULT4_lK-vPZmj24y-uLDGNgfWK-rdD83HpVS5yCUt32zYQXUbcQkB_xt7XTK052gLZFohM2VfhOyeUwmsAO4KqCuW2a5Xwz-TR-WX9pudlj8D7eXsSZVWPsxK2iqa2oF3OZZKom55qQt1pCL62wQqA3h5amvxNHQyXTx97jMgMgapCIAm7cGojHYxHSvO17vn5uvemqb7yoH5oD8PoL1LEsYM17uNRIIlDZuMpONWuHS6wm71sotCipMuK52dX4LKm05J3XNkfGNYw0iiUtfOIxXJqEbpLb147hFM1GoKR3ZRPjTEf6GA74V4iTnqEcJTQ5EM4gdiXZg5MKMrEIkAjp0Bi67Z3MpNrCgMQyhxBRtOB-ZJuAEB6pSxNUV90YCX-i7NxNCB_GynnAFPuZTmpvHuhTwU9VxpleupxfbZ0tUr2GBCgN9lLDIy4QSEiab4cW1wRAADVlyMe5vLSmRhsWf5uanTQLBegh4kUsWpPrf0VG4k',
 
   // Текст автоответа
   replyText: `Добрый день, нахожусь не в офисе
@@ -63,8 +63,10 @@ function connect() {
     headers: {
       'Origin': 'https://web.max.ru',
       'Host': 'ws-api.oneme.ru',
-      'User-Agent': 'Mozilla/5.0',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36',
+      'Accept-Language': 'ru-RU,ru;q=0.9',
       'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
     }
   });
 
@@ -78,7 +80,7 @@ function connect() {
       userAgent: {
         deviceType: 'WEB', locale: 'ru', deviceLocale: 'ru',
         osVersion: 'Windows', deviceName: 'Chrome', appVersion: '26.4.7',
-        headerUserAgent: 'Mozilla/5.0',
+        headerUserAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         screen: '1080x1920 1.0x', timezone: 'Europe/Moscow'
       }
     });
@@ -101,16 +103,20 @@ function connect() {
       const { opcode, payload, cmd } = msg;
 
       // Получаем userId бота
-      if (cmd === 1 && opcode === 19 && payload?.userId) {
-        botUserId = String(payload.userId);
-        console.log(`🤖 Bot userId: ${botUserId}`);
-        console.log('📨 Автоответчик активен. Жду сообщений...');
-      } else if (opcode === 19) {
-        console.log(`📡 opcode=19 cmd=${cmd} payload=${JSON.stringify(payload).substring(0, 100)}`);
+      if (opcode === 19 && payload) {
+        // userId может быть в payload.userId или в payload.profile.contact.id
+        const uid = payload.userId || payload.profile?.contact?.id;
+        if (uid) {
+          botUserId = String(uid);
+          console.log(`🤖 Bot userId: ${botUserId}`);
+          console.log('📨 Автоответчик активен. Жду сообщений...');
+        } else if (cmd === 3) {
+          console.log(`❌ Ошибка авторизации: ${payload.error || 'unknown'}`);
+        }
       }
 
-      // Логируем все входящие opcodes для отладки
-      if (opcode !== 1 && opcode !== 19 && opcode !== 6) {
+      // Логируем только важные opcodes
+      if (opcode !== 1 && opcode !== 19 && opcode !== 6 && opcode !== 128 && opcode !== 129 && opcode !== 130 && opcode !== 292) {
         console.log(`📡 opcode=${opcode} cmd=${cmd}`);
       }
 
