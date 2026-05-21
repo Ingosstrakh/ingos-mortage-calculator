@@ -48,6 +48,16 @@ function handleClientRequest(clientText) {
       return "🚫 <b>Найдены ошибки в данных:</b><br><br>" + validationErrors.join("<br><br>");
     }
 
+    // Добавляем ручные опции из UI
+    if (typeof window !== 'undefined' && window.currentCalculationOptions) {
+      if (window.currentCalculationOptions.manualTariff) {
+        parsedData.manualTariff = window.currentCalculationOptions.manualTariff;
+      }
+      if (window.currentCalculationOptions.hasBanya) {
+        parsedData.hasBanya = window.currentCalculationOptions.hasBanya;
+      }
+    }
+
     // Выполняем расчеты
     const result = performCalculations(parsedData);
 
