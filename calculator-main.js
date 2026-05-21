@@ -48,15 +48,6 @@ function handleClientRequest(clientText) {
       return "🚫 <b>Найдены ошибки в данных:</b><br><br>" + validationErrors.join("<br><br>");
     }
 
-    // ДОБАВЛЕНО: Сбор ручных тарифов из UI
-    if (typeof document !== 'undefined') {
-      const banya = document.getElementById('has-banya');
-      if (banya && banya.checked) parsedData.hasBanya = true;
-      const woodTariff = document.getElementById('house-wood-tariff');
-      if (woodTariff) parsedData.manualTariff = woodTariff.value;
-      const flatTariff = document.getElementById('flat-tariff');
-      if (flatTariff) parsedData.manualTariff = flatTariff.value;
-    }
     // Выполняем расчеты
     const result = performCalculations(parsedData);
 
