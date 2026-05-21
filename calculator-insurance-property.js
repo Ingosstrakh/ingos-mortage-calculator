@@ -29,7 +29,16 @@ function calculatePropertyInsurance(data, bankConfig, insuranceAmount) {
 
   // Получаем тариф (для ГПБ учитываем дату КД и комбинацию с жизнью)
   const withLifeInsurance = data.risks && data.risks.life || false;
-  const tariff = (window.getPropertyTariff || getPropertyTariff)(bankConfig.bankName, objectType, data.contractDate, withLifeInsurance);
+  let tariff;
+  if (data.manualTariff && (objectType === 'house_wood' || objectType === 'flat')) {
+    tariff = Number(data.manualTariff);
+  } else {
+    tariff = (window.getPropertyTariff || getPropertyTariff)(bankConfig.bankName, objectType, data.contractDate, withLifeInsurance);
+  }
+  // Для дома кирпич с баней — тариф * 1.23
+  if (objectType === 'house_brick' && data.hasBanya) {
+    tariff = tariff * 1.23;
+  }
   if (!tariff) {
     return {
       output: `<b>Страхование имущества:</b> тариф для типа объекта не найден<br><br>`,
