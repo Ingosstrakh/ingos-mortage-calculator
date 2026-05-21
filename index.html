@@ -256,25 +256,33 @@
 
   <!-- Подключаем данные -->
   <script defer src="config_banks.js?v=13"></script>
-<script defer src="tariffs_life.js?v=12"></script>
-<script defer src="tariffs_property.js?v=12"></script>
-<script defer src="tariffs_ifl.js?v=12"></script>
-<script defer src="parser.js?v=18"></script>
-<script defer src="installment_calculator.js?v=4"></script>
-<script defer src="calculator-utils.js?v=1"></script>
-<script defer src="calculator-medical.js?v=1"></script>
-<script defer src="calculator-validation.js?v=1"></script>
-<script defer src="calculator-insurance-life.js?v=1"></script>
-<script defer src="calculator-insurance-property.js?v=1"></script>
-<script defer src="calculator-insurance-title.js?v=1"></script>
-<script defer src="calculator-installment.js?v=1"></script>
-<script defer src="calculator-main.js?v=1"></script>
-<script defer src="calculator-variant2-helpers.js?v=1"></script>
-<script defer src="calculator-variant2-constructor.js?v=1"></script>
-<script defer src="calculator-variant2.js?v=1"></script>
-<script defer src="calculator-variant3.js?v=1"></script>
-<script defer src="calculator-variant2-ui.js?v=1"></script>
-<script defer src="request-handler.js?v=18"></script>
+  <script defer src="tariffs_life.js?v=12"></script>
+  <script defer src="tariffs_property.js?v=12"></script>
+  <script defer src="tariffs_ifl.js?v=12"></script>
+
+  <!-- Логика - НОВЫЕ МОДУЛИ -->
+  <script defer src="parser.js?v=18"></script>
+  <script defer src="installment_calculator.js?v=4"></script>
+  
+  <!-- Модульный калькулятор (замена calculator_v2.js) -->
+  <script defer src="calculator-utils.js?v=1"></script>
+  <script defer src="calculator-medical.js?v=1"></script>
+  <script defer src="calculator-validation.js?v=1"></script>
+  <script defer src="calculator-insurance-life.js?v=1"></script>
+  <script defer src="calculator-insurance-property.js?v=1"></script>
+  <script defer src="calculator-insurance-title.js?v=1"></script>
+  <script defer src="calculator-installment.js?v=1"></script>
+  <script defer src="calculator-main.js?v=1"></script>
+  
+  <!-- Модули для вариантов 2 и 3 -->
+  <script defer src="calculator-variant2-helpers.js?v=1"></script>
+  <script defer src="calculator-variant2-constructor.js?v=1"></script>
+  <script defer src="calculator-variant2.js?v=1"></script>
+  <script defer src="calculator-variant3.js?v=1"></script>
+  <script defer src="calculator-variant2-ui.js?v=1"></script>
+  
+  <!-- Обработчик запросов -->
+  <script defer src="request-handler.js?v=18"></script>
 
 </head>
 
@@ -349,7 +357,22 @@
                 <span class="help-icon">💡</span>
                 Укажите: банк, ОСЗ, данные заемщика, тип объекта
               </div>
-              <div id="custom-tariff-options" style="margin: 16px 0;"></div>
+            </div>
+
+            <!-- Опции тарифа -->
+            <div id="custom-tariff-options" style="display: none; margin-bottom: 15px; padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+              <div id="banya-option" style="display: none; margin-bottom: 10px;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                  <input type="checkbox" id="has-banya" style="width: 18px; height: 18px; cursor: pointer;">
+                  <span style="font-size: 14px; color: #1e293b;">Есть баня (коэффициент 1.23)</span>
+                </label>
+              </div>
+              <div id="manual-tariff-option" style="display: none;">
+                <label style="display: block; font-size: 13px; color: #64748b; margin-bottom: 5px;">Тариф, %</label>
+                <select id="manual-tariff" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; background: white;">
+                  <option value="">Базовый 0.1%</option>
+                </select>
+              </div>
             </div>
 
             <!-- Кнопки -->
@@ -543,8 +566,44 @@
       const clearBtn = document.getElementById('clear-btn');
       const resultsSection = document.getElementById('results-section');
       const resultsContent = document.getElementById('results-content');
+      const customTariffOptions = document.getElementById('custom-tariff-options');
+      const banyaOption = document.getElementById('banya-option');
+      const manualTariffOption = document.getElementById('manual-tariff-option');
+      const hasBanyaCheckbox = document.getElementById('has-banya');
+      const manualTariffSelect = document.getElementById('manual-tariff');
 
       // Список банков теперь статический
+
+      // Обновление опций тарифа на основе текста
+      function updateTariffOptions() {
+        const text = clientInput.value.toLowerCase();
+        const hasBrick = /кирп/.test(text);
+        const hasWood = /дерев/.test(text);
+        const hasHouse = /дом|таун/.test(text);
+        const hasFlat = /кварт|кв-ра|кв\./.test(text);
+
+        // Сброс
+        customTariffOptions.style.display = 'none';
+        banyaOption.style.display = 'none';
+        manualTariffOption.style.display = 'none';
+        hasBanyaCheckbox.checked = false;
+        manualTariffSelect.innerHTML = '<option value="">Базовый 0.1%</option>';
+
+        if (hasHouse && hasBrick) {
+          customTariffOptions.style.display = 'block';
+          banyaOption.style.display = 'block';
+        } else if (hasHouse && hasWood) {
+          customTariffOptions.style.display = 'block';
+          manualTariffOption.style.display = 'block';
+          manualTariffSelect.innerHTML = '<option value="">Базовый 0.43%</option><option value="0.45">0.45%</option><option value="0.46">0.46%</option><option value="0.47">0.47%</option><option value="0.48">0.48%</option><option value="0.49">0.49%</option><option value="0.50">0.50%</option><option value="0.51">0.51%</option><option value="0.52">0.52%</option><option value="0.53">0.53%</option><option value="0.54">0.54%</option><option value="0.55">0.55%</option><option value="0.56">0.56%</option><option value="0.57">0.57%</option><option value="0.58">0.58%</option><option value="0.59">0.59%</option><option value="0.60">0.60%</option>';
+        } else if (hasFlat) {
+          customTariffOptions.style.display = 'block';
+          manualTariffOption.style.display = 'block';
+          manualTariffSelect.innerHTML = '<option value="">Базовый 0.1%</option><option value="0.12">0.12%</option><option value="0.13">0.13%</option><option value="0.14">0.14%</option><option value="0.15">0.15%</option>';
+        }
+      }
+
+      clientInput.addEventListener('input', updateTariffOptions);
 
       // Обработчик кнопки расчета
       calculateBtn.addEventListener('click', async function() {
@@ -560,6 +619,14 @@
         calculateBtn.innerHTML = '<span class="btn-icon">⏳</span><span>Рассчитываем...</span>';
 
         try {
+          // Собираем ручные опции из UI
+          const manualTariff = document.getElementById('manual-tariff').value;
+          const hasBanya = document.getElementById('has-banya').checked;
+          window.currentCalculationOptions = {
+            manualTariff: manualTariff ? parseFloat(manualTariff) : null,
+            hasBanya: hasBanya
+          };
+
           const result = await processClientRequest(message);
 
           // Показываем результаты
@@ -658,31 +725,6 @@
       // Фокус на поле ввода при загрузке
       clientInput.focus();
 
-      // === Динамический UI для тарифа и бани ===
-      const customOptions = document.getElementById('custom-tariff-options');
-      if (customOptions) {
-        clientInput.addEventListener('input', function() {
-          const text = clientInput.value.toLowerCase();
-          let html = '';
-          // Дом кирпич — баня
-          if (/дом.*кирпич/.test(text)) {
-            html += '<label style="margin-right:16px;"><input type="checkbox" id="has-banya"> Есть баня (тариф × 1.23)</label>';
-          }
-          // Дом дерево — выбор тарифа
-          if (/дом.*дерев/.test(text)) {
-            html += '<label style="margin-right:16px;">Тариф: <select id="house-wood-tariff">' +
-              [0.45,0.46,0.47,0.48,0.49,0.5,0.51,0.52,0.53,0.54,0.55,0.56,0.57,0.58,0.59,0.6].map(v => `<option value="${v}">${v.toFixed(2)}%</option>`).join('') +
-              '</select></label>';
-          }
-          // Квартира — выбор тарифа
-          if (/квартира|flat/.test(text)) {
-            html += '<label>Тариф: <select id="flat-tariff">' +
-              [0.12,0.13,0.14,0.15].map(v => `<option value="${v}">${v.toFixed(2)}%</option>`).join('') +
-              '</select></label>';
-          }
-          customOptions.innerHTML = html;
-        });
-      }
     });
   </script>
 
