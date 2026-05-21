@@ -749,12 +749,6 @@ function parseTextToObject(rawText) {
     }
   }
 
-  // ДОБАВЛЕНО: если есть "мужчина" или "женщина" в тексте, а у borrower нет пола, то выставить
-  if (result.borrowers.length > 0 && !result.borrowers[0].gender) {
-    if (/\bмужчина\b/i.test(text)) result.borrowers[0].gender = 'male';
-    if (/\bженщина\b/i.test(text)) result.borrowers[0].gender = 'female';
-  }
-
   // 5) Risks detection - сначала определяем явно указанные риски
   let hasExplicitRiskMention = false;
 
@@ -801,8 +795,8 @@ function parseTextToObject(rawText) {
   // 5) object type (перенесено вверх для правильного определения рисков)
   if (/(таунхаус|таун)/i.test(text)) result.objectType = 'townhouse';
   else if (/(апарт|апартам|апартаменты)/i.test(text)) result.objectType = 'apartment';
-  else if (/(кварти|кв[^а-яё]|кв-|кв |квар|кв-ра|кв\.|кв$|квартира|flat)/i.test(text)) result.objectType = 'flat';
-  else if (/(дом|жилой дом|частный дом|house)/i.test(text)) {
+  else if (/(кварти|кв[^а-яё]|кв-|кв |квар|кв-ра)/i.test(text)) result.objectType = 'flat';
+  else if (/(дом|жилой дом|частный дом)/i.test(text)) {
     // Определяем тип дома по материалу
     if (/(кирпич|блок|блоки|железобетон|ж\/б)/i.test(text)) result.objectType = 'house_brick';
     else if (/(дерев|древес|каркас|брус)/i.test(text)) result.objectType = 'house_wood';
