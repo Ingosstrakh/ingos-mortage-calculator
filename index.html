@@ -357,6 +357,7 @@
                 <span class="help-icon">💡</span>
                 Укажите: банк, ОСЗ, данные заемщика, тип объекта
               </div>
+              <div id="custom-tariff-options" style="margin: 16px 0;"></div>
             </div>
 
             <!-- Кнопки -->
@@ -665,6 +666,31 @@
       // Фокус на поле ввода при загрузке
       clientInput.focus();
 
+      // === Динамический UI для тарифа и бани ===
+      const customOptions = document.getElementById('custom-tariff-options');
+      if (customOptions) {
+        clientInput.addEventListener('input', function() {
+          const text = clientInput.value.toLowerCase();
+          let html = '';
+          // Дом кирпич — баня
+          if (/дом.*кирпич/.test(text)) {
+            html += '<label style="margin-right:16px;"><input type="checkbox" id="has-banya"> Есть баня (тариф × 1.23)</label>';
+          }
+          // Дом дерево — выбор тарифа
+          if (/дом.*дерев/.test(text)) {
+            html += '<label style="margin-right:16px;">Тариф: <select id="house-wood-tariff">' +
+              [0.45,0.46,0.47,0.48,0.49,0.5,0.51,0.52,0.53,0.54,0.55,0.56,0.57,0.58,0.59,0.6].map(v => `<option value="${v}">${v.toFixed(2)}%</option>`).join('') +
+              '</select></label>';
+          }
+          // Квартира — выбор тарифа
+          if (/квартира|flat/.test(text)) {
+            html += '<label>Тариф: <select id="flat-tariff">' +
+              [0.12,0.13,0.14,0.15].map(v => `<option value="${v}">${v.toFixed(2)}%</option>`).join('') +
+              '</select></label>';
+          }
+          customOptions.innerHTML = html;
+        });
+      }
     });
   </script>
 
