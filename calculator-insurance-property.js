@@ -3,7 +3,7 @@
 // ==========================
 
 // Базовые тарифы имущества
-const PROPERTY_TARIFFS = {
+window.PROPERTY_TARIFFS = {
   base: {
     flat: 0.10,      // квартира
     house_brick: 0.18,
@@ -141,7 +141,6 @@ function getPropertyTariff(bank, type, contractDate = null, withLifeInsurance = 
 }
 
 if (typeof window !== 'undefined') {
-  window.PROPERTY_TARIFFS = PROPERTY_TARIFFS;
   window.getPropertyTariff = getPropertyTariff;
   window.getGPBPropertyTariff = getGPBPropertyTariff;
 }
