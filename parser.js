@@ -445,6 +445,9 @@ function extractBorrowers(text, contractDate = null) {
     // Паттерн: дата, затем пол, затем доля
     const dateGenderSharePattern = /(\d{1,2}[.,/]\d{1,2}[.,/]\d{4})\s*(?:г\.?|гр\.?)?\s+(мужчина|женщина|муж|жен|она|он|мужч)\.?\s*(\d{1,3})\s*%/ig;
 
+    // Паттерн: пол, затем доля, затем дата (мужчина 45% 12.12.1980г)
+    const genderShareDatePattern = /(мужчина|женщина|муж|жен|она|он|мужч)\s+(\d{1,3})\s*%\s+(\d{1,2}\.\d{1,2}\.\d{4})/ig;
+
     // Паттерн: ФИО + дата рождения + доля
     const fioDobSharePattern = /([А-ЯЁ][а-яё]+)\s+[А-ЯЁ][а-яё]+\s+[А-ЯЁ][а-яё]+\s+(\d{1,2}[.,/]\d{1,2}[.,/]\d{4})\s+(\d{1,3})\s*%/g;
 
@@ -504,6 +507,22 @@ function extractBorrowers(text, contractDate = null) {
       const genderWord = m[2].toLowerCase();
       const gender = (genderWord === 'женщина' || genderWord === 'жен' || genderWord === 'она') ? 'f' : 'm';
       const share = Number(m[3]);
+      const ex = found.find(f => f.dob === dob);
+      if (ex) {
+        ex.share = share;
+        if (!ex.gender) ex.gender = gender;
+      } else {
+        found.push({ dob, gender, share, raw: line });
+      }
+    }
+
+    // Обработка: пол, затем доля, затем дата (мужчина 45% 12.12.1980г)
+    const gsdMatches = Array.from(line.matchAll(genderShareDatePattern));
+    for (const m of gsdMatches) {
+      const genderWord = m[1].toLowerCase();
+      const gender = (genderWord === 'женщина' || genderWord === 'жен' || genderWord === 'она') ? 'f' : 'm';
+      const share = Number(m[2]);
+      const dob = m[3];
       const ex = found.find(f => f.dob === dob);
       if (ex) {
         ex.share = share;
@@ -588,15 +607,22 @@ function extractBorrowers(text, contractDate = null) {
       /(\d{1,2}\.\d{1,2}\.\d{4})\s*(?:г\.?|гр\.?)?\s+(женщина)/ig,
       /(\d{1,2}\.\d{1,2}\.\d{4})\s*(?:г\.?|гр\.?)?\s+(мужчина)/ig,
       /(\d{1,2}\.\d{1,2}\.\d{4})\s*(?:г\.?|гр\.?)?\s+(мужч|он\b)/ig,
-      /(\d{1,2}\.\d{1,2}\.\d{4})\s*(?:г\.?|гр\.?)?\s+(жен\b|она\b)/ig
+      /(\d{1,2}\.\d{1,2}\.\d{4})\s*(?:г\.?|гр\.?)?\s+(жен\b|она\b)/ig,
+      // Пол + доля + дата (мужчина 45% 12.12.1980г)
+      /(мужчина|женщина|муж|жен|она|он|мужч)\s+(\d{1,3})\s*%\s+(\d{1,2}\.\d{1,2}\.\d{4})/ig
     ];
 
     for (const pattern of globalPatterns) {
       const matches = Array.from(text.matchAll(pattern));
       for (const match of matches) {
-        let genderWord, dob;
-        // Определяем порядок групп: пол-перед-датой или дата-перед-полом
-        if (/^\d{1,2}\.\d{1,2}\.\d{4}$/.test(match[1])) {
+        let genderWord, dob, share = undefined;
+        // Определяем порядок групп: пол-перед-датой, дата-перед-полом, или пол+доля+дата
+        if (match[3] && /^\d{1,2}\.\d{1,2}\.\d{4}$/.test(match[3])) {
+          // формат "пол + доля + дата" (3 группы)
+          genderWord = match[1].toLowerCase();
+          share = Number(match[2]);
+          dob = match[3];
+        } else if (/^\d{1,2}\.\d{1,2}\.\d{4}$/.test(match[1])) {
           // match[1] — это дата, значит формат "дата перед полом"
           dob = match[1];
           genderWord = match[2].toLowerCase();
@@ -609,7 +635,7 @@ function extractBorrowers(text, contractDate = null) {
 
         // Проверяем, что это не дата кредитного договора
         if (!/\bкд\b/i.test(match[0]) && !found.some(f => f.dob === dob)) {
-          found.push({ dob, gender, share: undefined });
+          found.push({ dob, gender, share });
         }
       }
     }
