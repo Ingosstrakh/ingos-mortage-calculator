@@ -31,7 +31,7 @@ function calculateVariant3(data, bankConfig, insuranceAmount, discountPercent) {
       const isMultipleBorrowers = data.borrowers && data.borrowers.length > 1;
       
       lifeResult.borrowers.forEach((borrower, index) => {
-        const borrowerLabel = isMultipleBorrowers ? `заемщик ${index + 1}` : 'заемщик';
+        const borrowerLabel = isMultipleBorrowers ? (index === 0 ? 'заемщик' : (index === 1 ? 'созаемщик' : `созаемщик ${index}`)) : 'заемщик';
         const basePremium = borrower.premiumWithoutDiscount || borrower.premium;
         const lifePremiumV3 = Math.round(basePremium * (1 - discountRate) * 100) / 100;
         
