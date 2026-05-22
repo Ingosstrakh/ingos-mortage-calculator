@@ -284,7 +284,7 @@ function performCalculations(data) {
           const isRsxb = bankConfig && bankConfig.bankName === "РСХБ";
           const isAlfa = bankConfig && bankConfig.bankName === "Альфа Банк";
           lifeResult.borrowers.forEach((borrower, index) => {
-            const borrowerLabel = `заемщик ${index + 1}`;
+            const borrowerLabel = index === 0 ? 'заемщик' : (index === 1 ? 'созаемщик' : `созаемщик ${index}`);
             output += `жизнь ${borrowerLabel} ${borrower.premium.toLocaleString('ru-RU', {useGrouping: false})}`;
             
             // Для Совкомбанка добавляем текст "без РИСКА СВО"
