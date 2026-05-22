@@ -63,7 +63,7 @@ function calculateSimplifiedVariant2(data, bankConfig, insuranceAmount) {
       const isMultipleBorrowers = data.borrowers && data.borrowers.length > 1;
       const isSovcombank = bankConfig && bankConfig.bankName === "Совкомбанк";
       lifeResult.borrowers.forEach((borrower, index) => {
-        const borrowerLabel = isMultipleBorrowers ? `заемщик ${index + 1}` : 'заемщик';
+        const borrowerLabel = isMultipleBorrowers ? (index === 0 ? 'заемщик' : (index === 1 ? 'созаемщик' : `созаемщик ${index}`)) : 'заемщик';
         const borrowerPremium = borrower.premiumWithDiscount || borrower.premium;
         output += `жизнь ${borrowerLabel} ${borrowerPremium.toLocaleString('ru-RU', {useGrouping: false})}`;
         if (isSovcombank) {
@@ -422,7 +422,7 @@ function formatVariant2Output(data, bankConfig, insuranceAmount, basePremiums, o
       const isSovcombank = bankConfig && bankConfig.bankName === "Совкомбанк";
       
       lifeResult.borrowers.forEach((borrower, index) => {
-        const borrowerLabel = isMultipleBorrowers ? `заемщик ${index + 1}` : 'заемщик';
+        const borrowerLabel = isMultipleBorrowers ? (index === 0 ? 'заемщик' : (index === 1 ? 'созаемщик' : `созаемщик ${index}`)) : 'заемщик';
         const borrowerPremium = borrower.premiumWithDiscount || borrower.premium;
         output += `жизнь ${borrowerLabel} ${borrowerPremium.toLocaleString('ru-RU', {useGrouping: false})}`;
         
