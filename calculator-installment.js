@@ -62,7 +62,7 @@ function formatInstallmentResult(calculationResult) {
   if (data.borrowers && data.borrowers.length > 1) {
     // Несколько заемщиков - показываем каждого отдельно
     data.borrowers.forEach((borrower, index) => {
-      const borrowerLabel = data.borrowers.length > 1 ? `заемщик ${index + 1}` : 'заемщик';
+      const borrowerLabel = data.borrowers.length > 1 ? (index === 0 ? 'заемщик' : (index === 1 ? 'созаемщик' : `созаемщик ${index}`)) : 'заемщик';
       output += `жизнь ${borrowerLabel} ${borrower.variant1.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
       if (index === 0 && data.medicalUnderwritingMessage) {
         output += ` <span style="color: #f59e0b; font-weight: bold;">${data.medicalUnderwritingMessage}</span>`;
@@ -91,7 +91,7 @@ function formatInstallmentResult(calculationResult) {
     // Несколько заемщиков - показываем каждого отдельно
     const hasDiscountRestriction = data.borrowers.some(b => b.requiresMedicalExam || b.medicalUnderwritingFactor === 1.25);
     data.borrowers.forEach((borrower, index) => {
-      const borrowerLabel = data.borrowers.length > 1 ? `заемщик ${index + 1}` : 'заемщик';
+      const borrowerLabel = data.borrowers.length > 1 ? (index === 0 ? 'заемщик' : (index === 1 ? 'созаемщик' : `созаемщик ${index}`)) : 'заемщик';
       output += `жизнь ${borrowerLabel} ${borrower.variant2.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
       if (borrower.requiresMedicalExam || borrower.medicalUnderwritingFactor === 1.25) {
         output += ` <span style="color: #dc3545; font-weight: bold;">(скидки недоступны)</span>`;
