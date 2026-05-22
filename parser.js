@@ -436,14 +436,14 @@ function extractBorrowers(text, contractDate = null) {
     // Ищем заемщиков с долями (формат: "жен 04.06.1981- 50%" или "он - 50%- 13.04.1968")
     const sharePattern = /(мужчина|женщина|муж|жен|она|он|мужч)[^\d]{0,20}(\d{1,2}\.\d{1,2}\.\d{4})[^\d]{0,20}(\d{1,3})\s*%/ig;
 
-    // Специальный паттерн для дат в начале строки: "29.12.1983 мужчина"
-    const dateFirstPattern = /^(\d{1,2}\.\d{1,2}\.\d{4})\s+(мужчина|женщина|муж|жен|она|он|мужч)/ig;
+    // Специальный паттерн для дат в начале строки: "29.12.1983 мужчина" или "23.03.1965г женщина"
+    const dateFirstPattern = /^(\d{1,2}\.\d{1,2}\.\d{4})\s*(?:г\.?|гр\.?)?\s+(мужчина|женщина|муж|жен|она|он|мужч)/ig;
 
-    // Паттерн для даты перед полом: "02.03.1980 ЖЕНЩИНА"
-    const dateBeforeGenderPattern = /(\d{1,2}\.\d{1,2}\.\d{4})\s+(ЖЕНЩИНА|МУЖЧИНА|ЖЕН|МУЖ|ОНА|ОН|МУЖЧ)/ig;
+    // Паттерн для даты перед полом: "02.03.1980 ЖЕНЩИНА" или "23.03.1965г женщина"
+    const dateBeforeGenderPattern = /(\d{1,2}\.\d{1,2}\.\d{4})\s*(?:г\.?|гр\.?)?\s+(ЖЕНЩИНА|МУЖЧИНА|ЖЕН|МУЖ|ОНА|ОН|МУЖЧ)/ig;
 
     // Паттерн: дата, затем пол, затем доля
-    const dateGenderSharePattern = /(\d{1,2}[.,/]\d{1,2}[.,/]\d{4})\s+(мужчина|женщина|муж|жен|она|он|мужч)\.?\s*(\d{1,3})\s*%/ig;
+    const dateGenderSharePattern = /(\d{1,2}[.,/]\d{1,2}[.,/]\d{4})\s*(?:г\.?|гр\.?)?\s+(мужчина|женщина|муж|жен|она|он|мужч)\.?\s*(\d{1,3})\s*%/ig;
 
     // Паттерн: ФИО + дата рождения + доля
     const fioDobSharePattern = /([А-ЯЁ][а-яё]+)\s+[А-ЯЁ][а-яё]+\s+[А-ЯЁ][а-яё]+\s+(\d{1,2}[.,/]\d{1,2}[.,/]\d{4})\s+(\d{1,3})\s*%/g;
@@ -574,6 +574,7 @@ function extractBorrowers(text, contractDate = null) {
     }
     
     const globalPatterns = [
+      // Пол перед датой
       /(женщина)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/ig,
       /(мужчина)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/ig,
       /(мужч)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/ig,
@@ -582,15 +583,29 @@ function extractBorrowers(text, contractDate = null) {
       /(жен)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/ig,
       /(он)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/ig,
       /(муж)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/ig,
-      /(муж)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/ig
+      /(муж)[^0-9]{0,30}(\d{1,2}\.\d{1,2}\.\d{4})/ig,
+      // Дата перед полом (с суффиксом 'г'/'гр')
+      /(\d{1,2}\.\d{1,2}\.\d{4})\s*(?:г\.?|гр\.?)?\s+(женщина)/ig,
+      /(\d{1,2}\.\d{1,2}\.\d{4})\s*(?:г\.?|гр\.?)?\s+(мужчина)/ig,
+      /(\d{1,2}\.\d{1,2}\.\d{4})\s*(?:г\.?|гр\.?)?\s+(мужч|он\b)/ig,
+      /(\d{1,2}\.\d{1,2}\.\d{4})\s*(?:г\.?|гр\.?)?\s+(жен\b|она\b)/ig
     ];
 
     for (const pattern of globalPatterns) {
       const matches = Array.from(text.matchAll(pattern));
       for (const match of matches) {
-        const genderWord = match[1].toLowerCase();
+        let genderWord, dob;
+        // Определяем порядок групп: пол-перед-датой или дата-перед-полом
+        if (/^\d{1,2}\.\d{1,2}\.\d{4}$/.test(match[1])) {
+          // match[1] — это дата, значит формат "дата перед полом"
+          dob = match[1];
+          genderWord = match[2].toLowerCase();
+        } else {
+          // стандартный формат: пол перед датой
+          genderWord = match[1].toLowerCase();
+          dob = match[2];
+        }
         const gender = (genderWord === 'женщина' || genderWord === 'жен' || genderWord === 'она') ? 'f' : 'm';
-        const dob = match[2];
 
         // Проверяем, что это не дата кредитного договора
         if (!/\bкд\b/i.test(match[0]) && !found.some(f => f.dob === dob)) {
@@ -842,28 +857,16 @@ function parseTextToObject(rawText) {
     }
   }
 
-  // 10) normalise borrowers shares if needed (ensure sum 100 unless VTB special case is required externally)
-  const sumShares = result.borrowers.reduce((s,b)=>s+(b.share||0),0);
-  if (result.borrowers.length>0 && sumShares !== 100) {
-    // Distribute equally if none defined
+  // 10) Set shares: if none defined, distribute equally to sum 100; otherwise keep user values as-is
+  if (result.borrowers.length > 0) {
     const anyDefined = result.borrowers.some(b => b.share !== undefined);
     if (!anyDefined) {
       const eq = Math.floor(100 / result.borrowers.length);
-      for (let i=0;i<result.borrowers.length;i++){
-        result.borrowers[i].share = (i === result.borrowers.length-1) ? (100 - eq*(result.borrowers.length-1)) : eq;
-      }
-    } else {
-      // normalize proportionally
-      let total = result.borrowers.reduce((s,b)=>s+(b.share||0),0);
-      if (total === 0) {
-        const eq = Math.floor(100 / result.borrowers.length);
-        for (let i=0;i<result.borrowers.length;i++){
-          result.borrowers[i].share = (i === result.borrowers.length-1) ? (100 - eq*(result.borrowers.length-1)) : eq;
-        }
-      } else {
-        for (const b of result.borrowers) b.share = Math.round((b.share||0) * 100 / total);
+      for (let i = 0; i < result.borrowers.length; i++) {
+        result.borrowers[i].share = (i === result.borrowers.length - 1) ? (100 - eq * (result.borrowers.length - 1)) : eq;
       }
     }
+    // Если доли указаны пользователем — оставляем без изменений (поддержка ВТБ: 100% + 60%)
   }
 
   // 11) If osz missing but property and there is a big number -> guess
