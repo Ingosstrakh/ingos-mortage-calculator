@@ -17,7 +17,7 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
 
   // Проверяем наличие необходимых данных для расчета
   const hasLifeOnlyData = isLifeOnly && window.LICHNIE_VESHCHI_PACKS;
-  const hasPropertyData = window.T_MOYA && window.EXPRESS_PACKS && window.EXPRESS_GO_PACKS && window.T_BASTION;
+  const hasPropertyData = window.T_MOYA && window.EXPRESS_PACKS && window.EXPRESS_GO_PACKS && window.T_BASTION && window.T_DOMBEZ;
   const hasFullData = hasLifeOnlyData || hasPropertyData;
 
   // Проверяем, является ли устройство мобильным
@@ -66,8 +66,8 @@ function calculateVariant2(data, bankConfig, insuranceAmount, variant1Total) {
     output: output,
     total: optimizedResult.currentTotal,
     meta: {
-      constructorSupported: optimizedResult.finalProduct && 
-        (optimizedResult.finalProduct.product === 'moyakvartira' || optimizedResult.finalProduct.product === 'bastion'),
+      constructorSupported: optimizedResult.finalProduct &&
+        (optimizedResult.finalProduct.product === 'moyakvartira' || optimizedResult.finalProduct.product === 'bastion' || optimizedResult.finalProduct.product === 'dombez'),
       product: optimizedResult.finalProduct ? optimizedResult.finalProduct.product : null,
       productName: optimizedResult.finalProduct ? optimizedResult.finalProduct.productName : null,
       insuranceAmount: insuranceAmount,
