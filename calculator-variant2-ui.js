@@ -48,7 +48,7 @@ function ensureVariant2ConstructorModal() {
             <div style="font-weight:600;">Скидка (вариант 2)</div>
             <input id="variant2-discount" type="number" min="0" max="50" step="1" style="width:120px; padding:10px 12px; border:1px solid #d1d5db; border-radius:10px;">
           </div>
-          <div style="font-size:12px; color:#6b7280;">Для Сбербанка можно выбрать скидку на базовые риски (имущество/жизнь/титул) до 50%.</div>
+          <div style="font-size:12px; color:#6b7280;">Сбербанк: 30–50%, остальные банки: 0–30%.</div>
         </div>
 
         <div style="display:grid; gap:8px; padding:12px; border:1px solid #e5e7eb; border-radius:12px; background:#fafafa;">
@@ -279,11 +279,14 @@ function computeMoyaPremiums(insuranceAmount, { finishEnabled, finishSum, movabl
 
 /**
  * Ограничение процента скидки
+ * @param {number} p - входное значение
+ * @param {boolean} isSberbank - признак Сбербанка
  */
-function clampDiscountPercent(p) {
+function clampDiscountPercent(p, isSberbank = false) {
   const n = Number(p);
   if (!Number.isFinite(n)) return null;
-  return Math.max(0, Math.min(50, Math.round(n)));
+  const max = isSberbank ? 50 : 30;
+  return Math.max(0, Math.min(max, Math.round(n)));
 }
 
 /**
@@ -297,21 +300,15 @@ function computeVariant2BasePremiums(parsedData, bankConfig, insuranceAmount, di
   const MIN_PREMIUM_PROPERTY = 600;
   const MIN_PREMIUM_LIFE = 600;
 
-  // ВАЖНО: только для Сбербанка можно менять скидку (0-50%)
-  // Для всех остальных банков скидка фиксированная 30%
-  // НО: если банк запрещает скидки (allow_discount_* = false), то скидки не применяются вообще
+  // Для всех банков можно менять скидку:
+  // - Сбербанк: 0-50%
+  // - Остальные: 0-30%
+  // Если банк запрещает скидки (allow_discount_* = false), скидки не применяются
   const isSberbank = bankConfig && bankConfig.bankName === 'Сбербанк';
-  let discountPercent;
+  let discountPercent = clampDiscountPercent(discountPercentOverride, isSberbank);
+  if (discountPercent === null) discountPercent = 30; // по умолчанию 30%
   
-  if (isSberbank && discountPercentOverride !== null) {
-    // Для Сбербанка используем переданную скидку (0-50%)
-    discountPercent = clampDiscountPercent(discountPercentOverride);
-  } else {
-    // Для всех остальных банков фиксированная скидка 30%
-    discountPercent = null; // null означает использовать стандартную скидку 30%
-  }
-  
-  const discountMultiplier = discountPercent === null ? 0.7 : (1 - discountPercent / 100);
+  const discountMultiplier = 1 - discountPercent / 100;
 
   // ИМУЩЕСТВО
   if (parsedData.risks.property) {
@@ -345,25 +342,16 @@ function computeVariant2BasePremiums(parsedData, bankConfig, insuranceAmount, di
 
       if (canApplyV2LifeDiscount) {
         if (lifeResult.borrowers && lifeResult.borrowers.length > 0) {
-          if (discountPercent === null) {
-            // Используем стандартную скидку 30% (premiumWithDiscount)
-            lifePremiumV2 = round2(lifeResult.borrowers.reduce((sum, b) => sum + (Number(b.premiumWithDiscount ?? b.premium) || 0), 0));
-          } else {
-            // Для Сбербанка: пересчитываем с кастомной скидкой
-            lifePremiumV2 = round2(lifeResult.borrowers.reduce((sum, b) => {
-              const basePrem = Number(b.premium) || 0;
-              const discounted = round2(basePrem * discountMultiplier);
-              return sum + Math.max(discounted, MIN_PREMIUM_LIFE);
-            }, 0));
-          }
+          // Пересчитываем с кастомной скидкой для всех банков
+          lifePremiumV2 = round2(lifeResult.borrowers.reduce((sum, b) => {
+            const basePrem = Number(b.premium) || 0;
+            const discounted = round2(basePrem * discountMultiplier);
+            return sum + Math.max(discounted, MIN_PREMIUM_LIFE);
+          }, 0));
         } else {
-          if (discountPercent === null) {
-            lifePremiumV2 = round2(Number(lifeResult.total) || 0);
-          } else {
-            const baseTotal = Number(lifeResult.totalWithoutDiscount || lifeResult.total) || 0;
-            const numBorrowers = parsedData.borrowers ? parsedData.borrowers.length : 1;
-            lifePremiumV2 = Math.max(round2(baseTotal * discountMultiplier), MIN_PREMIUM_LIFE * numBorrowers);
-          }
+          const baseTotal = Number(lifeResult.totalWithoutDiscount || lifeResult.total) || 0;
+          const numBorrowers = parsedData.borrowers ? parsedData.borrowers.length : 1;
+          lifePremiumV2 = Math.max(round2(baseTotal * discountMultiplier), MIN_PREMIUM_LIFE * numBorrowers);
         }
       } else {
         lifePremiumV2 = round2(Number(lifeResult.total || lifeResult.totalWithoutDiscount) || 0);
@@ -375,14 +363,9 @@ function computeVariant2BasePremiums(parsedData, bankConfig, insuranceAmount, di
     const withLifeInsurance = parsedData.risks.life || false;
     const titleResult = calculateTitleInsurance(parsedData, bankConfig, insuranceAmount, withLifeInsurance, parsedData.contractDate);
     if (bankConfig.allow_discount_title) {
-      if (discountPercent === null) {
-        // Используем стандартную скидку (уже применена в calculateTitleInsurance)
-        titlePremiumV2 = round2(Number(titleResult.total) || 0);
-      } else {
-        // Для Сбербанка: пересчитываем с кастомной скидкой
-        const baseTitle = Number(titleResult.totalWithoutDiscount || titleResult.total) || 0;
-        titlePremiumV2 = Math.max(round2(baseTitle * discountMultiplier), 600);
-      }
+      // Пересчитываем с кастомной скидкой для всех банков
+      const baseTitle = Number(titleResult.totalWithoutDiscount || titleResult.total) || 0;
+      titlePremiumV2 = Math.max(round2(baseTitle * discountMultiplier), 600);
     } else {
       titlePremiumV2 = round2(Number(titleResult.totalWithoutDiscount || titleResult.total) || 0);
     }
@@ -470,11 +453,10 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
   const goDefault = byObjects['гражданская ответственность']?.sum ?? limits.go.min;
 
   const state = ctx.variant2CustomState || {
-    bankName: currentBankName, // Сохраняем имя банка для проверки при следующем открытии
+    bankName: currentBankName,
     insuranceAmount,
-    // Только для Сбербанка можно менять скидку (0-50%)
-    // Для остальных банков скидка фиксированная 30% (null = использовать стандартную)
-    discountPercent: isSberbank ? 30 : null,
+    // Скидка настраивается для всех банков (Сбер 0-50%, остальные 0-30%)
+    discountPercent: 30,
     finishEnabled: Boolean(byObjects['отделка и инженерное оборудование']),
     movableEnabled: Boolean(byObjects['движимое имущество']),
     goEnabled: Boolean(byObjects['гражданская ответственность']),
@@ -482,34 +464,26 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
     movableSum: movableDefault,
     goSum: goDefault
   };
-  
-  // Обновляем имя банка в state (на случай если использовали сохраненный state)
+
+  // Обновляем имя банка в state
   state.bankName = currentBankName;
-  
-  // ВАЖНО: Для не-Сбербанка всегда устанавливаем discountPercent = null
-  // Это нужно на случай если state был сохранен от предыдущего расчета с другим банком
-  if (!isSberbank) {
-    state.discountPercent = null;
-  }
-  
+
+  // Корректируем сохранённую скидку под новые лимиты банка
+  state.discountPercent = clampDiscountPercent(state.discountPercent, isSberbank) ?? 30;
+
   ctx.variant2CustomState = state;
-  
-  // ВАЖНО: Инициализируем базу при первом открытии конструктора
-  // Это гарантирует, что база не будет пересчитываться при изменении только доп. рисков
+
+  // Инициализируем базу при первом открытии конструктора
   if (!ctx.variant2Meta.base) {
-    const initialDiscount = isSberbank ? 30 : null;
-    ctx.variant2Meta.base = computeVariant2BasePremiums(ctx.parsedData, ctx.bankConfig, insuranceAmount, initialDiscount);
+    ctx.variant2Meta.base = computeVariant2BasePremiums(ctx.parsedData, ctx.bankConfig, insuranceAmount, state.discountPercent);
   }
 
   const discountSection = modal.querySelector('#variant2-discount-section');
   const discountInput = modal.querySelector('#variant2-discount');
-  if (isSberbank) {
-    discountSection.style.display = 'grid';
-    discountInput.value = String(clampDiscountPercent(state.discountPercent) ?? 30);
-  } else {
-    discountSection.style.display = 'none';
-    state.discountPercent = null;
-  }
+  discountSection.style.display = 'grid';
+  discountInput.min = isSberbank ? '30' : '0';
+  discountInput.max = isSberbank ? '50' : '30';
+  discountInput.value = String(state.discountPercent);
 
   // Обновляем заголовки и лимиты в зависимости от типа объекта
   const productName = isHouse ? 'Бастион' : 'Моя квартира';
@@ -571,17 +545,11 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
     
     state.insuranceAmount = ins;
 
-    let newDiscountPercent;
-    if (currentIsSberbank) {
-      const discountInputElement = modal.querySelector('#variant2-discount');
-      const inputValue = discountInputElement.value;
-      newDiscountPercent = clampDiscountPercent(inputValue);
-      if (newDiscountPercent === null) newDiscountPercent = 30;
-      discountInputElement.value = String(newDiscountPercent);
-    } else {
-      newDiscountPercent = null;
-    }
-    
+    const discountInputElement = modal.querySelector('#variant2-discount');
+    const inputValue = discountInputElement.value;
+    let newDiscountPercent = clampDiscountPercent(inputValue, currentIsSberbank);
+    if (newDiscountPercent === null) newDiscountPercent = 30;
+    discountInputElement.value = String(newDiscountPercent);
     state.discountPercent = newDiscountPercent;
 
     state.finishEnabled = modal.querySelector('#variant2-finish-enabled').checked;
@@ -594,12 +562,11 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
     // ВАЖНО: пересчитываем базу ТОЛЬКО если изменилась страховая сумма или скидка
     // При изменении только галочек доп. рисков база НЕ должна меняться
     let baseNow;
-    
+
     // Проверяем изменение страховой суммы (с учетом округления)
     const insChanged = Math.abs(ins - (prevInsAmount || ins)) > 0.01;
-    
+
     // Проверяем изменение скидки
-    // ВАЖНО: для не-Сбербанка оба значения должны быть null, поэтому изменения нет
     const discountChanged = prevDiscountPercent !== newDiscountPercent;
     
     const needRecalcBase = insChanged || discountChanged;
