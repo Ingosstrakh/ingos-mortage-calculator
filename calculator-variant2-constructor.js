@@ -1,7 +1,7 @@
 // calculator-variant2-constructor.js - Вспомогательные функции для построения варианта 2
 
 /**
- * Упрощенный расчет варианта 2 (без доп. рисков, только скидки 30%)
+ * Упрощенный расчет варианта 2 (без доп. рисков, с настраиваемой скидкой)
  */
 function calculateSimplifiedVariant2(data, bankConfig, insuranceAmount) {
 
@@ -10,12 +10,14 @@ function calculateSimplifiedVariant2(data, bankConfig, insuranceAmount) {
 
   const MIN_PREMIUM_PROPERTY = 600;
   const MIN_PREMIUM_LIFE = 600;
+  const discountPercent = (typeof data.manualDiscount === 'number') ? data.manualDiscount : 30;
+  const discountMultiplier = 1 - discountPercent / 100;
   
   if (data.risks.property) {
     const propertyResult = calculatePropertyInsurance(data, bankConfig, insuranceAmount);
     if (propertyResult && bankConfig.allow_discount_property) {
       const basePremium = propertyResult.totalWithoutDiscount;
-      propertyPremiumV2 = Math.round(basePremium * 0.7 * 100) / 100;
+      propertyPremiumV2 = Math.round(basePremium * discountMultiplier * 100) / 100;
       propertyPremiumV2 = Math.max(propertyPremiumV2, MIN_PREMIUM_PROPERTY);
     } else if (propertyResult) {
       propertyPremiumV2 = propertyResult.total || propertyResult.totalWithoutDiscount;
@@ -37,12 +39,12 @@ function calculateSimplifiedVariant2(data, bankConfig, insuranceAmount) {
       
       if (lifeResult.borrowers && lifeResult.borrowers.length > 0) {
         lifeResult.borrowers.forEach(borrower => {
-          const borrowerPremiumWithDiscount = borrower.premiumWithDiscount || borrower.premium;
-          totalWithDiscount += borrowerPremiumWithDiscount;
+          const basePrem = Number(borrower.premium) || 0;
+          totalWithDiscount += Math.max(Math.round(basePrem * discountMultiplier * 100) / 100, MIN_PREMIUM_LIFE);
         });
       } else {
         const basePremium = lifeResult.totalWithoutDiscount;
-        totalWithDiscount = Math.round(basePremium * 0.7 * 100) / 100;
+        totalWithDiscount = Math.round(basePremium * discountMultiplier * 100) / 100;
       }
       
       lifePremiumV2 = Math.max(totalWithDiscount, MIN_PREMIUM_LIFE * numBorrowers);
@@ -114,12 +116,15 @@ function getAvailableProducts(data, bankConfig, isMobile) {
 }
 
 /**
- * Рассчитываем базовые премии варианта 2 с скидками 30%
+ * Рассчитываем базовые премии варианта 2 с настраиваемой скидкой
  */
 function calculateBasePremiums(data, bankConfig, insuranceAmount) {
   const MIN_PREMIUM_PROPERTY_V2 = 600;
   const MIN_PREMIUM_LIFE_V2 = 600;
   
+  const discountPercent = (typeof data.manualDiscount === 'number') ? data.manualDiscount : 30;
+  const discountMultiplier = 1 - discountPercent / 100;
+
   let propertyPremiumV2 = 0;
   let lifePremiumV2 = 0;
   let titlePremiumV2 = 0;
@@ -129,7 +134,7 @@ function calculateBasePremiums(data, bankConfig, insuranceAmount) {
     if (propertyResult) {
       if (bankConfig.allow_discount_property) {
         const basePremium = propertyResult.totalWithoutDiscount;
-        propertyPremiumV2 = Math.round(basePremium * 0.7 * 100) / 100;
+        propertyPremiumV2 = Math.round(basePremium * discountMultiplier * 100) / 100;
         propertyPremiumV2 = Math.max(propertyPremiumV2, MIN_PREMIUM_PROPERTY_V2);
       } else {
         propertyPremiumV2 = propertyResult.totalWithoutDiscount || propertyResult.total;
@@ -152,12 +157,12 @@ function calculateBasePremiums(data, bankConfig, insuranceAmount) {
         
         if (lifeResult.borrowers && lifeResult.borrowers.length > 0) {
           lifeResult.borrowers.forEach(borrower => {
-            const borrowerPremiumWithDiscount = borrower.premiumWithDiscount || borrower.premium;
-            totalWithDiscount += borrowerPremiumWithDiscount;
+            const basePrem = Number(borrower.premium) || 0;
+            totalWithDiscount += Math.max(Math.round(basePrem * discountMultiplier * 100) / 100, MIN_PREMIUM_LIFE_V2);
           });
         } else {
           const basePremium = lifeResult.totalWithoutDiscount;
-          totalWithDiscount = Math.round(basePremium * 0.7 * 100) / 100;
+          totalWithDiscount = Math.round(basePremium * discountMultiplier * 100) / 100;
         }
         
         lifePremiumV2 = Math.max(totalWithDiscount, MIN_PREMIUM_LIFE_V2 * numBorrowers);
