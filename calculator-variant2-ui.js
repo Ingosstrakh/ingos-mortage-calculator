@@ -138,25 +138,50 @@ function getMoyaRateBySum(table, sum) {
 }
 
 /**
- * Получение лимитов для "Моя квартира" или "Бастион"
+ * Получение лимитов для "Моя квартира", "Бастион" или "Дом без забот"
  * @param {number} insuranceAmount - Страховая сумма
  * @param {boolean} isHouse - Является ли объект домом
+ * @param {boolean} isDombez - Использовать "Дом без забот" (дома >= 2020)
  */
-function getMoyaLimits(insuranceAmount, isHouse = false) {
+function getMoyaLimits(insuranceAmount, isHouse = false, isDombez = false) {
   const ins = Math.max(0, Number(insuranceAmount) || 0);
-  
+
+  if (isHouse && isDombez) {
+    // Для домов >= 2020 используем тарифы "Дом без забот"
+    const dombez = window.T_DOMBEZ;
+    if (!dombez) return null;
+
+    const finishMin = dombez.finish?.stone?.[0]?.min ?? 200000;
+    const finishMaxCfg = Math.max(...(dombez.finish?.stone || []).map(r => r.max));
+    const finishMax = ins > 0 ? Math.min(finishMaxCfg, ins) : finishMaxCfg;
+
+    const movableMin = dombez.movable?.[0]?.min ?? 100000;
+    const movableMaxCfg = Math.max(...(dombez.movable || []).map(r => r.max));
+    const movableMax = ins > 0 ? Math.min(movableMaxCfg, ins) : movableMaxCfg;
+
+    const goMin = dombez.liability?.[0]?.min ?? 100000;
+    const goMaxCfg = Math.max(...(dombez.liability || []).map(r => r.max));
+    const goMax = ins > 0 ? Math.min(goMaxCfg, ins) : goMaxCfg;
+
+    return {
+      finish: { min: finishMin, max: finishMax },
+      movable: { min: movableMin, max: movableMax },
+      go: { min: goMin, max: goMax }
+    };
+  }
+
   if (isHouse) {
     // Для домов используем тарифы Бастион
     const bastion = window.T_BASTION;
     if (!bastion || !bastion.house) return null;
-    
+
     const finishMin = bastion.house.finish.min;
     const finishMax = ins > 0 ? Math.min(bastion.house.finish.max, ins) : bastion.house.finish.max;
-    
+
     // Для Бастион нет движимого имущества и ГО, используем конструктивные элементы
     const consMin = bastion.house.cons.min;
     const consMax = ins > 0 ? Math.min(bastion.house.cons.max, ins) : bastion.house.cons.max;
-    
+
     return {
       finish: { min: finishMin, max: finishMax },
       movable: { min: consMin, max: consMax }, // Используем cons как "движимое"
@@ -188,13 +213,14 @@ function getMoyaLimits(insuranceAmount, isHouse = false) {
 }
 
 /**
- * Расчет премий "Моя квартира" или "Бастион"
+ * Расчет премий "Моя квартира", "Бастион" или "Дом без забот"
  * @param {number} insuranceAmount - Страховая сумма
  * @param {Object} options - Опции (finishEnabled, finishSum, movableEnabled, movableSum, goEnabled, goSum)
  * @param {boolean} isHouse - Является ли объект домом
+ * @param {boolean} isDombez - Использовать "Дом без забот" (дома >= 2020)
  */
-function computeMoyaPremiums(insuranceAmount, { finishEnabled, finishSum, movableEnabled, movableSum, goEnabled, goSum }, isHouse = false) {
-  const limits = getMoyaLimits(insuranceAmount, isHouse);
+function computeMoyaPremiums(insuranceAmount, { finishEnabled, finishSum, movableEnabled, movableSum, goEnabled, goSum, material }, isHouse = false, isDombez = false) {
+  const limits = getMoyaLimits(insuranceAmount, isHouse, isDombez);
   if (!limits) return { risks: [], totalPremium: 0, warning: 'Тарифы не загружены' };
 
   const risks = [];
@@ -207,7 +233,48 @@ function computeMoyaPremiums(insuranceAmount, { finishEnabled, finishSum, movabl
     totalPremium += p;
   };
 
-  if (isHouse) {
+  if (isHouse && isDombez) {
+    // Для домов >= 2020 используем тарифы "Дом без забот"
+    const dombez = window.T_DOMBEZ;
+    if (!dombez) {
+      return { risks: [], totalPremium: 0, warning: 'Тарифы Дом без забот не загружены' };
+    }
+
+    const mat = (material === 'wood') ? 'wood' : 'stone';
+
+    if (finishEnabled) {
+      const s0 = Number(finishSum) || 0;
+      const s = Math.min(limits.finish.max, Math.max(limits.finish.min, s0));
+      const rate = getMoyaRateBySum(dombez.finish?.[mat], s)?.rate;
+      if (!rate) {
+        warning = warning || 'Не найден тариф для отделки по указанной сумме';
+      } else {
+        addRisk('Дом без забот', 'отделка и инженерное оборудование', s, s * rate);
+      }
+    }
+
+    if (movableEnabled) {
+      const s0 = Number(movableSum) || 0;
+      const s = Math.min(limits.movable.max, Math.max(limits.movable.min, s0));
+      const rate = getMoyaRateBySum(dombez.movable, s)?.rate;
+      if (!rate) {
+        warning = warning || 'Не найден тариф для движимого имущества по указанной сумме';
+      } else {
+        addRisk('Дом без забот', 'движимое имущество', s, s * rate);
+      }
+    }
+
+    if (goEnabled) {
+      const s0 = Number(goSum) || 0;
+      const s = Math.min(limits.go.max, Math.max(limits.go.min, s0));
+      const rate = getMoyaRateBySum(dombez.liability, s)?.rate;
+      if (!rate) {
+        warning = warning || 'Не найден тариф для ГО по указанной сумме';
+      } else {
+        addRisk('Дом без забот', 'гражданская ответственность', s, s * rate);
+      }
+    }
+  } else if (isHouse) {
     // Для домов используем тарифы Бастион
     const bastion = window.T_BASTION;
     if (!bastion || !bastion.house) {
@@ -440,23 +507,27 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
     }
   }
   
-  // Определяем тип объекта: дом или квартира
-  const isHouse = ctx.parsedData.objectType === 'house_brick' || 
-                  ctx.parsedData.objectType === 'house_wood' || 
+  // Определяем тип объекта: дом или квартира, и используем ли "Дом без забот"
+  const isHouse = ctx.parsedData.objectType === 'house_brick' ||
+                  ctx.parsedData.objectType === 'house_wood' ||
                   ctx.parsedData.objectType === 'house';
-  
-  const limits = getMoyaLimits(insuranceAmount, isHouse);
+  const isDombez = isHouse && Number(ctx.parsedData.yearBuilt) >= 2020;
+
+  const limits = getMoyaLimits(insuranceAmount, isHouse, isDombez);
 
   const byObjects = Object.fromEntries((ctx.variant2Meta.additionalRisks || []).map(r => [r.objects, r]));
   const finishDefault = byObjects['отделка и инженерное оборудование']?.sum ?? limits.finish.min;
   const movableDefault = byObjects['движимое имущество']?.sum ?? limits.movable.min;
   const goDefault = byObjects['гражданская ответственность']?.sum ?? limits.go.min;
 
+  const material = (ctx.parsedData.material === 'wood' || ctx.parsedData.objectType === 'house_wood') ? 'wood' : 'stone';
+
   const state = ctx.variant2CustomState || {
     bankName: currentBankName,
     insuranceAmount,
     // Скидка настраивается для всех банков (Сбер 0-50%, остальные 0-30%)
     discountPercent: 30,
+    material,
     finishEnabled: Boolean(byObjects['отделка и инженерное оборудование']),
     movableEnabled: Boolean(byObjects['движимое имущество']),
     goEnabled: Boolean(byObjects['гражданская ответственность']),
@@ -465,8 +536,9 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
     goSum: goDefault
   };
 
-  // Обновляем имя банка в state
+  // Обновляем имя банка и материал в state
   state.bankName = currentBankName;
+  state.material = material;
 
   // Корректируем сохранённую скидку под новые лимиты банка
   state.discountPercent = clampDiscountPercent(state.discountPercent, isSberbank) ?? 30;
@@ -486,8 +558,8 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
   discountInput.value = String(state.discountPercent);
 
   // Обновляем заголовки и лимиты в зависимости от типа объекта
-  const productName = isHouse ? 'Бастион' : 'Моя квартира';
-  const movableLabel = isHouse ? 'конструктивные элементы' : 'движимое имущество';
+  const productName = isHouse ? (isDombez ? 'Дом без забот' : 'Бастион') : 'Моя квартира';
+  const movableLabel = isHouse ? (isDombez ? 'движимое имущество' : 'конструктивные элементы') : 'движимое имущество';
   
   modal.querySelector('#variant2-finish-enabled').nextElementSibling.querySelector('div').textContent = 
     `${productName}: отделка и инженерное оборудование`;
@@ -496,9 +568,9 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
   modal.querySelector('#variant2-go-enabled').nextElementSibling.querySelector('div').textContent = 
     `${productName}: гражданская ответственность`;
   
-  // Для домов (Бастион) скрываем ГО
+  // Для домов со старым Бастион скрываем ГО, для "Дом без забот" показываем
   const goRow = modal.querySelector('#variant2-go-enabled').closest('div[style*="grid-template-columns"]');
-  if (isHouse) {
+  if (isHouse && !isDombez) {
     goRow.style.display = 'none';
   } else {
     goRow.style.display = 'grid';
@@ -535,10 +607,11 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
     }
     
     const currentIsSberbank = currentCtx.bankConfig && currentCtx.bankConfig.bankName === 'Сбербанк';
-    const currentIsHouse = currentCtx.parsedData.objectType === 'house_brick' || 
-                           currentCtx.parsedData.objectType === 'house_wood' || 
+    const currentIsHouse = currentCtx.parsedData.objectType === 'house_brick' ||
+                           currentCtx.parsedData.objectType === 'house_wood' ||
                            currentCtx.parsedData.objectType === 'house';
-    
+    const currentIsDombez = currentIsHouse && Number(currentCtx.parsedData.yearBuilt) >= 2020;
+
     const ins = Number(modal.querySelector('#variant2-ins-amount').value) || 0;
     const prevInsAmount = state.insuranceAmount;
     const prevDiscountPercent = state.discountPercent;
@@ -578,13 +651,13 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
       baseNow = currentCtx.variant2Meta.base || computeVariant2BasePremiums(currentCtx.parsedData, currentCtx.bankConfig, ins, state.discountPercent);
     }
     
-    const custom = computeMoyaPremiums(ins, state, currentIsHouse);
+    const custom = computeMoyaPremiums(ins, state, currentIsHouse, currentIsDombez);
 
     const premByObj = Object.fromEntries(custom.risks.map(r => [r.objects, r.premium]));
     modal.querySelector('#variant2-finish-prem').textContent = state.finishEnabled ? formatMoneyRuGrouped(premByObj['отделка и инженерное оборудование'] || 0) : '0,00';
-    
-    // Для домов показываем "конструктивные элементы", для квартир "движимое имущество"
-    const movableKey = currentIsHouse ? 'конструктивные элементы' : 'движимое имущество';
+
+    // Для домов Бастион показываем "конструктивные элементы", для квартир и dombez — "движимое имущество"
+    const movableKey = (currentIsHouse && !currentIsDombez) ? 'конструктивные элементы' : 'движимое имущество';
     modal.querySelector('#variant2-movable-prem').textContent = state.movableEnabled ? formatMoneyRuGrouped(premByObj[movableKey] || 0) : '0,00';
     modal.querySelector('#variant2-go-prem').textContent = state.goEnabled ? formatMoneyRuGrouped(premByObj['гражданская ответственность'] || 0) : '0,00';
 
@@ -708,5 +781,6 @@ window.closeVariant2Constructor = function closeVariant2Constructor() {
 window.formatMoneyRuGrouped = formatMoneyRuGrouped;
 window.round2 = round2;
 window.computeVariant2BasePremiums = computeVariant2BasePremiums;
+window.getMoyaLimits = getMoyaLimits;
 window.computeMoyaPremiums = computeMoyaPremiums;
 window.renderVariant2RisksHtml = renderVariant2RisksHtml;
