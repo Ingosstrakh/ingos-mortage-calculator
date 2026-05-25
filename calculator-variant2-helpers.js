@@ -8,11 +8,40 @@
  * @returns {Object|null} Результат расчета с productName, riskName, premium
  */
 function calculateIFLAdditionalRisk(product, data, insuranceAmount) {
-  if (!window.T_BASTION || !window.EXPRESS_PACKS || !window.EXPRESS_GO_PACKS || !window.T_MOYA) {
+  if (!window.T_BASTION || !window.EXPRESS_PACKS || !window.EXPRESS_GO_PACKS || !window.T_MOYA || !window.T_DOMBEZ) {
     return null;
   }
 
   switch (product) {
+    case 'dombez': {
+      const dombez = window.T_DOMBEZ;
+      const material = (data.material === 'wood' || data.objectType === 'house_wood') ? 'wood' : 'stone';
+
+      // Отделка: минимальная сумма с минимальным тарифом
+      const finishRates = dombez.finish[material];
+      const finishRate = finishRates ? finishRates[0] : null;
+      const finishSum = finishRate ? finishRate.min : 200000;
+      const finishPremium = finishRate ? Math.round(finishSum * finishRate.rate * 100) / 100 : 0;
+
+      // Движимое: минимальная сумма
+      const movableRate = dombez.movable ? dombez.movable[0] : null;
+      const movableSum = movableRate ? movableRate.min : 100000;
+      const movablePremium = movableRate ? Math.round(movableSum * movableRate.rate * 100) / 100 : 0;
+
+      // ГО: минимальная сумма
+      const liRate = dombez.liability ? dombez.liability[0] : null;
+      const liSum = liRate ? liRate.min : 100000;
+      const liPremium = liRate ? Math.round(liSum * liRate.rate * 100) / 100 : 0;
+
+      const totalPremium = Math.round((finishPremium + movablePremium + liPremium) * 100) / 100;
+
+      return {
+        productName: 'Дом без забот',
+        riskName: 'отделка, движимое имущество, ГО',
+        premium: totalPremium
+      };
+    }
+
     case 'bastion': {
       // Бастион - военные риски
       const isFlat = data.objectType === 'flat' || data.objectType === null;
@@ -332,11 +361,15 @@ function increaseExpressSumsForDifference(currentDifference, targetDifference, p
  * Получение деталей доп. риска для вывода
  */
 function getAdditionalRiskDetails(product, data, insuranceAmount, premium, additionalRisks = [], packDetails = null) {
-  if (product !== 'lichnie_veschi' && (!window.T_BASTION || !window.EXPRESS_PACKS || !window.EXPRESS_GO_PACKS || !window.T_MOYA)) {
+  if (product !== 'lichnie_veschi' && (!window.T_BASTION || !window.EXPRESS_PACKS || !window.EXPRESS_GO_PACKS || !window.T_MOYA || !window.T_DOMBEZ)) {
     return { objects: '', sum: '' };
   }
 
   switch (product) {
+    case 'dombez': {
+      return { objects: 'отделка, движимое имущество, гражданская ответственность', sum: '' };
+    }
+
     case 'bastion': {
       if (additionalRisks && additionalRisks.length > 0) {
         return { objects: '', sum: '' };
