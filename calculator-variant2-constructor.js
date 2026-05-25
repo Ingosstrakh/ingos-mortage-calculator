@@ -103,7 +103,13 @@ function getAvailableProducts(data, bankConfig, isMobile) {
   } else if (isFlat) {
     availableProducts = ['moyakvartira', 'express', 'express_go', 'bastion'];
   } else if (isHouse) {
-    availableProducts = ['bastion'];
+    // Для домов с годом постройки >= 2020 предлагаем "Дом без забот", иначе "Бастион"
+    const yearBuilt = Number(data.yearBuilt);
+    if (yearBuilt >= 2020) {
+      availableProducts = ['dombez'];
+    } else {
+      availableProducts = ['bastion'];
+    }
   } else {
     return null;
   }
@@ -345,10 +351,10 @@ function optimizeProduct(bestProductResult, data, insuranceAmount, variant1Total
       }
     } else if (bestProduct.product === 'bastion') {
       const bastionResult = increaseBastionSumsForDifference(
-        data, insuranceAmount, currentDifference, targetDifferenceLarge, 
+        data, insuranceAmount, currentDifference, targetDifferenceLarge,
         propertyPremiumV2, lifePremiumV2, titlePremiumV2, variant1Total
       );
-      
+
       if (bastionResult) {
         finalProduct = bastionResult.finalProduct;
         additionalRisks = bastionResult.additionalRisks;
@@ -384,6 +390,37 @@ function optimizeProduct(bestProductResult, data, insuranceAmount, variant1Total
           currentTotal += finishPremium;
           finalProduct.total = currentTotal;
         }
+      }
+    } else if (bestProduct.product === 'dombez') {
+      // Для "Дом без забот" используем разумные суммы для доп. рисков
+      const dombez = window.T_DOMBEZ;
+      if (dombez) {
+        const material = (data.material === 'wood' || data.objectType === 'house_wood') ? 'wood' : 'stone';
+        const finishRates = dombez.finish[material];
+        const finishRate = finishRates ? finishRates[0] : null;
+        const finishSum = finishRate ? finishRate.min : 200000;
+        const finishPremium = finishRate ? Math.round(finishSum * finishRate.rate * 100) / 100 : 0;
+
+        const movableRate = dombez.movable ? dombez.movable[0] : null;
+        const movableSum = movableRate ? movableRate.min : 100000;
+        const movablePremium = movableRate ? Math.round(movableSum * movableRate.rate * 100) / 100 : 0;
+
+        const liRate = dombez.liability ? dombez.liability[0] : null;
+        const liSum = liRate ? liRate.min : 100000;
+        const liPremium = liRate ? Math.round(liSum * liRate.rate * 100) / 100 : 0;
+
+        const totalRiskPremium = Math.round((finishPremium + movablePremium + liPremium) * 100) / 100;
+        additionalRisks = [
+          { name: 'Дом без забот', objects: 'отделка и инженерное оборудование', sum: finishSum, premium: finishPremium },
+          { name: 'Дом без забот', objects: 'движимое имущество', sum: movableSum, premium: movablePremium },
+          { name: 'Дом без забот', objects: 'гражданская ответственность', sum: liSum, premium: liPremium }
+        ];
+        currentTotal = propertyPremiumV2 + lifePremiumV2 + titlePremiumV2 + totalRiskPremium;
+        currentDifference = variant1Total - currentTotal;
+        finalProduct = {
+          ...bestProduct,
+          total: currentTotal
+        };
       }
     } else if (bestProduct.product === 'express') {
       const expressResult = increaseExpressSumsForDifference(
@@ -480,6 +517,10 @@ function formatVariant2Output(data, bankConfig, insuranceAmount, basePremiums, o
       output += `доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${risk.premium.toLocaleString('ru-RU', {useGrouping: false})}${formatKv35(risk.premium)}<br>`;
     });
   } else if (finalProduct.product === 'bastion' && additionalRisks.length > 0) {
+    additionalRisks.forEach(risk => {
+      output += `доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${risk.premium.toLocaleString('ru-RU', {useGrouping: false})}${formatKv35(risk.premium)}<br>`;
+    });
+  } else if (finalProduct.product === 'dombez' && additionalRisks.length > 0) {
     additionalRisks.forEach(risk => {
       output += `доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${risk.premium.toLocaleString('ru-RU', {useGrouping: false})}${formatKv35(risk.premium)}<br>`;
     });
