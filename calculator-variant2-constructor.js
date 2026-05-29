@@ -12,6 +12,9 @@ function calculateSimplifiedVariant2(data, bankConfig, insuranceAmount) {
   const MIN_PREMIUM_LIFE = 600;
   const discountPercent = (typeof data.manualDiscount === 'number') ? data.manualDiscount : 30;
   const discountMultiplier = 1 - discountPercent / 100;
+  const hasAgeRestriction = data.borrowers && data.borrowers.length > 0
+    ? data.borrowers.some(borrower => Number(borrower.age) >= 55)
+    : false;
   
   if (data.risks.property) {
     const propertyResult = calculatePropertyInsurance(data, bankConfig, insuranceAmount);
@@ -27,13 +30,8 @@ function calculateSimplifiedVariant2(data, bankConfig, insuranceAmount) {
   if (data.risks.life) {
     const lifeResult = calculateLifeInsurance(data, bankConfig, insuranceAmount);
     
-    let hasAgeRestrictionForSberbank = false;
-    if (bankConfig && bankConfig.bankName === "Сбербанк" && data.borrowers && data.borrowers.length > 0) {
-      hasAgeRestrictionForSberbank = data.borrowers.some(borrower => borrower.age >= 55);
-    }
-    
     if (lifeResult && bankConfig.allow_discount_life && !lifeResult.requiresMedicalExam && 
-        lifeResult.medicalUnderwritingFactor !== 1.25 && !hasAgeRestrictionForSberbank) {
+        lifeResult.medicalUnderwritingFactor !== 1.25 && !hasAgeRestriction) {
       const numBorrowers = data.borrowers ? data.borrowers.length : 1;
       let totalWithDiscount = 0;
       
@@ -66,7 +64,7 @@ function calculateSimplifiedVariant2(data, bankConfig, insuranceAmount) {
       const isSovcombank = bankConfig && bankConfig.bankName === "Совкомбанк";
       lifeResult.borrowers.forEach((borrower, index) => {
         const borrowerLabel = isMultipleBorrowers ? (index === 0 ? 'заемщик' : (index === 1 ? 'созаемщик' : `созаемщик ${index}`)) : 'заемщик';
-        const borrowerPremium = borrower.premiumWithDiscount || borrower.premium;
+        const borrowerPremium = hasAgeRestriction ? borrower.premium : (borrower.premiumWithDiscount || borrower.premium);
         output += `жизнь ${borrowerLabel} ${borrowerPremium.toLocaleString('ru-RU', {useGrouping: false})}`;
         if (isSovcombank) {
           output += ` <span style="color: #64748b; font-size: 0.9em;">(без РИСКА СВО)</span>`;
@@ -135,6 +133,10 @@ function calculateBasePremiums(data, bankConfig, insuranceAmount) {
   let lifePremiumV2 = 0;
   let titlePremiumV2 = 0;
 
+  const hasAgeRestriction = data.borrowers && data.borrowers.length > 0
+    ? data.borrowers.some(borrower => Number(borrower.age) >= 55)
+    : false;
+
   if (data.risks.property) {
     const propertyResult = calculatePropertyInsurance(data, bankConfig, insuranceAmount);
     if (propertyResult) {
@@ -151,13 +153,8 @@ function calculateBasePremiums(data, bankConfig, insuranceAmount) {
   if (data.risks.life) {
     const lifeResult = calculateLifeInsurance(data, bankConfig, insuranceAmount);
     if (lifeResult) {
-      let hasAgeRestrictionForSberbank = false;
-      if (bankConfig && bankConfig.bankName === "Сбербанк" && data.borrowers && data.borrowers.length > 0) {
-        hasAgeRestrictionForSberbank = data.borrowers.some(borrower => borrower.age >= 55);
-      }
-      
       if (bankConfig.allow_discount_life && !lifeResult.requiresMedicalExam && 
-          lifeResult.medicalUnderwritingFactor !== 1.25 && !hasAgeRestrictionForSberbank) {
+          lifeResult.medicalUnderwritingFactor !== 1.25 && !hasAgeRestriction) {
         const numBorrowers = data.borrowers ? data.borrowers.length : 1;
         let totalWithDiscount = 0;
         
@@ -449,6 +446,10 @@ function formatVariant2Output(data, bankConfig, insuranceAmount, basePremiums, o
   const { propertyPremiumV2, lifePremiumV2, titlePremiumV2 } = basePremiums;
   const { finalProduct, additionalRisks, currentTotal } = optimizedResult;
 
+  const hasAgeRestriction = data.borrowers && data.borrowers.length > 0
+    ? data.borrowers.some(borrower => Number(borrower.age) >= 55)
+    : false;
+
   let output = '';
 
   if (data.risks.property) {
@@ -458,14 +459,17 @@ function formatVariant2Output(data, bankConfig, insuranceAmount, basePremiums, o
   if (data.risks.life) {
     const lifeResult = calculateLifeInsurance(data, bankConfig, insuranceAmount);
     if (lifeResult && lifeResult.requiresMedicalExam && lifeResult.total === 0) {
-      output += `<span style="color: #dc3545; font-weight: bold;">${lifeResult.medicalUnderwritingMessage}</span><br>`;
+            output += `<span style="color: #dc3545; font-weight: bold;">${lifeResult.medicalUnderwritingMessage}</span><br>`;
     } else if (lifeResult && lifeResult.borrowers && lifeResult.borrowers.length > 0) {
       const isMultipleBorrowers = data.borrowers && data.borrowers.length > 1;
       const isSovcombank = bankConfig && bankConfig.bankName === "Совкомбанк";
       
       lifeResult.borrowers.forEach((borrower, index) => {
         const borrowerLabel = isMultipleBorrowers ? (index === 0 ? 'заемщик' : (index === 1 ? 'созаемщик' : `созаемщик ${index}`)) : 'заемщик';
-        const borrowerPremium = borrower.premiumWithDiscount || borrower.premium;
+        const borrowerPremium = hasAgeRestriction
+          ? borrower.premium
+          : (borrower.premiumWithDiscount || borrower.premium);
+
         output += `жизнь ${borrowerLabel} ${borrowerPremium.toLocaleString('ru-RU', {useGrouping: false})}`;
         
         if (isSovcombank) {
