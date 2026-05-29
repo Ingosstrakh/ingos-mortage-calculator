@@ -1,4 +1,3 @@
-```js
 // calculator-variant2-ui.js - UI конструктор для варианта 2
 
 /**
