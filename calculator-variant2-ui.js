@@ -810,9 +810,9 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
     currentCtx.variant2Meta = {
       ...currentCtx.variant2Meta,
       constructorSupported: true,
-      selectedProduct: currentIsLichnieVeshchiMode
-        ? 'lichnie_veschi'
-        : (selectedProductFromMeta || currentCtx.variant2Meta?.selectedProduct || null),
+     selectedProduct: currentIsLichnieVeshchiMode
+  ? 'lichnie_veschi'
+  : (currentSelectedProduct || null),
       insuranceAmount: ins,
       discountPercent: state.discountPercent,
       base: baseNow,
