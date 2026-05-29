@@ -640,26 +640,26 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
   window.__CURRENT_CONSTRUCTOR_CTX__ = ctx;
 
   if (modal.__wired) {
-    const ids = [
-      '#variant2-discount',
-      '#variant2-ins-amount',
-      '#variant2-finish-enabled', '#variant2-finish-sum',
-      '#variant2-movable-enabled', '#variant2-movable-sum',
-      '#variant2-go-enabled', '#variant2-go-sum'
-    ];
-    ids.forEach(sel => {
-      const oldEl = modal.querySelector(sel);
-      const newEl = oldEl.cloneNode(true);
-      oldEl.parentNode.replaceChild(newEl, oldEl);
-    });
-    
-    ['#variant2-reset-btn', '#variant2-clear-btn', '#
-variant2-apply-btn'].forEach(sel => {
-      const oldBtn = modal.querySelector(sel);
-      const newBtn = oldBtn.cloneNode(true);
-      oldBtn.parentNode.replaceChild(newBtn, oldBtn);
-    });
-  }
+  const ids = [
+    '#variant2-discount',
+    '#variant2-ins-amount',
+    '#variant2-finish-enabled', '#variant2-finish-sum',
+    '#variant2-movable-enabled', '#variant2-movable-sum',
+    '#variant2-go-enabled', '#variant2-go-sum'
+  ];
+
+  ids.forEach(sel => {
+    const oldEl = modal.querySelector(sel);
+    const newEl = oldEl.cloneNode(true);
+    oldEl.parentNode.replaceChild(newEl, oldEl);
+  });
+
+  ['#variant2-reset-btn', '#variant2-clear-btn', '#variant2-apply-btn'].forEach(sel => {
+    const oldBtn = modal.querySelector(sel);
+    const newBtn = oldBtn.cloneNode(true);
+    oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+  });
+}
   
   modal.__wired = true;
   
