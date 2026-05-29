@@ -120,7 +120,6 @@ function ensureVariant2ConstructorModal() {
     }
   });
 
-  // Добавляем в контейнер (для sidepanel) или в body (для обычной страницы)
   const container = document.getElementById('variant2-constructor-modal-container') || document.body;
   container.appendChild(overlay);
 
@@ -147,7 +146,6 @@ function getMoyaLimits(insuranceAmount, isHouse = false, isDombez = false) {
   const ins = Math.max(0, Number(insuranceAmount) || 0);
 
   if (isHouse && isDombez) {
-    // Для домов >= 2020 используем тарифы "Дом без забот"
     const dombez = window.T_DOMBEZ;
     if (!dombez) return null;
 
@@ -171,24 +169,21 @@ function getMoyaLimits(insuranceAmount, isHouse = false, isDombez = false) {
   }
 
   if (isHouse) {
-    // Для домов используем тарифы Бастион
     const bastion = window.T_BASTION;
     if (!bastion || !bastion.house) return null;
 
     const finishMin = bastion.house.finish.min;
     const finishMax = ins > 0 ? Math.min(bastion.house.finish.max, ins) : bastion.house.finish.max;
 
-    // Для Бастион нет движимого имущества и ГО, используем конструктивные элементы
     const consMin = bastion.house.cons.min;
     const consMax = ins > 0 ? Math.min(bastion.house.cons.max, ins) : bastion.house.cons.max;
 
     return {
       finish: { min: finishMin, max: finishMax },
-      movable: { min: consMin, max: consMax }, // Используем cons как "движимое"
-      go: { min: 0, max: 0 } // ГО нет для Бастион
+      movable: { min: consMin, max: consMax },
+      go: { min: 0, max: 0 }
     };
   } else {
-    // Для квартир используем тарифы Моя квартира
     const moya = window.T_MOYA;
     if (!moya) return null;
 
@@ -215,9 +210,9 @@ function getMoyaLimits(insuranceAmount, isHouse = false, isDombez = false) {
 /**
  * Расчет премий "Моя квартира", "Бастион" или "Дом без забот"
  * @param {number} insuranceAmount - Страховая сумма
- * @param {Object} options - Опции (finishEnabled, finishSum, movableEnabled, movableSum, goEnabled, goSum)
+ * @param {Object} options - Опции
  * @param {boolean} isHouse - Является ли объект домом
- * @param {boolean} isDombez - Использовать "Дом без забот" (дома >= 2020)
+ * @param {boolean} isDombez - Использовать "Дом без забот"
  */
 function computeMoyaPremiums(insuranceAmount, { finishEnabled, finishSum, movableEnabled, movableSum, goEnabled, goSum, material }, isHouse = false, isDombez = false) {
   const limits = getMoyaLimits(insuranceAmount, isHouse, isDombez);
@@ -234,7 +229,6 @@ function computeMoyaPremiums(insuranceAmount, { finishEnabled, finishSum, movabl
   };
 
   if (isHouse && isDombez) {
-    // Для домов >= 2020 используем тарифы "Дом без забот"
     const dombez = window.T_DOMBEZ;
     if (!dombez) {
       return { risks: [], totalPremium: 0, warning: 'Тарифы Дом без забот не загружены' };
@@ -275,7 +269,6 @@ function computeMoyaPremiums(insuranceAmount, { finishEnabled, finishSum, movabl
       }
     }
   } else if (isHouse) {
-    // Для домов используем тарифы Бастион
     const bastion = window.T_BASTION;
     if (!bastion || !bastion.house) {
       return { risks: [], totalPremium: 0, warning: 'Тарифы Бастион не загружены' };
@@ -289,19 +282,16 @@ function computeMoyaPremiums(insuranceAmount, { finishEnabled, finishSum, movabl
     }
 
     if (movableEnabled) {
-      // Для Бастион "движимое" = конструктивные элементы
       const s0 = Number(movableSum) || 0;
       const s = Math.min(limits.movable.max, Math.max(limits.movable.min, s0));
       const rate = bastion.house.cons.rate;
       addRisk('Бастион', 'конструктивные элементы', s, s * rate);
     }
 
-    // ГО не поддерживается для Бастион
     if (goEnabled) {
       warning = 'ГО не поддерживается для продукта Бастион (дома)';
     }
   } else {
-    // Для квартир используем тарифы Моя квартира
     const moya = window.T_MOYA;
     if (!moya) {
       return { risks: [], totalPremium: 0, warning: 'Тарифы IFL (T_MOYA) не загружены' };
@@ -367,49 +357,38 @@ function computeVariant2BasePremiums(parsedData, bankConfig, insuranceAmount, di
   const MIN_PREMIUM_PROPERTY = 600;
   const MIN_PREMIUM_LIFE = 600;
 
-  // Для всех банков можно менять скидку:
-  // - Сбербанк: 0-50%
-  // - Остальные: 0-30%
-  // Если банк запрещает скидки (allow_discount_* = false), скидки не применяются
   const isSberbank = bankConfig && bankConfig.bankName === 'Сбербанк';
   let discountPercent = clampDiscountPercent(discountPercentOverride, isSberbank);
-  if (discountPercent === null) discountPercent = 30; // по умолчанию 30%
+  if (discountPercent === null) discountPercent = 30;
   
   const discountMultiplier = 1 - discountPercent / 100;
+  const hasAgeRestriction = parsedData.borrowers && parsedData.borrowers.length > 0
+    ? parsedData.borrowers.some(b => Number(b.age) >= 55)
+    : false;
 
-  // ИМУЩЕСТВО
   if (parsedData.risks.property) {
     const propertyResult = calculatePropertyInsurance(parsedData, bankConfig, insuranceAmount);
     if (propertyResult) {
       if (bankConfig.allow_discount_property) {
-        // Скидки разрешены - применяем
         const basePremium = propertyResult.totalWithoutDiscount;
         propertyPremiumV2 = round2(basePremium * discountMultiplier);
         propertyPremiumV2 = Math.max(propertyPremiumV2, MIN_PREMIUM_PROPERTY);
       } else {
-        // Скидки запрещены (например, ДомРФ) - используем полную цену
         propertyPremiumV2 = propertyResult.totalWithoutDiscount || propertyResult.total;
       }
     }
   }
 
-  // ЖИЗНЬ
   if (parsedData.risks.life) {
     const lifeResult = calculateLifeInsurance(parsedData, bankConfig, insuranceAmount);
     if (lifeResult) {
-      let hasAgeRestrictionForSberbank = false;
-      if (bankConfig && bankConfig.bankName === 'Сбербанк' && parsedData.borrowers && parsedData.borrowers.length > 0) {
-        hasAgeRestrictionForSberbank = parsedData.borrowers.some(b => b.age >= 55);
-      }
-
       const canApplyV2LifeDiscount = bankConfig.allow_discount_life &&
         !lifeResult.requiresMedicalExam &&
         lifeResult.medicalUnderwritingFactor !== 1.25 &&
-        !hasAgeRestrictionForSberbank;
+        !hasAgeRestriction;
 
       if (canApplyV2LifeDiscount) {
         if (lifeResult.borrowers && lifeResult.borrowers.length > 0) {
-          // Пересчитываем с кастомной скидкой для всех банков
           lifePremiumV2 = round2(lifeResult.borrowers.reduce((sum, b) => {
             const basePrem = Number(b.premium) || 0;
             const discounted = round2(basePrem * discountMultiplier);
@@ -430,7 +409,6 @@ function computeVariant2BasePremiums(parsedData, bankConfig, insuranceAmount, di
     const withLifeInsurance = parsedData.risks.life || false;
     const titleResult = calculateTitleInsurance(parsedData, bankConfig, insuranceAmount, withLifeInsurance, parsedData.contractDate);
     if (bankConfig.allow_discount_title) {
-      // Пересчитываем с кастомной скидкой для всех банков
       const baseTitle = Number(titleResult.totalWithoutDiscount || titleResult.total) || 0;
       titlePremiumV2 = Math.max(round2(baseTitle * discountMultiplier), 600);
     } else {
@@ -478,12 +456,7 @@ function renderVariant2RisksHtml({ propertyPremiumV2, lifePremiumV2, titlePremiu
 window.openVariant2Constructor = function openVariant2Constructor(forceContext = null) {
   ensureVariant2ConstructorModal();
   
-  // КРИТИЧНО: Если передан forceContext, используем его
-  // Иначе используем глобальный контекст (может быть старым!)
   let sourceContext = forceContext || window.__LAST_VARIANT2_CONTEXT__;
-  
-  // КРИТИЧНО: Делаем ГЛУБОКУЮ КОПИЮ контекста чтобы изменения не влияли на другие результаты
-  // Это предотвращает мутацию оригинального контекста при работе с конструктором
   const ctx = JSON.parse(JSON.stringify(sourceContext));
   
   const modal = document.getElementById('variant2-constructor-modal');
@@ -496,8 +469,6 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
   const insuranceAmount = Number(ctx.insuranceAmount) || 0;
   const isSberbank = ctx.bankConfig && ctx.bankConfig.bankName === 'Сбербанк';
   
-  // ВАЖНО: Если банк изменился с момента последнего открытия конструктора,
-  // сбрасываем сохраненное состояние (особенно важно для скидки)
   const savedBankName = ctx.variant2CustomState?.bankName;
   const currentBankName = ctx.bankConfig?.bankName;
   if (savedBankName && savedBankName !== currentBankName) {
@@ -507,7 +478,6 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
     }
   }
   
-  // Определяем тип объекта: дом или квартира, и используем ли "Дом без забот"
   const isHouse = ctx.parsedData.objectType === 'house_brick' ||
                   ctx.parsedData.objectType === 'house_wood' ||
                   ctx.parsedData.objectType === 'house';
@@ -525,7 +495,6 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
   const state = ctx.variant2CustomState || {
     bankName: currentBankName,
     insuranceAmount,
-    // Скидка настраивается для всех банков (Сбер 0-50%, остальные 0-30%)
     discountPercent: 30,
     material,
     finishEnabled: Boolean(byObjects['отделка и инженерное оборудование']),
@@ -536,16 +505,12 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
     goSum: goDefault
   };
 
-  // Обновляем имя банка и материал в state
   state.bankName = currentBankName;
   state.material = material;
-
-  // Корректируем сохранённую скидку под новые лимиты банка
   state.discountPercent = clampDiscountPercent(state.discountPercent, isSberbank) ?? 30;
 
   ctx.variant2CustomState = state;
 
-  // Инициализируем базу при первом открытии конструктора
   if (!ctx.variant2Meta.base) {
     ctx.variant2Meta.base = computeVariant2BasePremiums(ctx.parsedData, ctx.bankConfig, insuranceAmount, state.discountPercent);
   }
@@ -557,7 +522,6 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
   discountInput.max = isSberbank ? '50' : '30';
   discountInput.value = String(state.discountPercent);
 
-  // Обновляем заголовки и лимиты в зависимости от типа объекта
   const productName = isHouse ? (isDombez ? 'Дом без забот' : 'Бастион') : 'Моя квартира';
   const movableLabel = isHouse ? (isDombez ? 'движимое имущество' : 'конструктивные элементы') : 'движимое имущество';
   
@@ -568,7 +532,6 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
   modal.querySelector('#variant2-go-enabled').nextElementSibling.querySelector('div').textContent = 
     `${productName}: гражданская ответственность`;
   
-  // Для домов со старым Бастион скрываем ГО, для "Дом без забот" показываем
   const goRow = modal.querySelector('#variant2-go-enabled').closest('div[style*="grid-template-columns"]');
   if (isHouse && !isDombez) {
     goRow.style.display = 'none';
@@ -600,7 +563,6 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
   };
 
   const refresh = () => {
-    // КРИТИЧНО: Всегда читаем актуальный контекст из глобальной переменной
     const currentCtx = window.__CURRENT_CONSTRUCTOR_CTX__;
     if (!currentCtx) {
       return;
@@ -632,16 +594,10 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
     state.movableSum = Number(modal.querySelector('#variant2-movable-sum').value) || 0;
     state.goSum = Number(modal.querySelector('#variant2-go-sum').value) || 0;
 
-    // ВАЖНО: пересчитываем базу ТОЛЬКО если изменилась страховая сумма или скидка
-    // При изменении только галочек доп. рисков база НЕ должна меняться
     let baseNow;
 
-    // Проверяем изменение страховой суммы (с учетом округления)
     const insChanged = Math.abs(ins - (prevInsAmount || ins)) > 0.01;
-
-    // Проверяем изменение скидки
     const discountChanged = prevDiscountPercent !== newDiscountPercent;
-    
     const needRecalcBase = insChanged || discountChanged;
     
     if (needRecalcBase) {
@@ -656,7 +612,6 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
     const premByObj = Object.fromEntries(custom.risks.map(r => [r.objects, r.premium]));
     modal.querySelector('#variant2-finish-prem').textContent = state.finishEnabled ? formatMoneyRuGrouped(premByObj['отделка и инженерное оборудование'] || 0) : '0,00';
 
-    // Для домов Бастион показываем "конструктивные элементы", для квартир и dombez — "движимое имущество"
     const movableKey = (currentIsHouse && !currentIsDombez) ? 'конструктивные элементы' : 'движимое имущество';
     modal.querySelector('#variant2-movable-prem').textContent = state.movableEnabled ? formatMoneyRuGrouped(premByObj[movableKey] || 0) : '0,00';
     modal.querySelector('#variant2-go-prem').textContent = state.goEnabled ? formatMoneyRuGrouped(premByObj['гражданская ответственность'] || 0) : '0,00';
@@ -682,14 +637,9 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
     };
   };
 
-  // КРИТИЧНО: Сохраняем ctx в глобальной переменной для доступа из event listeners
-  // Это предотвращает проблемы с замыканиями когда listeners создаются один раз
   window.__CURRENT_CONSTRUCTOR_CTX__ = ctx;
 
-  // КРИТИЧНО: Удаляем старые event listeners перед добавлением новых
-  // Это предотвращает накопление listeners от предыдущих открытий конструктора
   if (modal.__wired) {
-    // Клонируем элементы чтобы удалить все event listeners
     const ids = [
       '#variant2-discount',
       '#variant2-ins-amount',
@@ -703,8 +653,8 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
       oldEl.parentNode.replaceChild(newEl, oldEl);
     });
     
-    // Также клонируем кнопки
-    ['#variant2-reset-btn', '#variant2-clear-btn', '#variant2-apply-btn'].forEach(sel => {
+    ['#variant2-reset-btn', '#variant2-clear-btn', '#
+variant2-apply-btn'].forEach(sel => {
       const oldBtn = modal.querySelector(sel);
       const newBtn = oldBtn.cloneNode(true);
       oldBtn.parentNode.replaceChild(newBtn, oldBtn);
@@ -753,7 +703,12 @@ window.openVariant2Constructor = function openVariant2Constructor(forceContext =
     const meta = currentCtx.variant2Meta;
     const baseNow = meta.base || computeVariant2BasePremiums(currentCtx.parsedData, currentCtx.bankConfig, meta.insuranceAmount, meta.discountPercent);
     const html = renderVariant2RisksHtml(baseNow, meta.additionalRisks || []);
-    const total = meta.total || round2(baseNow.propertyPremiumV2 + baseNow.lifePremiumV2 + baseNow.titlePremiumV2 + (meta.additionalRisks || []).reduce((s, r) => s + (Number(r.premium) || 0), 0));
+    const total = meta.total || round2(
+      baseNow.propertyPremiumV2 +
+      baseNow.lifePremiumV2 +
+      baseNow.titlePremiumV2 +
+      (meta.additionalRisks || []).reduce((s, r) => s + (Number(r.premium) || 0), 0)
+    );
 
     block.innerHTML = `${html}<br>Итого тариф взнос ${formatMoneyRuGrouped(total)}`;
 
