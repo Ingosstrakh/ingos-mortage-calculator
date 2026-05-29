@@ -1,10 +1,31 @@
+Да, этот файл тоже нужно было дорабатывать.
+
+Но важно: только правки в `calculator-variant2-constructor.js` не дадут клиентский выбор в модалке сами по себе. Этот файл отвечает за:
+- какие продукты доступны
+- как они считаются
+- какой продукт выбран лучшим
+- как формируется текст
+
+А сам конструктор, где пользователь кликает и выбирает пакет "Личные вещи", это все равно `calculator-variant2-ui.js`.
+
+То есть ответ такой:
+- да, этот файл нужно править
+- но не только его
+- сначала правильно дорабатываем `calculator-variant2-constructor.js`, потом UI подцепит эти данные
+
+Ниже даю уже готовый обновленный `calculator-variant2-constructor.js` целиком с поддержкой:
+- выбора `Личные вещи` по конкретному пакету и набору рисков
+- возврата `selectedProduct`
+- возврата `packDetails`
+- совместимости с текущей логикой
+
+```js
 // calculator-variant2-constructor.js - Вспомогательные функции для построения варианта 2
 
 /**
  * Упрощенный расчет варианта 2 (без доп. рисков, с настраиваемой скидкой)
  */
 function calculateSimplifiedVariant2(data, bankConfig, insuranceAmount) {
-
   let propertyPremiumV2 = 0;
   let lifePremiumV2 = 0;
 
@@ -15,7 +36,7 @@ function calculateSimplifiedVariant2(data, bankConfig, insuranceAmount) {
   const hasAgeRestriction = data.borrowers && data.borrowers.length > 0
     ? data.borrowers.some(borrower => Number(borrower.age) >= 55)
     : false;
-  
+
   if (data.risks.property) {
     const propertyResult = calculatePropertyInsurance(data, bankConfig, insuranceAmount);
     if (propertyResult && bankConfig.allow_discount_property) {
@@ -29,12 +50,12 @@ function calculateSimplifiedVariant2(data, bankConfig, insuranceAmount) {
 
   if (data.risks.life) {
     const lifeResult = calculateLifeInsurance(data, bankConfig, insuranceAmount);
-    
-    if (lifeResult && bankConfig.allow_discount_life && !lifeResult.requiresMedicalExam && 
+
+    if (lifeResult && bankConfig.allow_discount_life && !lifeResult.requiresMedicalExam &&
         lifeResult.medicalUnderwritingFactor !== 1.25 && !hasAgeRestriction) {
       const numBorrowers = data.borrowers ? data.borrowers.length : 1;
       let totalWithDiscount = 0;
-      
+
       if (lifeResult.borrowers && lifeResult.borrowers.length > 0) {
         lifeResult.borrowers.forEach(borrower => {
           const basePrem = Number(borrower.premium) || 0;
@@ -44,7 +65,7 @@ function calculateSimplifiedVariant2(data, bankConfig, insuranceAmount) {
         const basePremium = lifeResult.totalWithoutDiscount;
         totalWithDiscount = Math.round(basePremium * discountMultiplier * 100) / 100;
       }
-      
+
       lifePremiumV2 = Math.max(totalWithDiscount, MIN_PREMIUM_LIFE * numBorrowers);
     } else if (lifeResult) {
       lifePremiumV2 = lifeResult.total || lifeResult.totalWithoutDiscount;
@@ -55,17 +76,17 @@ function calculateSimplifiedVariant2(data, bankConfig, insuranceAmount) {
 
   let output = '';
   if (data.risks.property && propertyPremiumV2 > 0) {
-    output += `имущество ${propertyPremiumV2.toLocaleString('ru-RU', {useGrouping: false})}<br>`;
+    output += `имущество ${propertyPremiumV2.toLocaleString('ru-RU', { useGrouping: false })}<br>`;
   }
   if (data.risks.life && lifePremiumV2 > 0) {
     const lifeResult = calculateLifeInsurance(data, bankConfig, insuranceAmount);
     if (lifeResult && lifeResult.borrowers && lifeResult.borrowers.length > 0) {
       const isMultipleBorrowers = data.borrowers && data.borrowers.length > 1;
-      const isSovcombank = bankConfig && bankConfig.bankName === "Совкомбанк";
+      const isSovcombank = bankConfig && bankConfig.bankName === 'Совкомбанк';
       lifeResult.borrowers.forEach((borrower, index) => {
         const borrowerLabel = isMultipleBorrowers ? (index === 0 ? 'заемщик' : (index === 1 ? 'созаемщик' : `созаемщик ${index}`)) : 'заемщик';
         const borrowerPremium = hasAgeRestriction ? borrower.premium : (borrower.premiumWithDiscount || borrower.premium);
-        output += `жизнь ${borrowerLabel} ${borrowerPremium.toLocaleString('ru-RU', {useGrouping: false})}`;
+        output += `жизнь ${borrowerLabel} ${borrowerPremium.toLocaleString('ru-RU', { useGrouping: false })}`;
         if (isSovcombank) {
           output += ` <span style="color: #64748b; font-size: 0.9em;">(без РИСКА СВО)</span>`;
         }
@@ -73,14 +94,14 @@ function calculateSimplifiedVariant2(data, bankConfig, insuranceAmount) {
       });
     } else {
       const borrowerLabel = data.borrowers.length > 1 ? 'заемщики' : 'заемщик';
-      output += `жизнь ${borrowerLabel} ${lifePremiumV2.toLocaleString('ru-RU', {useGrouping: false})}<br>`;
+      output += `жизнь ${borrowerLabel} ${lifePremiumV2.toLocaleString('ru-RU', { useGrouping: false })}<br>`;
     }
   }
 
-  output += `<br>Итого тариф взнос ${totalV2.toLocaleString('ru-RU', {useGrouping: false})}`;
+  output += `<br>Итого тариф взнос ${totalV2.toLocaleString('ru-RU', { useGrouping: false })}`;
 
   return {
-    output: output,
+    output,
     total: totalV2
   };
 }
@@ -91,7 +112,7 @@ function calculateSimplifiedVariant2(data, bankConfig, insuranceAmount) {
 function getAvailableProducts(data, bankConfig, isMobile) {
   const isLifeOnly = data.risks.life && !data.risks.property && !data.risks.titul;
   const isFlat = data.objectType === 'flat' || data.objectType === null;
-  const isHouse = data.objectType === 'house_brick' || data.objectType === 'house_wood' || 
+  const isHouse = data.objectType === 'house_brick' || data.objectType === 'house_wood' ||
                   (data.objectType === 'house' && (data.material === 'brick' || data.material === 'wood'));
 
   let availableProducts = [];
@@ -101,7 +122,6 @@ function getAvailableProducts(data, bankConfig, isMobile) {
   } else if (isFlat) {
     availableProducts = ['moyakvartira', 'express', 'express_go', 'bastion'];
   } else if (isHouse) {
-    // Для домов с годом постройки >= 2020 предлагаем "Дом без забот", иначе "Бастион"
     const yearBuilt = Number(data.yearBuilt);
     if (yearBuilt >= 2020) {
       availableProducts = ['dombez'];
@@ -125,7 +145,7 @@ function getAvailableProducts(data, bankConfig, isMobile) {
 function calculateBasePremiums(data, bankConfig, insuranceAmount) {
   const MIN_PREMIUM_PROPERTY_V2 = 600;
   const MIN_PREMIUM_LIFE_V2 = 600;
-  
+
   const discountPercent = (typeof data.manualDiscount === 'number') ? data.manualDiscount : 30;
   const discountMultiplier = 1 - discountPercent / 100;
 
@@ -153,11 +173,11 @@ function calculateBasePremiums(data, bankConfig, insuranceAmount) {
   if (data.risks.life) {
     const lifeResult = calculateLifeInsurance(data, bankConfig, insuranceAmount);
     if (lifeResult) {
-      if (bankConfig.allow_discount_life && !lifeResult.requiresMedicalExam && 
+      if (bankConfig.allow_discount_life && !lifeResult.requiresMedicalExam &&
           lifeResult.medicalUnderwritingFactor !== 1.25 && !hasAgeRestriction) {
         const numBorrowers = data.borrowers ? data.borrowers.length : 1;
         let totalWithDiscount = 0;
-        
+
         if (lifeResult.borrowers && lifeResult.borrowers.length > 0) {
           lifeResult.borrowers.forEach(borrower => {
             const basePrem = Number(borrower.premium) || 0;
@@ -167,7 +187,7 @@ function calculateBasePremiums(data, bankConfig, insuranceAmount) {
           const basePremium = lifeResult.totalWithoutDiscount;
           totalWithDiscount = Math.round(basePremium * discountMultiplier * 100) / 100;
         }
-        
+
         lifePremiumV2 = Math.max(totalWithDiscount, MIN_PREMIUM_LIFE_V2 * numBorrowers);
       } else {
         lifePremiumV2 = lifeResult.total || lifeResult.totalWithoutDiscount;
@@ -189,32 +209,108 @@ function calculateBasePremiums(data, bankConfig, insuranceAmount) {
 }
 
 /**
- * Рассчитываем доп. риски для каждого доступного продукта
+ * Расчет коробочного продукта "Личные вещи" по выбранному пакету и набору рисков
  */
-function calculateProductResults(availableProducts, data, insuranceAmount, basePremiums) {
+function calculateLichnieVeshchiBySelection(packId, riskKey) {
+  const packs = window.LICHNIE_VESHCHI_PACKS;
+  if (!Array.isArray(packs) || !packs.length) return null;
+
+  const pack = packs.find(v => String(v.id) === String(packId)) || null;
+  if (!pack) return null;
+
+  const premium = riskKey === 'povrezhd'
+    ? Number(pack.povrezhd || 0)
+    : riskKey === 'tipovye'
+      ? Number(pack.tipovye || 0)
+      : Number(pack.all || 0);
+
+  const riskLabels = {
+    povrezhd: 'ПДТЛ + Повреждения по неосторожности',
+    tipovye: 'ПДТЛ + Типовые риски',
+    all: 'ПДТЛ + Повреждения + Типовые (все риски)'
+  };
+
+  return {
+    product: 'lichnie_veschi',
+    productName: 'Личные вещи',
+    riskName: riskLabels[riskKey] || riskLabels.all,
+    premium,
+    total: premium,
+    packDetails: {
+      pack,
+      riskCombo: riskKey || 'all'
+    }
+  };
+}
+
+/**
+ * Получаем дефолтный выбор для "Личные вещи"
+ */
+function getDefaultLichnieVeshchiSelection() {
+  const packs = window.LICHNIE_VESHCHI_PACKS;
+  if (!Array.isArray(packs) || !packs.length) return null;
+
+  return {
+    packId: packs[0].id,
+    riskKey: 'all'
+  };
+}
+
+/**
+ * Рассчитываем доп. риски для каждого доступного продукта
+ * customSelection:
+ * {
+ *   lichnie_veschi: { packId, riskKey }
+ * }
+ */
+function calculateProductResults(availableProducts, data, insuranceAmount, basePremiums, customSelection = null) {
   const productResults = [];
   const { propertyPremiumV2, lifePremiumV2 } = basePremiums;
 
   for (const product of availableProducts) {
     if (product === 'lichnie_veschi') {
+      const selected = customSelection && customSelection.lichnie_veschi
+        ? customSelection.lichnie_veschi
+        : null;
+
+      if (selected && selected.packId != null) {
+        const chosen = calculateLichnieVeshchiBySelection(selected.packId, selected.riskKey || 'all');
+        if (chosen) {
+          const totalV2 = propertyPremiumV2 + lifePremiumV2 + chosen.premium;
+          productResults.push({
+            product: 'lichnie_veschi',
+            productName: 'Личные вещи',
+            riskName: chosen.riskName,
+            premium: chosen.premium,
+            total: totalV2,
+            packDetails: chosen.packDetails,
+            constructorSupported: true
+          });
+        }
+        continue;
+      }
+
       const packs = window.LICHNIE_VESHCHI_PACKS;
       if (!packs) continue;
+
       const riskCombos = [
         { key: 'povrezhd', label: 'ПДТЛ + Повреждения' },
         { key: 'tipovye', label: 'ПДТЛ + Типовые' },
         { key: 'all', label: 'все риски' }
       ];
+
       for (const pack of packs) {
         for (const combo of riskCombos) {
-          const premium = pack[combo.key];
+          const premium = Number(pack[combo.key] || 0);
           const totalV2 = propertyPremiumV2 + lifePremiumV2 + premium;
           productResults.push({
             product: 'lichnie_veschi',
             productName: 'Личные вещи',
             riskName: combo.label,
-            premium: premium,
+            premium,
             total: totalV2,
-            packDetails: { pack, riskCombo: combo.key }
+            packDetails: { pack, riskCombo: combo.key },
+            constructorSupported: true
           });
         }
       }
@@ -223,11 +319,12 @@ function calculateProductResults(availableProducts, data, insuranceAmount, baseP
       if (additionalRisk) {
         const totalV2 = propertyPremiumV2 + lifePremiumV2 + additionalRisk.premium;
         productResults.push({
-          product: product,
+          product,
           productName: additionalRisk.productName,
           riskName: additionalRisk.riskName,
           premium: additionalRisk.premium,
-          total: totalV2
+          total: totalV2,
+          constructorSupported: true
         });
       }
     }
@@ -240,9 +337,9 @@ function calculateProductResults(availableProducts, data, insuranceAmount, baseP
  * Выбираем лучший продукт
  */
 function selectBestProduct(productResults, variant1Total, titlePremiumV2) {
-  const priorityProducts = productResults.filter(p => 
+  const priorityProducts = productResults.filter(p =>
     p.product === 'moyakvartira' || p.product === 'express' || p.product === 'lichnie_veschi');
-  const otherProducts = productResults.filter(p => 
+  const otherProducts = productResults.filter(p =>
     p.product !== 'moyakvartira' && p.product !== 'express' && p.product !== 'lichnie_veschi');
 
   priorityProducts.sort((a, b) => a.total - b.total);
@@ -296,7 +393,8 @@ function selectBestProduct(productResults, variant1Total, titlePremiumV2) {
 
   return {
     bestProduct,
-    bestDifference
+    bestDifference,
+    selectedProduct: bestProduct.product
   };
 }
 
@@ -304,7 +402,7 @@ function selectBestProduct(productResults, variant1Total, titlePremiumV2) {
  * Оптимизируем продукт (увеличиваем суммы если нужно)
  */
 function optimizeProduct(bestProductResult, data, insuranceAmount, variant1Total, basePremiums) {
-  const { bestProduct, bestDifference } = bestProductResult;
+  const { bestProduct } = bestProductResult;
   const { propertyPremiumV2, lifePremiumV2, titlePremiumV2 } = basePremiums;
 
   let finalProduct = bestProduct;
@@ -327,10 +425,10 @@ function optimizeProduct(bestProductResult, data, insuranceAmount, variant1Total
       }
 
       const additionalRisksResult = increaseMoyaKvartiraSumsForDifference(
-        data, insuranceAmount, currentDifference, targetDifferenceLarge, 
+        data, insuranceAmount, currentDifference, targetDifferenceLarge,
         baseFinishSum, variant1Total, propertyPremiumV2, lifePremiumV2, titlePremiumV2
       );
-      
+
       if (additionalRisksResult && additionalRisksResult.risks.length > 0) {
         additionalRisks = additionalRisksResult.risks;
         currentTotal = propertyPremiumV2 + lifePremiumV2 + titlePremiumV2 + additionalRisksResult.totalPremium;
@@ -389,7 +487,6 @@ function optimizeProduct(bestProductResult, data, insuranceAmount, variant1Total
         }
       }
     } else if (bestProduct.product === 'dombez') {
-      // Для "Дом без забот" используем разумные суммы для доп. рисков
       const dombez = window.T_DOMBEZ;
       if (dombez) {
         const material = (data.material === 'wood' || data.objectType === 'house_wood') ? 'wood' : 'stone';
@@ -399,7 +496,7 @@ function optimizeProduct(bestProductResult, data, insuranceAmount, variant1Total
         const finishPremium = finishRate ? Math.round(finishSum * finishRate.rate * 100) / 100 : 0;
 
         const movableRate = dombez.movable ? dombez.movable[0] : null;
-        const movableSum = movableRate ? movableRate.min : 100000;
+                const movableSum = movableRate ? movableRate.min : 100000;
         const movablePremium = movableRate ? Math.round(movableSum * movableRate.rate * 100) / 100 : 0;
 
         const liRate = dombez.liability ? dombez.liability[0] : null;
@@ -435,7 +532,10 @@ function optimizeProduct(bestProductResult, data, insuranceAmount, variant1Total
     finalProduct,
     additionalRisks,
     currentTotal,
-    currentDifference
+    currentDifference,
+    selectedProduct: finalProduct.product,
+    constructorSupported: true,
+    packDetails: finalProduct.packDetails || null
   };
 }
 
@@ -453,29 +553,29 @@ function formatVariant2Output(data, bankConfig, insuranceAmount, basePremiums, o
   let output = '';
 
   if (data.risks.property) {
-    output += `имущество ${propertyPremiumV2.toLocaleString('ru-RU', {useGrouping: false})}<br>`;
+    output += `имущество ${propertyPremiumV2.toLocaleString('ru-RU', { useGrouping: false })}<br>`;
   }
 
   if (data.risks.life) {
     const lifeResult = calculateLifeInsurance(data, bankConfig, insuranceAmount);
     if (lifeResult && lifeResult.requiresMedicalExam && lifeResult.total === 0) {
-            output += `<span style="color: #dc3545; font-weight: bold;">${lifeResult.medicalUnderwritingMessage}</span><br>`;
+      output += `<span style="color: #dc3545; font-weight: bold;">${lifeResult.medicalUnderwritingMessage}</span><br>`;
     } else if (lifeResult && lifeResult.borrowers && lifeResult.borrowers.length > 0) {
       const isMultipleBorrowers = data.borrowers && data.borrowers.length > 1;
-      const isSovcombank = bankConfig && bankConfig.bankName === "Совкомбанк";
-      
+      const isSovcombank = bankConfig && bankConfig.bankName === 'Совкомбанк';
+
       lifeResult.borrowers.forEach((borrower, index) => {
         const borrowerLabel = isMultipleBorrowers ? (index === 0 ? 'заемщик' : (index === 1 ? 'созаемщик' : `созаемщик ${index}`)) : 'заемщик';
         const borrowerPremium = hasAgeRestriction
           ? borrower.premium
           : (borrower.premiumWithDiscount || borrower.premium);
 
-        output += `жизнь ${borrowerLabel} ${borrowerPremium.toLocaleString('ru-RU', {useGrouping: false})}`;
-        
+        output += `жизнь ${borrowerLabel} ${borrowerPremium.toLocaleString('ru-RU', { useGrouping: false })}`;
+
         if (isSovcombank) {
           output += ` <span style="color: #64748b; font-size: 0.9em;">(без РИСКА СВО)</span>`;
         }
-        
+
         if (index === 0 && lifeResult.medicalUnderwritingMessage) {
           if (lifeResult.requiresMedicalExam) {
             output += ` <span style="color: #dc3545; font-weight: bold;">⚠️ ${lifeResult.medicalUnderwritingMessage}</span>`;
@@ -489,13 +589,13 @@ function formatVariant2Output(data, bankConfig, insuranceAmount, basePremiums, o
       });
     } else {
       const borrowerLabel = data.borrowers.length > 1 ? 'заемщики' : 'заемщик';
-      const isSovcombank = bankConfig && bankConfig.bankName === "Совкомбанк";
-      output += `жизнь ${borrowerLabel} ${lifePremiumV2.toLocaleString('ru-RU', {useGrouping: false})}`;
-      
+      const isSovcombank = bankConfig && bankConfig.bankName === 'Совкомбанк';
+      output += `жизнь ${borrowerLabel} ${lifePremiumV2.toLocaleString('ru-RU', { useGrouping: false })}`;
+
       if (isSovcombank) {
         output += ` <span style="color: #64748b; font-size: 0.9em;">(без РИСКА СВО)</span>`;
       }
-      
+
       if (lifeResult && lifeResult.medicalUnderwritingMessage) {
         if (lifeResult.requiresMedicalExam) {
           output += ` <span style="color: #dc3545; font-weight: bold;">⚠️ ${lifeResult.medicalUnderwritingMessage}</span>`;
@@ -511,49 +611,56 @@ function formatVariant2Output(data, bankConfig, insuranceAmount, basePremiums, o
 
   const formatKv = (premium, percent = 35) => {
     const agentAmount = Math.round(premium * (percent / 100) * 100) / 100;
-    return ` кв - ${percent}% = агент получит по ИФЛ (${agentAmount.toLocaleString('ru-RU', {useGrouping: false})})`;
+    return ` кв - ${percent}% = агент получит по ИФЛ (${agentAmount.toLocaleString('ru-RU', { useGrouping: false })})`;
   };
   const formatKv35 = (premium) => formatKv(premium, 35);
   const formatKv50 = (premium) => formatKv(premium, 50);
 
   if (finalProduct.useIncreasedRisksOnly && additionalRisks.length > 0) {
     additionalRisks.forEach(risk => {
-      output += `доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${risk.premium.toLocaleString('ru-RU', {useGrouping: false})}${formatKv35(risk.premium)}<br>`;
+      output += `доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${risk.premium.toLocaleString('ru-RU', { useGrouping: false })}${formatKv35(risk.premium)}<br>`;
     });
   } else if (finalProduct.product === 'bastion' && additionalRisks.length > 0) {
     additionalRisks.forEach(risk => {
-      output += `доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${risk.premium.toLocaleString('ru-RU', {useGrouping: false})}${formatKv35(risk.premium)}<br>`;
+      output += `доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${risk.premium.toLocaleString('ru-RU', { useGrouping: false })}${formatKv35(risk.premium)}<br>`;
     });
   } else if (finalProduct.product === 'dombez' && additionalRisks.length > 0) {
     additionalRisks.forEach(risk => {
-      output += `доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${risk.premium.toLocaleString('ru-RU', {useGrouping: false})}${formatKv35(risk.premium)}<br>`;
+      output += `доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${risk.premium.toLocaleString('ru-RU', { useGrouping: false })}${formatKv35(risk.premium)}<br>`;
     });
   } else {
     const formatKvForProduct = finalProduct.product === 'lichnie_veschi' ? formatKv50 : formatKv35;
-    const riskDetails = getAdditionalRiskDetails(finalProduct.product, data, insuranceAmount, finalProduct.premium, additionalRisks, finalProduct.packDetails);
+    const riskDetails = getAdditionalRiskDetails(
+      finalProduct.product,
+      data,
+      insuranceAmount,
+      finalProduct.premium,
+      additionalRisks,
+      finalProduct.packDetails
+    );
 
     if (riskDetails.sum) {
-      output += `доп риск - ${finalProduct.productName} (${riskDetails.objects}) ${riskDetails.sum} ${finalProduct.premium.toLocaleString('ru-RU', {useGrouping: false})}${formatKvForProduct(finalProduct.premium)}`;
+      output += `доп риск - ${finalProduct.productName} (${riskDetails.objects}) ${riskDetails.sum} ${finalProduct.premium.toLocaleString('ru-RU', { useGrouping: false })}${formatKvForProduct(finalProduct.premium)}`;
     } else {
-      output += `доп риск - ${finalProduct.productName} (${riskDetails.objects}) ${finalProduct.premium.toLocaleString('ru-RU', {useGrouping: false})}${formatKvForProduct(finalProduct.premium)}`;
+      output += `доп риск - ${finalProduct.productName} (${riskDetails.objects}) ${finalProduct.premium.toLocaleString('ru-RU', { useGrouping: false })}${formatKvForProduct(finalProduct.premium)}`;
     }
 
     if (additionalRisks.length > 0) {
       additionalRisks.forEach(risk => {
-        output += `<br>доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${risk.premium.toLocaleString('ru-RU', {useGrouping: false})}${formatKv35(risk.premium)}`;
+        output += `<br>доп риск - ${risk.name} (${risk.objects}) на сумму ${risk.sum.toLocaleString('ru-RU')} ₽ премия ${risk.premium.toLocaleString('ru-RU', { useGrouping: false })}${formatKv35(risk.premium)}`;
       });
     }
   }
-  
+
   if (additionalRisks.length === 0) {
     output += '<br>';
   }
-  
+
   if (data.risks.titul && titlePremiumV2 > 0) {
-    output += `<br>титул ${titlePremiumV2.toLocaleString('ru-RU', {useGrouping: false})}`;
+    output += `<br>титул ${titlePremiumV2.toLocaleString('ru-RU', { useGrouping: false })}`;
   }
 
-  output += `<br>Итого тариф взнос ${currentTotal.toLocaleString('ru-RU', {useGrouping: false})}`;
+  output += `<br>Итого тариф взнос ${currentTotal.toLocaleString('ru-RU', { useGrouping: false })}`;
 
   return output;
 }
@@ -566,3 +673,5 @@ window.calculateProductResults = calculateProductResults;
 window.selectBestProduct = selectBestProduct;
 window.optimizeProduct = optimizeProduct;
 window.formatVariant2Output = formatVariant2Output;
+window.calculateLichnieVeshchiBySelection = calculateLichnieVeshchiBySelection;
+window.getDefaultLichnieVeshchiSelection = getDefaultLichnieVeshchiSelection;
